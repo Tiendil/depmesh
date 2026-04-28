@@ -1,0 +1,12 @@
+
+* pyproject.toml
+
+** description
+
+** tags
+
+* tests
+
+* package building and publishing
+
+* AGENTS.md
