@@ -14,7 +14,9 @@ Project behavior, implementation requirements, and product requirements are out 
 
 A specification MUST contain a single `h1` header with the name of the specification, which SHOULD be unique across all specifications.
 
-All other information SHOULD be organized in sections with `h2` headers.
+Top-level information SHOULD be organized in sections with `h2` headers.
+
+Nested sections MAY use `h3`, `h4`, and deeper headers when they make the document easier to navigate. Nested sections SHOULD be used for details that belong to a parent top-level section, such as examples, option descriptions, record fields, or subsections of a larger topic.
 
 Sections that are mandatory for all specifications:
 
