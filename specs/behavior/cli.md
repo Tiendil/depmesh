@@ -2,13 +2,15 @@
 
 ## Goal of the document
 
-This document describes how `depmesh` behaves as a command line interface: how users and tools invoke it, which commands and arguments are accepted, which output protocols are supported, and what output shape each command produces.
+This document describes how `depmesh` behaves as a command line interface: how users and tools invoke it, which commands and arguments are accepted, which output protocols are supported, and what output shape each dependency query produces.
 
 ## Scope
 
 The scope of this specification is limited to CLI behavior.
 
 Dependency discovery rules, relation semantics, plugin behavior, and configuration file semantics are out of scope except for CLI options needed to select or report them.
+
+The exact Markdown text emitted by `depmesh --skill` is out of scope.
 
 ## General behavior
 
@@ -102,8 +104,6 @@ The `llm` protocol MUST be used only when a coding agent invokes `depmesh` as a 
 LLM output MUST use plain Markdown-compatible text.
 
 LLM output SHOULD be concise and SHOULD avoid redundant information.
-
-LLM output SHOULD include enough labels that individual lines remain understandable when quoted out of context.
 
 LLM output SHOULD prefer stable identifiers and explicit paths over compact visual formatting.
 
@@ -356,6 +356,8 @@ The `depmesh --skill` command form MUST print extensive instructions for coding 
 depmesh --skill
 ```
 
+For the `llm` protocol, `depmesh --skill` output MUST be Markdown-compatible text.
+
 The command output SHOULD be suitable for coding agents that receive the output as a tool result.
 
 The default output protocol for this command MUST be `llm`.
@@ -377,7 +379,7 @@ depmesh --skill
 Example output:
 
 ```text
-The exact content emitted by `depmesh --skill` is not part of this specification.
+The exact Markdown text emitted by `depmesh --skill` is not part of this specification.
 ```
 
 ### Example: automation output
