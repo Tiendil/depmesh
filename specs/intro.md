@@ -13,6 +13,7 @@ Detailed requirements for individual specifications are out of scope except for 
 ## Specification directories
 
 - `./specs/` — directory with all specifications.
+- `./specs/architecture/` — specifications related to the architecture of the system.
 - `./specs/behavior/` — specifications related to the behavior of the system.
 - `./specs/meta/` — specifications related to requirements for specification documents.
 
@@ -20,5 +21,6 @@ Detailed requirements for individual specifications are out of scope except for 
 
 - `./specs/intro.md` — this file, contains a list of all specifications and their brief descriptions.
 - `./specs/dictionary.md` — dictionary of project-specific terms shared by multiple specifications.
+- `./specs/architecture/modules_layout.md` — specification of the project module structure.
 - `./specs/behavior/cli.md` — specification of the `depmesh` command line interface.
 - `./specs/meta/general.md` — general requirements for specification documents.
