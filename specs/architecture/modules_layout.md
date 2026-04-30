@@ -13,6 +13,7 @@ The following topics are out of scope:
 - detailed implementation design.
 - dependency rules.
 - runtime behavior.
+- entity, error, and test conventions beyond module placement.
 
 ## Dictionary
 
@@ -23,7 +24,11 @@ The following topics are out of scope:
 ## Modules
 
 - `./depmesh/` — root module of the project, contains all code related to the `depmesh` tool.
-- `./depmesh/core/` — module responsible for the core functionality not related to domain logic.
+- `./depmesh/core/` — module responsible for the core functionality not related to domain logic. Contains:
+  - shared entity base classes.
+  - shared error base classes.
+  - shared warning storage.
+  - domain-independent utilities.
 - `./depmesh/domain/` — module responsible for the general domain logic that is used in all parts of the project. Contains:
   - domain-specific types.
   - data structures.
@@ -48,6 +53,10 @@ List of specific submodules:
 - `domain` — submodule responsible for domain-specific logic related to the module's responsibilities.
 - `entities` — submodule responsible for defining types and entities related to the module's responsibilities.
 - `tests` — submodule containing module tests.
+
+The `errors`, `entities`, and `tests` submodules MUST follow the corresponding architecture specifications when they are present.
+
+The shared `entities` submodule in `./depmesh/core/` MUST define the common Pydantic entity base used by higher-level modules.
 
 ### Test submodules
 

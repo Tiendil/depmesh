@@ -21,7 +21,10 @@ Detailed requirements for individual specifications are out of scope except for 
 
 - `./specs/intro.md` — this file, contains a list of all specifications and their brief descriptions.
 - `./specs/dictionary.md` — dictionary of project-specific terms shared by multiple specifications.
+- `./specs/architecture/entities.md` — specification of project entity and data structure architecture.
+- `./specs/architecture/errors.md` — specification of project error and diagnostic architecture.
 - `./specs/architecture/modules_layout.md` — specification of the project module structure.
+- `./specs/architecture/tests.md` — specification of project test architecture.
 - `./specs/behavior/cli.md` — specification of the `depmesh` command line interface.
 - `./specs/behavior/config.md` — specification of the `depmesh.toml` configuration file behavior.
 - `./specs/meta/general.md` — general requirements for specification documents.
