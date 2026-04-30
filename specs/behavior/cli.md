@@ -8,7 +8,9 @@ This document describes how `depmesh` behaves as a command line interface: how u
 
 The scope of this specification is limited to CLI behavior.
 
-Dependency discovery rules, relation semantics, plugin behavior, and configuration file semantics are out of scope except for CLI options needed to select or report them.
+Dependency discovery rules, relation properties, relation semantics, plugin behavior, and configuration file semantics are out of scope.
+
+This specification may refer to configured relations, relation ids, reverse relation ids, relation descriptions, and configuration paths only to describe how the CLI accepts arguments and renders output.
 
 The exact Markdown text emitted by `depmesh --skill` is out of scope.
 
@@ -49,13 +51,13 @@ Output MUST NOT contain terminal color, styling, or other control sequences.
 
 Dependency query output MUST group dependencies by relation.
 
-Dependency query output MUST order relation groups alphabetically by relation name.
+Dependency query output MUST order relation groups alphabetically by displayed relation id.
 
 Dependency query output MUST order dependencies alphabetically inside each relation group.
 
-Dependency query output MUST use relation names for the current query direction.
+Dependency query output MUST use relation ids for the current query direction.
 
-If a relation between `x` and `y` is named `name_1` from `x` to `y` and `name_2` from `y` to `x`, forward output for `x` MUST group `y` under `name_1`, and reverse output for `y` MUST group `x` under `name_2`.
+If a relation from `x` to `y` has relation id `relation_id` and reverse relation id `reverse_relation_id`, forward output for `x` MUST group `y` under `relation_id`, and reverse output for `y` MUST group `x` under `reverse_relation_id`.
 
 When multiple artifact identifiers are provided, dependency query output MUST contain merged dependencies for all input artifacts.
 
@@ -196,13 +198,15 @@ The CLI MAY also include normalized or resolved artifact identifiers when useful
 
 ### Option `-r`, `--relation RELATION_ID`
 
-`-r RELATION_ID` and `--relation RELATION_ID` MUST limit output to the specified relation type.
+`-r RELATION_ID` and `--relation RELATION_ID` MUST limit output to the specified relation.
 
-When a relation has different names in different directions, the CLI MUST apply the filter to the underlying relation type and MUST still display the relation name for the current query direction.
+`RELATION_ID` MUST match either a configured relation id or a configured reverse relation id.
 
-This option MAY be repeated to include multiple relation types.
+When a relation has different ids in different directions, the CLI MUST apply the filter to the underlying relation and MUST still display the relation id for the current query direction.
 
-When this option is repeated, output MUST include dependencies whose relation type matches any specified `RELATION_ID`.
+This option MAY be repeated to include multiple relations.
+
+When this option is repeated, output MUST include dependencies whose relation matches any specified `RELATION_ID`.
 
 Example:
 
@@ -210,13 +214,13 @@ Example:
 depmesh -r imports -r tests ./src/do_smth.py
 ```
 
-If omitted, all configured relation types MUST be included.
+If omitted, all configured relations MUST be included.
 
 ### Option `--reverse`
 
 `--reverse` MUST show reverse dependencies: artifacts that depend on the specified artifacts.
 
-Reverse dependency output MUST use reverse relation names.
+Reverse dependency output MUST use reverse relation ids.
 
 This option MUST change the direction of the dependency query but MUST NOT change the output protocol contract.
 
