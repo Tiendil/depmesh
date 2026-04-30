@@ -23,4 +23,5 @@ Detailed requirements for individual specifications are out of scope except for 
 - `./specs/dictionary.md` — dictionary of project-specific terms shared by multiple specifications.
 - `./specs/architecture/modules_layout.md` — specification of the project module structure.
 - `./specs/behavior/cli.md` — specification of the `depmesh` command line interface.
+- `./specs/behavior/config.md` — specification of the `depmesh.toml` configuration file behavior.
 - `./specs/meta/general.md` — general requirements for specification documents.

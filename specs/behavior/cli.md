@@ -2,15 +2,32 @@
 
 ## Goal of the document
 
-This document describes how `depmesh` behaves as a command line interface: how users and tools invoke it, which commands and arguments are accepted, which output protocols are supported, and what output shape each dependency query produces.
+This document describes how `depmesh` behaves as a command line interface, including:
+
+- how users and tools invoke it.
+- which commands and arguments are accepted.
+- which output protocols are supported.
+- what output shape each dependency query produces.
 
 ## Scope
 
 The scope of this specification is limited to CLI behavior.
 
-Dependency discovery rules, relation properties, relation semantics, plugin behavior, and configuration file semantics are out of scope.
+The following topics are out of scope:
 
-This specification may refer to configured relations, relation ids, reverse relation ids, relation descriptions, and configuration paths only to describe how the CLI accepts arguments and renders output.
+- dependency discovery rules.
+- relation properties.
+- relation semantics.
+- plugin behavior.
+- configuration file semantics.
+
+This specification may refer to the following concepts only to describe how the CLI accepts arguments and renders output:
+
+- configured relations.
+- relation ids.
+- reverse relation ids.
+- relation descriptions.
+- configuration paths.
 
 The exact Markdown text emitted by `depmesh --skill` is out of scope.
 
@@ -24,7 +41,15 @@ The root command MUST be the primary dependency query command:
 depmesh [OPTIONS] ARTIFACT...
 ```
 
-`ARTIFACT` is an artifact identifier accepted by the configured dependency rules. In the initial implementation this is expected to be a file path, but the CLI MUST NOT reserve syntax that would prevent later support for directories, URLs, DOI values, ISBN values, or other identifiers.
+`ARTIFACT` is an artifact identifier accepted by the configured dependency rules.
+
+In the initial implementation this is expected to be a file path, but the CLI MUST NOT reserve syntax that would prevent later support for:
+
+- directories.
+- URLs.
+- DOI values.
+- ISBN values.
+- other identifiers.
 
 The CLI MUST write requested command output to stdout.
 
@@ -34,7 +59,12 @@ For `automation` output, stdout MUST contain only valid JSON Lines records.
 
 Diagnostics written to stderr MAY be plain text and MAY be non-JSONL, including when `--protocol automation` was requested.
 
-The CLI MUST produce deterministic output for the same input, configuration, working directory, and project state.
+The CLI MUST produce deterministic output for the same:
+
+- input.
+- configuration.
+- working directory.
+- project state.
 
 ## Commands
 
@@ -49,7 +79,11 @@ The CLI MUST support these commands and command forms:
 
 All output MUST use UTF-8.
 
-Output MUST NOT contain terminal color, styling, or other control sequences.
+Output MUST NOT contain:
+
+- terminal color.
+- styling.
+- other control sequences.
 
 Dependency query output MUST group dependencies by relation.
 
@@ -77,7 +111,15 @@ The CLI MUST support three output protocols:
 - `llm` — text protocol optimized for coding agents that invoke `depmesh` as a tool.
 - `automation` — protocol optimized for programs; output is serialized as JSON Lines.
 
-`human` and `llm` MUST be separate protocols. Human output SHOULD be compact and easy to scan. LLM output SHOULD be explicit, stable, and self-contained for coding agents that receive the output as a tool result.
+`human` and `llm` MUST be separate protocols.
+
+Human output SHOULD be compact and easy to scan.
+
+LLM output SHOULD be:
+
+- explicit.
+- stable.
+- self-contained for coding agents that receive the output as a tool result.
 
 The output protocol MUST be selected with:
 
@@ -109,7 +151,9 @@ LLM output SHOULD be concise and SHOULD avoid redundant information.
 
 LLM output SHOULD prefer stable identifiers and explicit paths over compact visual formatting.
 
-LLM output MUST include the configured relation description between each relation `h2` heading and the dependency list for that relation.
+LLM output MUST include the configured relation description between a relation `h2` heading and the dependency list for that relation when the relation description is not `None`.
+
+LLM output MUST NOT display a relation description, placeholder, or blank description paragraph when the relation description is `None`.
 
 ### Automation output
 
@@ -428,7 +472,13 @@ The `depmesh --skill` command form MAY be combined with `--protocol PROTOCOL` an
 
 The `depmesh --skill` command form MUST NOT be combined with artifact arguments or dependency query options.
 
-For `depmesh --skill`, `PROTOCOL` MAY be `llm`, `human`, or `automation`, but `llm` MUST be the canonical protocol.
+For `depmesh --skill`, `PROTOCOL` MAY be:
+
+- `llm`.
+- `human`.
+- `automation`.
+
+The `llm` protocol MUST be the canonical protocol for `depmesh --skill`.
 
 ### Example: LLM output
 
@@ -468,7 +518,11 @@ Command:
 depmesh --help
 ```
 
-Help output SHOULD be autogenerated from command, argument, and option definitions.
+Help output SHOULD be autogenerated from:
+
+- command definitions.
+- argument definitions.
+- option definitions.
 
 ### Version
 
@@ -515,6 +569,10 @@ The CLI SHOULD preserve backward compatibility for:
 - JSONL record `type` values.
 - JSONL field meanings.
 
-Backward-compatible additions MAY include new options, new JSONL fields, and new JSONL record types.
+Backward-compatible additions MAY include:
+
+- new options.
+- new JSONL fields.
+- new JSONL record types.
 
 Backward-incompatible changes MUST be documented in this specification before implementation.
