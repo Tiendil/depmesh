@@ -10,6 +10,12 @@ The scope of this specification is limited to requirements for specification doc
 
 Project behavior, implementation requirements, and product requirements are out of scope except when they affect how specification documents should be written.
 
+## Dictionary
+
+- `specification` — a Markdown document in `./specs/` that describes requirements, behavior, terminology, or documentation rules for the project.
+- `top-level section` — a section introduced by an `h2` Markdown header.
+- `nested section` — a section introduced by an `h3` or deeper Markdown header.
+
 ## Sections
 
 A specification MUST contain a single `h1` header with the name of the specification, which SHOULD be unique across all specifications.
@@ -23,14 +29,21 @@ Sections that are mandatory for all specifications:
 - `Goal of the document` — a brief description of what the specification is about and what it aims to achieve.
 - `Scope` — a brief description of what the specification covers and what it intentionally does not cover.
 
-Mandatory sections SHOULD be placed first in this order:
+Optional sections:
+
+- `Dictionary` — a list of terms that are specific to the specification.
+
+The first sections of a specification SHOULD be placed in this order:
 
 1. `Goal of the document`
 2. `Scope`
+3. `Dictionary`, when the section exists
 
 The `Goal of the document` section MUST describe the content and purpose of the document. It MUST NOT define requirements for the document itself, such as saying that the document MUST define, MUST list, or MUST describe something.
 
 The `Scope` section MUST describe the boundaries of the specification. It SHOULD be descriptive rather than normative when it explains what the document covers. It SHOULD explicitly mention important topics that are out of scope when those boundaries are useful for readers or future authors.
+
+The `Dictionary` section SHOULD be placed immediately after the `Scope` section. It SHOULD contain only terms that are specific to the specification. Terms that are used by multiple specifications SHOULD be defined in `./specs/dictionary.md`.
 
 ## Style
 

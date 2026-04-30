@@ -19,5 +19,6 @@ Detailed requirements for individual specifications are out of scope except for 
 ## Specification documents
 
 - `./specs/intro.md` — this file, contains a list of all specifications and their brief descriptions.
+- `./specs/dictionary.md` — dictionary of project-specific terms shared by multiple specifications.
 - `./specs/behavior/cli.md` — specification of the `depmesh` command line interface.
 - `./specs/meta/general.md` — general requirements for specification documents.
