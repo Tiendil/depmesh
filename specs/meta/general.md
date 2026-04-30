@@ -2,7 +2,7 @@
 
 ## Goal of the document
 
-Set the general requirements for specifications in this project.
+This document describes the general requirements for specifications in this project.
 
 ## Sections
 
@@ -13,6 +13,8 @@ All other information SHOULD be organized in sections with `h2` headers.
 Sections that are mandatory for all specifications:
 
 - `Goal of the document` — a brief description of what the specification is about and what it aims to achieve.
+
+The `Goal of the document` section MUST describe the content and purpose of the document. It MUST NOT define requirements for the document itself, such as saying that the document MUST define, MUST list, or MUST describe something.
 
 ## Style
 

@@ -2,7 +2,7 @@
 
 ## Goal of the document
 
-This document MUST list all specification documents and specification directories in the project and briefly describe their purpose.
+This document lists all specification documents and specification directories in the project and briefly describes their purpose.
 
 ## Specification directories
 
