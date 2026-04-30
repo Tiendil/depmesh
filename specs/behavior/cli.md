@@ -32,6 +32,8 @@ Diagnostics that are not part of the requested output MUST be written to stderr.
 
 For `automation` output, stdout MUST contain only valid JSON Lines records.
 
+Diagnostics written to stderr MAY be plain text and MAY be non-JSONL, including when `--protocol automation` was requested.
+
 The CLI MUST produce deterministic output for the same input, configuration, working directory, and project state.
 
 ## Commands
@@ -131,7 +133,7 @@ Known record types MUST include:
 
 - `dependency` — one merged dependency entry.
 - `warning` — non-fatal problem.
-- `skill` — one section of agent-oriented tool usage information.
+- `skill` — record emitted by `depmesh --skill --protocol automation`; record content is outside this specification.
 - `error` — fatal problem, emitted before a non-zero exit when possible.
 
 Additional fields MAY be added in future versions. Consumers MUST ignore unknown fields.
@@ -350,6 +352,64 @@ Example output:
 {"type":"dependency","relation":"tests","dependency":"./src/tests/test_do_smth.py"}
 ```
 
+### Example: human output with warnings
+
+Command:
+
+```bash
+depmesh ./src/do_smth.py
+```
+
+Example output:
+
+```text
+imports:
+  ./src/another_module.py
+  ./src/some_module.py
+
+warnings:
+  relation `imports`: skipped unresolved dependency `third_party_package`
+```
+
+### Example: LLM output with warnings
+
+Command:
+
+```bash
+depmesh --protocol llm ./src/do_smth.py
+```
+
+Example output:
+
+```text
+## imports
+
+Files imported by the input artifacts.
+
+- ./src/another_module.py
+- ./src/some_module.py
+
+## warnings
+
+- relation `imports`: skipped unresolved dependency `third_party_package`
+```
+
+### Example: automation output with warnings
+
+Command:
+
+```bash
+depmesh --protocol automation ./src/do_smth.py
+```
+
+Example output:
+
+```jsonl
+{"type":"dependency","relation":"imports","dependency":"./src/another_module.py"}
+{"type":"dependency","relation":"imports","dependency":"./src/some_module.py"}
+{"type":"warning","relation":"imports","message":"skipped unresolved dependency `third_party_package`"}
+```
+
 ## Skill command form
 
 The `depmesh --skill` command form MUST print extensive instructions for coding agents that want to use `depmesh` effectively.
@@ -436,6 +496,8 @@ The CLI SHOULD use these exit codes:
 Human and LLM error messages SHOULD be written to stderr.
 
 For automation output, fatal errors SHOULD be written to stdout as an `error` record when possible and the process SHOULD still exit with a non-zero code.
+
+If automation output cannot be initialized, fatal diagnostics MAY be written to stderr as plain text instead of stdout as JSON Lines.
 
 Example automation fatal error:
 
