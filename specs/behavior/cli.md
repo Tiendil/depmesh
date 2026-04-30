@@ -55,8 +55,6 @@ Dependency query output MUST order relation groups alphabetically by displayed r
 
 Dependency query output MUST order dependencies alphabetically inside each relation group.
 
-Dependency query output MUST use relation ids for the current query direction.
-
 If a relation from `x` to `y` has relation id `relation_id` and reverse relation id `reverse_relation_id`, forward output for `x` MUST group `y` under `relation_id`, and reverse output for `y` MUST group `x` under `reverse_relation_id`.
 
 When multiple artifact identifiers are provided, dependency query output MUST contain merged dependencies for all input artifacts.
