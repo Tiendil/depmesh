@@ -4,6 +4,12 @@
 
 This document describes the general requirements for specifications in this project.
 
+## Scope
+
+The scope of this specification is limited to requirements for specification documents in this project.
+
+Project behavior, implementation requirements, and product requirements are out of scope except when they affect how specification documents should be written.
+
 ## Sections
 
 A specification MUST contain a single `h1` header with the name of the specification, which SHOULD be unique across all specifications.
@@ -13,8 +19,16 @@ All other information SHOULD be organized in sections with `h2` headers.
 Sections that are mandatory for all specifications:
 
 - `Goal of the document` — a brief description of what the specification is about and what it aims to achieve.
+- `Scope` — a brief description of what the specification covers and what it intentionally does not cover.
+
+Mandatory sections SHOULD be placed first in this order:
+
+1. `Goal of the document`
+2. `Scope`
 
 The `Goal of the document` section MUST describe the content and purpose of the document. It MUST NOT define requirements for the document itself, such as saying that the document MUST define, MUST list, or MUST describe something.
+
+The `Scope` section MUST describe the boundaries of the specification. It SHOULD be descriptive rather than normative when it explains what the document covers. It SHOULD explicitly mention important topics that are out of scope when those boundaries are useful for readers or future authors.
 
 ## Style
 
