@@ -37,6 +37,12 @@ The preferred command form for running tests is:
 
 Tests SHOULD be deterministic for the same repository state and filesystem state.
 
+Tests SHOULD prefer end-to-end coverage through public boundaries when that is practical for the behavior under test.
+
+Tests SHOULD use mocks, stubs, and monkeypatching as little as possible.
+
+Tests SHOULD prefer real project code, temporary files, and explicit fixtures over mocked collaborators.
+
 Tests MUST NOT depend on network access.
 
 Tests MUST NOT depend on user-specific files outside test-created temporary directories.
