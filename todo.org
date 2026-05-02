@@ -5,8 +5,6 @@
 
 ** tags
 
-* tests
-
 * package building and publishing
 
 * AGENTS.md
@@ -23,14 +21,7 @@
 
 * should depmesh paths logic be in sync with donna's paths logic?
 
-* remove calling _query_forward from _query_reverse
-
-** remove _project_files
-
 * Improve CLI help texts
 
 * sync all files between each other, especially specs
-
-* r.id, r.reverse_id -> r.forward_id, r.backward_id?
-
 * list all relations
