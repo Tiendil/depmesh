@@ -232,7 +232,7 @@ CLI tests SHOULD cover:
 - output protocol selection.
 - dependency output grouping and ordering.
 - relation filtering.
-- backward relation id queries.
+- explicitly configured reverse relation queries.
 - warnings.
 - errors and exit codes.
 

@@ -10,10 +10,8 @@ RelationId = NewType("RelationId", str)
 
 
 class Relation(BaseEntity):
-    forward_id: RelationId
-    backward_id: RelationId
-    forward_description: RelationDescription | None = None
-    backward_description: RelationDescription | None = None
+    id: RelationId
+    description: RelationDescription | None = None
 
 
 class Dependency(BaseEntity):

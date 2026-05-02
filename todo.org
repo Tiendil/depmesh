@@ -32,3 +32,5 @@
 * sync all files between each other, especially specs
 
 * r.id, r.reverse_id -> r.forward_id, r.backward_id?
+
+* list all relations

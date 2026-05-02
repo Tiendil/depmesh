@@ -20,20 +20,18 @@ RELATION_ID_RE = re.compile(r"^[a-z0-9_]+$")
 class RelationConfig(Relation):
     def to_relation(self) -> Relation:
         return Relation(
-            forward_id=self.forward_id,
-            backward_id=self.backward_id,
-            forward_description=self.forward_description,
-            backward_description=self.backward_description,
+            id=self.id,
+            description=self.description,
         )
 
-    @pydantic.field_validator("forward_id", "backward_id")
+    @pydantic.field_validator("id")
     @classmethod
     def validate_relation_id(cls, value: str) -> RelationId:
         if not RELATION_ID_RE.fullmatch(value):
             raise ValueError("relation id must contain only lowercase ASCII letters, digits, and underscores")
         return RelationId(value)
 
-    @pydantic.field_validator("forward_description", "backward_description")
+    @pydantic.field_validator("description")
     @classmethod
     def validate_description(cls, value: str | None) -> RelationDescription | None:
         if value == "":
@@ -51,12 +49,11 @@ class Config(BaseEntity):
         seen_ids: set[RelationId] = set()
 
         for relation in self.relations:
-            for relation_id in (relation.forward_id, relation.backward_id):
-                if relation_id in seen_ids:
-                    raise ValueError(f"duplicate relation id `{relation_id}`")
-                seen_ids.add(relation_id)
+            if relation.id in seen_ids:
+                raise ValueError(f"duplicate relation id `{relation.id}`")
+            seen_ids.add(relation.id)
 
-        relation_ids = {relation.forward_id for relation in self.relations}
+        relation_ids = {relation.id for relation in self.relations}
         for rule in self.rules:
             if rule.relation not in relation_ids:
                 raise ValueError(f"rule references unknown relation `{rule.relation}`")
@@ -70,13 +67,5 @@ class Workspace(BaseEntity):
     rules: tuple[DependencyRule, ...] = ()
 
     @cached_property
-    def relations_by_forward_id(self) -> dict[RelationId, Relation]:
-        return {relation.forward_id: relation for relation in self.relations}
-
-    @cached_property
-    def relations_by_backward_id(self) -> dict[RelationId, Relation]:
-        return {relation.backward_id: relation for relation in self.relations}
-
-    @cached_property
     def relations_by_id(self) -> dict[RelationId, Relation]:
-        return self.relations_by_forward_id | self.relations_by_backward_id
+        return {relation.id: relation for relation in self.relations}

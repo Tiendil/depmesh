@@ -23,8 +23,7 @@ The following topics are out of scope:
 This specification may refer to the following concepts only to describe how the CLI accepts arguments and renders output:
 
 - configured relations.
-- forward relation ids.
-- backward relation ids.
+- relation ids.
 - relation descriptions.
 - configuration paths.
 
@@ -94,20 +93,17 @@ Output MUST NOT contain:
 - styling.
 - other control sequences.
 
-Dependency query output MUST group dependencies by directional relation id.
+Dependency query output MUST group dependencies by relation id.
 
-Dependency query output MUST order relation groups alphabetically by directional relation id.
+Dependency query output MUST order relation groups alphabetically by relation id.
 
 Dependency query output MUST order dependencies alphabetically inside each relation group.
 
-The `show` command MUST always treat each input artifact as the left side of selected directional relations and MUST output artifacts found on the right side of those directional relations.
+The `show` command MUST always treat each input artifact as the left side of selected relations and MUST output artifacts found on the right side of those relations.
 
-If a configured relation from `x` to `y` has forward relation id `forward_relation_id` and backward relation id `backward_relation_id`:
+Relations are single-directional. Reverse lookups MUST be represented by separate configured relations and rules.
 
-- selecting `forward_relation_id` for input `x` MUST return `y`.
-- selecting `backward_relation_id` for input `y` MUST return `x`.
-
-Dependency query output MUST group dependencies under the selected directional relation id that produced them.
+Dependency query output MUST group dependencies under the selected relation id that produced them.
 
 When multiple artifact identifiers are provided, dependency query output MUST contain merged dependencies for all input artifacts.
 
@@ -167,9 +163,9 @@ LLM output SHOULD be concise and SHOULD avoid redundant information.
 
 LLM output SHOULD prefer stable identifiers and explicit paths over compact visual formatting.
 
-LLM output MUST include the configured directional relation description between a relation `h2` heading and the dependency list for that relation when the directional relation description is not `None`.
+LLM output MUST include the configured relation description between a relation `h2` heading and the dependency list for that relation when the relation description is not `None`.
 
-LLM output MUST NOT display a relation description, placeholder, or blank description paragraph when the directional relation description is `None`.
+LLM output MUST NOT display a relation description, placeholder, or blank description paragraph when the relation description is `None`.
 
 ### Automation output
 
@@ -266,13 +262,9 @@ The CLI MAY also include normalized or resolved artifact identifiers when useful
 
 `-r RELATION_ID` and `--relation RELATION_ID` MUST limit output to the specified relation.
 
-`RELATION_ID` MUST match either a configured forward relation id or a configured backward relation id.
+`RELATION_ID` MUST match a configured relation id.
 
-`RELATION_ID` MUST be interpreted as a directional relation id.
-
-When `RELATION_ID` matches a configured forward relation id, the command MUST use configured forward dependency rules for that relation.
-
-When `RELATION_ID` matches a configured backward relation id, the command MUST derive dependencies in the backward direction from configured forward dependency rules for the corresponding relation.
+When `RELATION_ID` matches a configured relation id, the command MUST use configured dependency rules for that relation.
 
 This option MAY be repeated to include multiple relations.
 
@@ -284,7 +276,7 @@ Example:
 depmesh show -r imports -r tests ./src/do_smth.py
 ```
 
-If omitted, all configured directional relation ids MUST be included.
+If omitted, all configured relation ids MUST be included.
 
 ### Example: default human output
 
@@ -346,7 +338,7 @@ tests:
   ./src/tests/test_do_smth.py
 ```
 
-### Example: backward relation id
+### Example: reverse relation
 
 Command:
 
