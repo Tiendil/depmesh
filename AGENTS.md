@@ -63,6 +63,22 @@ When entities, errors, warnings, or module layout are affected, agents MUST chec
 
 ## Tool Priority
 
+Use `depmesh` to discover dependencies between project artifacts.
+
+Agents MUST use `depmesh` for dependency types supported by its configuration.
+
+Run `depmesh` through the development container:
+
+```bash
+./bin/dev.sh uv run -- depmesh ...
+```
+
+At the start of each work session, read the `depmesh` usage instructions:
+
+```bash
+./bin/dev.sh uv run -- depmesh -p llm skill usage
+```
+
 Use `rg` for text and file searches unless a structural code query is needed.
 
 Use `ast-grep` for structural Python code searches and code-pattern refactors.
