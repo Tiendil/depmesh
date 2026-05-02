@@ -60,8 +60,7 @@ def show(
         workspace = load_config(global_options.config)
         result = query_dependencies(
             Path(workspace.root),
-            workspace.relations_by_forward_id,
-            workspace.relations_by_backward_id,
+            workspace.relations_by_id,
             workspace.rules,
             artifacts,
             relation_filters=relations,

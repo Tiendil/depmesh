@@ -16,15 +16,12 @@ def touch(path: Path) -> None:
     path.write_text("", encoding="utf-8")
 
 
-def make_relation(forward_id: str, backward_id: str) -> Relation:
-    return Relation(forward_id=RelationId(forward_id), backward_id=RelationId(backward_id))
+def make_relation(relation_id: str) -> Relation:
+    return Relation(id=RelationId(relation_id))
 
 
-def make_relation_indexes(*relations: Relation) -> tuple[dict[RelationId, Relation], dict[RelationId, Relation]]:
-    return (
-        {relation.forward_id: relation for relation in relations},
-        {relation.backward_id: relation for relation in relations},
-    )
+def make_relation_index(*relations: Relation) -> dict[RelationId, Relation]:
+    return {relation.id: relation for relation in relations}
 
 
 def make_rules(*raw_rules: dict[str, object]) -> tuple[DependencyRule, ...]:
@@ -32,12 +29,12 @@ def make_rules(*raw_rules: dict[str, object]) -> tuple[DependencyRule, ...]:
 
 
 class TestQueryDependencies:
-    def test_forward_query_merges_and_orders_dependencies(self, tmp_path: Path) -> None:
+    def test_merges_and_orders_dependencies(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")
         touch(tmp_path / "src/b.py")
         touch(tmp_path / "tests/test_a.py")
         touch(tmp_path / "tests/test_b.py")
-        relations = (make_relation("tests", "tested_by"),)
+        relations = (make_relation("tests"),)
         rules = make_rules(
             {
                 "relation": "tests",
@@ -54,7 +51,7 @@ class TestQueryDependencies:
 
         result = query_dependencies(
             tmp_path,
-            *make_relation_indexes(*relations),
+            make_relation_index(*relations),
             rules,
             [ArtifactId("./src/a.py"), ArtifactId("./src/b.py")],
             cwd=tmp_path,
@@ -62,11 +59,11 @@ class TestQueryDependencies:
 
         assert result.grouped() == {"tests": ["./tests/test_a.py", "./tests/test_b.py"]}
 
-    def test_forward_query_uses_regex_dependency_expression(self, tmp_path: Path) -> None:
+    def test_uses_regex_dependency_expression(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")
         touch(tmp_path / "specs/a.md")
         touch(tmp_path / "specs/b.md")
-        relations = (make_relation("specs", "specified_by"),)
+        relations = (make_relation("specs"),)
         rules = make_rules(
             {
                 "relation": "specs",
@@ -77,7 +74,7 @@ class TestQueryDependencies:
 
         result = query_dependencies(
             tmp_path,
-            *make_relation_indexes(*relations),
+            make_relation_index(*relations),
             rules,
             [ArtifactId("src/a.py")],
             cwd=tmp_path,
@@ -85,10 +82,10 @@ class TestQueryDependencies:
 
         assert result.grouped() == {"specs": ["./specs/a.md"]}
 
-    def test_forward_query_uses_command_expression(self, tmp_path: Path) -> None:
+    def test_uses_command_expression(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")
         touch(tmp_path / "tests/test_a.py")
-        relations = (make_relation("tests", "tested_by"),)
+        relations = (make_relation("tests"),)
         rules = make_rules(
             {
                 "relation": "tests",
@@ -99,7 +96,7 @@ class TestQueryDependencies:
 
         result = query_dependencies(
             tmp_path,
-            *make_relation_indexes(*relations),
+            make_relation_index(*relations),
             rules,
             [ArtifactId("./src/a.py")],
             cwd=tmp_path,
@@ -110,7 +107,7 @@ class TestQueryDependencies:
     def test_path_expression_missing_file_adds_warning(self, tmp_path: Path) -> None:
         warnings.clear()
         touch(tmp_path / "src/a.py")
-        relations = (make_relation("tests", "tested_by"),)
+        relations = (make_relation("tests"),)
         rules = make_rules(
             {
                 "relation": "tests",
@@ -121,7 +118,7 @@ class TestQueryDependencies:
 
         result = query_dependencies(
             tmp_path,
-            *make_relation_indexes(*relations),
+            make_relation_index(*relations),
             rules,
             [ArtifactId("./src/a.py")],
             cwd=tmp_path,
@@ -131,11 +128,11 @@ class TestQueryDependencies:
         assert warnings.read() == ["relation `tests`: skipped missing dependency `./tests/test_a.py`"]
         warnings.clear()
 
-    def test_relation_filter_uses_backward_relation_id_direction(self, tmp_path: Path) -> None:
+    def test_relation_filter_uses_explicit_relation_id(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")
         touch(tmp_path / "tests/test_a.py")
         touch(tmp_path / "specs/a.md")
-        relations = (make_relation("tests", "tested_by"), make_relation("specs", "specified_by"))
+        relations = (make_relation("tests"), make_relation("specs"))
         rules = make_rules(
             {
                 "relation": "tests",
@@ -151,7 +148,60 @@ class TestQueryDependencies:
 
         result = query_dependencies(
             tmp_path,
-            *make_relation_indexes(*relations),
+            make_relation_index(*relations),
+            rules,
+            [ArtifactId("./src/a.py")],
+            relation_filters=[RelationId("tests")],
+            cwd=tmp_path,
+        )
+
+        assert result.grouped() == {"tests": ["./tests/test_a.py"]}
+
+    def test_omitted_relation_filter_searches_all_explicit_relations(self, tmp_path: Path) -> None:
+        touch(tmp_path / "src/a.py")
+        touch(tmp_path / "tests/test_a.py")
+        relations = (make_relation("tests"), make_relation("tested_by"))
+        rules = make_rules(
+            {
+                "relation": "tests",
+                "artifact": {"type": "glob", "pattern": "./src/{*module}.py"},
+                "dependency": {"type": "path", "path": "./tests/test_{module}.py"},
+            },
+            {
+                "relation": "tested_by",
+                "artifact": {"type": "glob", "pattern": "./tests/test_{*module}.py"},
+                "dependency": {"type": "path", "path": "./src/{module}.py"},
+            },
+        )
+
+        result = query_dependencies(
+            tmp_path,
+            make_relation_index(*relations),
+            rules,
+            [ArtifactId("./src/a.py"), ArtifactId("./tests/test_a.py")],
+            cwd=tmp_path,
+        )
+
+        assert result.grouped() == {
+            "tested_by": ["./src/a.py"],
+            "tests": ["./tests/test_a.py"],
+        }
+
+    def test_reverse_lookup_requires_explicit_relation_and_rule(self, tmp_path: Path) -> None:
+        touch(tmp_path / "src/a.py")
+        touch(tmp_path / "tests/test_a.py")
+        relations = (make_relation("tested_by"),)
+        rules = make_rules(
+            {
+                "relation": "tested_by",
+                "artifact": {"type": "glob", "pattern": "./tests/test_{*module}.py"},
+                "dependency": {"type": "path", "path": "./src/{module}.py"},
+            }
+        )
+
+        result = query_dependencies(
+            tmp_path,
+            make_relation_index(*relations),
             rules,
             [ArtifactId("./tests/test_a.py")],
             relation_filters=[RelationId("tested_by")],
@@ -160,58 +210,7 @@ class TestQueryDependencies:
 
         assert result.grouped() == {"tested_by": ["./src/a.py"]}
 
-    def test_omitted_relation_filter_searches_forward_and_backward_relations(self, tmp_path: Path) -> None:
-        touch(tmp_path / "src/a.py")
-        touch(tmp_path / "tests/test_a.py")
-        relations = (make_relation("tests", "tested_by"),)
-        rules = make_rules(
-            {
-                "relation": "tests",
-                "artifact": {"type": "glob", "pattern": "./src/{*module}.py"},
-                "dependency": {"type": "path", "path": "./tests/test_{module}.py"},
-            }
-        )
-
-        result = query_dependencies(
-            tmp_path,
-            *make_relation_indexes(*relations),
-            rules,
-            [ArtifactId("./src/a.py"), ArtifactId("./tests/test_a.py")],
-            cwd=tmp_path,
-        )
-
-        assert result.grouped() == {
-            "tested_by": ["./src/a.py"],
-            "tests": ["./tests/test_a.py"],
-        }
-
-    def test_relation_filter_supports_mixed_directions(self, tmp_path: Path) -> None:
-        touch(tmp_path / "src/a.py")
-        touch(tmp_path / "tests/test_a.py")
-        relations = (make_relation("tests", "tested_by"),)
-        rules = make_rules(
-            {
-                "relation": "tests",
-                "artifact": {"type": "glob", "pattern": "./src/{*module}.py"},
-                "dependency": {"type": "path", "path": "./tests/test_{module}.py"},
-            }
-        )
-
-        result = query_dependencies(
-            tmp_path,
-            *make_relation_indexes(*relations),
-            rules,
-            [ArtifactId("./src/a.py"), ArtifactId("./tests/test_a.py")],
-            relation_filters=[RelationId("tests"), RelationId("tested_by")],
-            cwd=tmp_path,
-        )
-
-        assert result.grouped() == {
-            "tested_by": ["./src/a.py"],
-            "tests": ["./tests/test_a.py"],
-        }
-
-    def test_forward_query_skips_rule_with_missing_relation(self, tmp_path: Path) -> None:
+    def test_skips_rule_with_missing_relation(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")
         touch(tmp_path / "tests/test_a.py")
         rules = make_rules(
@@ -224,7 +223,6 @@ class TestQueryDependencies:
 
         result = query_dependencies(
             tmp_path,
-            {},
             {},
             rules,
             [ArtifactId("./src/a.py")],
@@ -234,37 +232,14 @@ class TestQueryDependencies:
         assert result.grouped() == {}
 
     def test_unknown_relation_filter(self, tmp_path: Path) -> None:
-        relations = (make_relation("tests", "tested_by"),)
+        relations = (make_relation("tests"),)
 
         with pytest.raises(errors.UnknownRelationFilter):
             query_dependencies(
                 tmp_path,
-                *make_relation_indexes(*relations),
+                make_relation_index(*relations),
                 (),
                 [ArtifactId("./src/a.py")],
                 relation_filters=[RelationId("missing")],
                 cwd=tmp_path,
             )
-
-    def test_backward_relation_id_query_uses_backward_relation_id(self, tmp_path: Path) -> None:
-        touch(tmp_path / "src/a.py")
-        touch(tmp_path / "tests/test_a.py")
-        relations = (make_relation("tests", "tested_by"),)
-        rules = make_rules(
-            {
-                "relation": "tests",
-                "artifact": {"type": "glob", "pattern": "./src/{*module}.py"},
-                "dependency": {"type": "path", "path": "./tests/test_{module}.py"},
-            }
-        )
-
-        result = query_dependencies(
-            tmp_path,
-            *make_relation_indexes(*relations),
-            rules,
-            [ArtifactId("./tests/test_a.py")],
-            relation_filters=[RelationId("tested_by")],
-            cwd=tmp_path,
-        )
-
-        assert result.grouped() == {"tested_by": ["./src/a.py"]}
