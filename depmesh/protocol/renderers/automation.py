@@ -41,5 +41,19 @@ class AutomationRendered(Rendered):
     def render_skill(self) -> str:
         return to_jsonl({"type": "skill", "text": load_skill_text()})
 
+    def render_relations(self, relations: tuple[Relation, ...]) -> str:
+        lines = []
+
+        for relation in sorted(relations, key=lambda item: item.id):
+            record: dict[str, object] = {
+                "type": "relation",
+                "id": relation.id,
+            }
+            if relation.description is not None:
+                record["description"] = relation.description
+            lines.append(to_jsonl(record))
+
+        return "".join(lines)
+
     def render_error(self, error_record: dict[str, object]) -> str:
         return to_jsonl(error_record)

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from importlib import metadata
 from pathlib import Path
 
@@ -13,8 +15,10 @@ from depmesh.core import warnings
 from depmesh.discovery import errors as discovery_errors
 from depmesh.discovery.query import query_dependencies
 from depmesh.protocol import OutputProtocol, renderer
+from depmesh.protocol.renderers import Rendered
 from depmesh.workspace import errors as workspace_errors
 from depmesh.workspace.config import load_config
+from depmesh.workspace.entities import Workspace
 
 EXIT_INVALID_ARGUMENTS = 1
 EXIT_CONFIG = 2
@@ -25,7 +29,7 @@ GLOBAL_OPTIONS_CONTEXT_KEY = "depmesh_global_options"
 app = typer.Typer(
     add_completion=False,
     context_settings={"help_option_names": ["-h", "--help"]},
-    help="Print configured dependencies for one or more artifacts.",
+    help="Inspect configured relations and dependencies.",
     no_args_is_help=False,
 )
 
@@ -43,21 +47,17 @@ def root(
     context.meta[GLOBAL_OPTIONS_CONTEXT_KEY] = GlobalOptions(protocol=protocol, config=config)
 
 
-@app.command("show")
-def show(
+@app.command("dependencies")
+@app.command("deps")
+def dependencies(
     context: typer.Context,
     artifacts: ArtifactsArgument = None,
     relation: RelationOption = None,
 ) -> None:
-    warnings.clear()
-
-    global_options = _global_options(context)
     relations = relation or []
-    selected_protocol = global_options.protocol or OutputProtocol.human
-    selected_renderer = renderer(selected_protocol)
 
-    try:
-        workspace = load_config(global_options.config)
+    with command_context(context, default_protocol=OutputProtocol.human) as command:
+        workspace = command.load_workspace()
         result = query_dependencies(
             Path(workspace.root),
             workspace.relations_by_id,
@@ -66,47 +66,83 @@ def show(
             relation_filters=relations,
             cwd=Path.cwd(),
         )
-        sys.stdout.write(
-            selected_renderer.render_query(
+        command.write(
+            command.renderer.render_query(
                 result,
                 warnings.read(),
                 relations=workspace.relations,
             )
         )
-        raise typer.Exit(0)
 
-    except cli_errors.Error as error:
-        _render_fatal(error, protocol=selected_protocol)
-        raise typer.Exit(EXIT_INVALID_ARGUMENTS) from error
-    except workspace_errors.Error as error:
-        _render_fatal(error, protocol=selected_protocol)
-        raise typer.Exit(EXIT_CONFIG) from error
-    except discovery_errors.Error as error:
-        _render_fatal(error, protocol=selected_protocol)
-        raise typer.Exit(EXIT_QUERY) from error
-    except core_errors.Error as error:
-        _render_fatal(error, protocol=selected_protocol)
-        raise typer.Exit(EXIT_PROJECT_ERROR) from error
+
+@app.command("relations")
+@app.command("rels")
+def relations(context: typer.Context) -> None:
+    with command_context(context, default_protocol=OutputProtocol.human) as command:
+        workspace = command.load_workspace()
+        command.write(command.renderer.render_relations(workspace.relations))
 
 
 @app.command("skill")
 def skill(context: typer.Context) -> None:
-    warnings.clear()
-
-    global_options = _global_options(context)
-    selected_protocol = global_options.protocol or OutputProtocol.llm
-
-    sys.stdout.write(renderer(selected_protocol).render_skill())
-    raise typer.Exit(0)
+    with command_context(context, default_protocol=OutputProtocol.llm) as command:
+        command.write(command.renderer.render_skill())
 
 
 @app.command("version")
 def version(context: typer.Context) -> None:
-    warnings.clear()
-    _global_options(context)
+    with command_context(context, default_protocol=OutputProtocol.human) as command:
+        command.write(metadata.version("depmesh") + "\n")
 
-    sys.stdout.write(metadata.version("depmesh") + "\n")
-    raise typer.Exit(0)
+
+class CommandContext:
+    __slots__ = ("global_options", "protocol", "renderer")
+
+    def __init__(self, context: typer.Context, *, default_protocol: OutputProtocol) -> None:
+        self.global_options = _global_options(context)
+        self.protocol = self.global_options.protocol or default_protocol
+        self.renderer: Rendered = renderer(self.protocol)
+
+    def load_workspace(self) -> Workspace:
+        return load_config(self.global_options.config)
+
+    def write(self, text: str) -> None:
+        sys.stdout.write(text)
+
+    def render_fatal(self, error: core_errors.Error) -> None:
+        rendered = self.renderer.render_error(error.as_record())
+
+        if self.protocol is OutputProtocol.automation:
+            sys.stdout.write(rendered)
+        else:
+            sys.stderr.write(rendered)
+
+
+@contextmanager
+def command_context(
+    context: typer.Context,
+    *,
+    default_protocol: OutputProtocol,
+) -> Iterator[CommandContext]:
+    warnings.clear()
+    command_context = CommandContext(context, default_protocol=default_protocol)
+
+    try:
+        yield command_context
+        raise typer.Exit(0)
+
+    except cli_errors.Error as error:
+        command_context.render_fatal(error)
+        raise typer.Exit(EXIT_INVALID_ARGUMENTS) from error
+    except workspace_errors.Error as error:
+        command_context.render_fatal(error)
+        raise typer.Exit(EXIT_CONFIG) from error
+    except discovery_errors.Error as error:
+        command_context.render_fatal(error)
+        raise typer.Exit(EXIT_QUERY) from error
+    except core_errors.Error as error:
+        command_context.render_fatal(error)
+        raise typer.Exit(EXIT_PROJECT_ERROR) from error
 
 
 def _global_options(context: typer.Context) -> GlobalOptions:
@@ -114,12 +150,3 @@ def _global_options(context: typer.Context) -> GlobalOptions:
     if isinstance(global_options, GlobalOptions):
         return global_options
     return GlobalOptions()
-
-
-def _render_fatal(error: core_errors.Error, *, protocol: OutputProtocol) -> None:
-    rendered = renderer(protocol).render_error(error.as_record())
-
-    if protocol is OutputProtocol.automation:
-        sys.stdout.write(rendered)
-    else:
-        sys.stderr.write(rendered)

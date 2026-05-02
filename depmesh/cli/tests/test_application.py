@@ -46,7 +46,7 @@ dependency = { type = "path", path = "./src/{module}.py" }
 
 class TestApp:
     def test_protocol_choices__match_cli_contract(self) -> None:
-        result = CliRunner().invoke(app, ["--protocol", "invalid", "show", "./src/a.py"])
+        result = CliRunner().invoke(app, ["--protocol", "invalid", "dependencies", "./src/a.py"])
 
         assert result.exit_code == 1
         assert "human" in result.output
@@ -54,7 +54,7 @@ class TestApp:
         assert "automation" in result.output
 
 
-class TestShow:
+class TestDependencies:
     def test_empty_config_outputs_no_dependencies(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -62,7 +62,7 @@ class TestShow:
         config_path.write_text("", encoding="utf-8")
         monkeypatch.chdir(tmp_path)
 
-        result = CliRunner().invoke(app, ["show", "./src/a.py"])
+        result = CliRunner().invoke(app, ["dependencies", "./src/a.py"])
 
         assert result.exit_code == 0
         assert result.output == ""
@@ -71,7 +71,7 @@ class TestShow:
         write_project(tmp_path)
         monkeypatch.chdir(tmp_path)
 
-        result = CliRunner().invoke(app, ["show", "./src/a.py"])
+        result = CliRunner().invoke(app, ["dependencies", "./src/a.py"])
 
         assert result.exit_code == 0
         assert result.output == "tests:\n  ./tests/test_a.py\n"
@@ -82,7 +82,7 @@ class TestShow:
         write_project(tmp_path)
         monkeypatch.chdir(tmp_path)
 
-        result = CliRunner().invoke(app, ["--protocol", "llm", "show", "./src/a.py"])
+        result = CliRunner().invoke(app, ["--protocol", "llm", "dependencies", "./src/a.py"])
 
         assert result.exit_code == 0
         assert result.output == (
@@ -97,7 +97,7 @@ class TestShow:
         write_project(tmp_path)
         monkeypatch.chdir(tmp_path)
 
-        result = CliRunner().invoke(app, ["--protocol", "automation", "show", "./src/a.py"])
+        result = CliRunner().invoke(app, ["--protocol", "automation", "dependencies", "./src/a.py"])
 
         assert result.exit_code == 0
         records = [json.loads(line) for line in result.output.splitlines()]
@@ -107,7 +107,7 @@ class TestShow:
         write_project(tmp_path)
         monkeypatch.chdir(tmp_path)
 
-        result = CliRunner().invoke(app, ["show", "--relation", "tested_by", "./tests/test_a.py"])
+        result = CliRunner().invoke(app, ["dependencies", "--relation", "tested_by", "./tests/test_a.py"])
 
         assert result.exit_code == 0
         assert result.output == "tested_by:\n  ./src/a.py\n"
@@ -118,25 +118,34 @@ class TestShow:
         write_project(tmp_path)
         monkeypatch.chdir(tmp_path)
 
-        result = CliRunner().invoke(app, ["show", "./tests/test_a.py"])
+        result = CliRunner().invoke(app, ["dependencies", "./tests/test_a.py"])
 
         assert result.exit_code == 0
         assert result.output == "tested_by:\n  ./src/a.py\n"
 
-    def test_protocol_is_not_a_show_option(self) -> None:
-        result = CliRunner().invoke(app, ["show", "--protocol", "llm", "./src/a.py"])
+    def test_short_alias(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        write_project(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["deps", "./src/a.py"])
+
+        assert result.exit_code == 0
+        assert result.output == "tests:\n  ./tests/test_a.py\n"
+
+    def test_protocol_is_not_a_dependencies_option(self) -> None:
+        result = CliRunner().invoke(app, ["dependencies", "--protocol", "llm", "./src/a.py"])
 
         assert result.exit_code != 0
         assert "--protocol" in result.output
 
     def test_invalid_arguments_exit_code(self) -> None:
-        result = CliRunner().invoke(app, ["show"])
+        result = CliRunner().invoke(app, ["dependencies"])
 
         assert result.exit_code == 1
         assert "at least one artifact is required" in result.output
 
     def test_config_error_exit_code(self, tmp_path: Path) -> None:
-        result = CliRunner().invoke(app, ["--config", str(tmp_path / "missing.toml"), "show", "./src/a.py"])
+        result = CliRunner().invoke(app, ["--config", str(tmp_path / "missing.toml"), "dependencies", "./src/a.py"])
 
         assert result.exit_code == 2
         assert "could not read configuration" in result.output
@@ -145,7 +154,7 @@ class TestShow:
         write_project(tmp_path)
         monkeypatch.chdir(tmp_path)
 
-        result = CliRunner().invoke(app, ["show", "--relation", "missing", "./src/a.py"])
+        result = CliRunner().invoke(app, ["dependencies", "--relation", "missing", "./src/a.py"])
 
         assert result.exit_code == 3
         assert "unknown relation `missing`" in result.output
@@ -153,11 +162,76 @@ class TestShow:
     def test_automation_error_is_stdout_json(self, tmp_path: Path) -> None:
         result = CliRunner().invoke(
             app,
-            ["--config", str(tmp_path / "missing.toml"), "--protocol", "automation", "show", "./src/a.py"],
+            ["--config", str(tmp_path / "missing.toml"), "--protocol", "automation", "dependencies", "./src/a.py"],
         )
 
         assert result.exit_code == 2
         assert json.loads(result.output)["type"] == "error"
+
+
+class TestRelations:
+    def test_human_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        write_project(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["relations"])
+
+        assert result.exit_code == 0
+        assert result.output == (
+            "tested_by:\n"
+            "  Artifacts tested by the input artifacts.\n\n"
+            "tests:\n"
+            "  Tests related to the input artifacts.\n"
+        )
+
+    def test_short_alias(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        write_project(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["rels"])
+
+        assert result.exit_code == 0
+        assert "tests:" in result.output
+
+    def test_llm_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        write_project(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["--protocol", "llm", "relations"])
+
+        assert result.exit_code == 0
+        assert result.output == (
+            "## tested_by\n\n"
+            "Artifacts tested by the input artifacts.\n\n"
+            "## tests\n\n"
+            "Tests related to the input artifacts.\n"
+        )
+
+    def test_automation_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        write_project(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["--protocol", "automation", "relations"])
+
+        assert result.exit_code == 0
+        assert [json.loads(line) for line in result.output.splitlines()] == [
+            {
+                "type": "relation",
+                "id": "tested_by",
+                "description": "Artifacts tested by the input artifacts.",
+            },
+            {
+                "type": "relation",
+                "id": "tests",
+                "description": "Tests related to the input artifacts.",
+            },
+        ]
+
+    def test_config_error_exit_code(self, tmp_path: Path) -> None:
+        result = CliRunner().invoke(app, ["--config", str(tmp_path / "missing.toml"), "relations"])
+
+        assert result.exit_code == 2
+        assert "could not read configuration" in result.output
 
 
 class TestSkill:

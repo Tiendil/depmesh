@@ -230,6 +230,7 @@ CLI tests SHOULD cover:
 - command forms.
 - option parsing.
 - output protocol selection.
+- relation list output.
 - dependency output grouping and ordering.
 - relation filtering.
 - explicitly configured reverse relation queries.

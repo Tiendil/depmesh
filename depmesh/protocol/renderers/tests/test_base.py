@@ -15,6 +15,9 @@ class RenderedForTests(Rendered):
     ) -> str:
         return "query\n"
 
+    def render_relations(self, relations: tuple[Relation, ...]) -> str:
+        return "relations\n"
+
 
 class TestRendered:
     def test_render_skill__returns_text_instructions(self) -> None:

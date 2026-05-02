@@ -21,5 +21,9 @@ class Rendered(abc.ABC):
     def render_skill(self) -> str:
         return load_skill_text()
 
+    @abc.abstractmethod
+    def render_relations(self, relations: tuple[Relation, ...]) -> str:
+        raise NotImplementedError
+
     def render_error(self, error_record: dict[str, object]) -> str:
         return str(error_record.get("message", "error")) + "\n"

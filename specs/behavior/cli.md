@@ -7,7 +7,7 @@ This document describes how `depmesh` behaves as a command line interface, inclu
 - how users and tools invoke it.
 - which commands and arguments are accepted.
 - which output protocols are supported.
-- what output shape each dependency query produces.
+- what output shape each relation list and dependency query produces.
 
 ## Scope
 
@@ -31,14 +31,20 @@ The exact Markdown text emitted by `depmesh skill` is out of scope.
 
 ## General behavior
 
-`depmesh` is a command line tool with explicit subcommands for dependency queries, skill text, and version output.
+`depmesh` is a command line tool that provides a generalized interface for discovering dependencies between files in a project. It supports multiple dependency discovery mechanisms, from glob pattern templates to third-party commands, so agents and developers can use one interface without needing to know exactly how each dependency relation is discovered.
+
+The CLI has two primary workflows:
+
+- `depmesh dependencies ...` — query dependencies for one or more artifacts.
+- `depmesh relations` — list available relation types and their descriptions.
 
 The root command MUST be a command group.
 
-Dependency queries MUST use the `show` command:
+Dependency queries MUST use the `dependencies` command or its `deps` alias:
 
 ```bash
-depmesh show [OPTIONS] ARTIFACT...
+depmesh dependencies [OPTIONS] ARTIFACT...
+depmesh deps [OPTIONS] ARTIFACT...
 ```
 
 Global options, when present, MUST be provided before the subcommand:
@@ -76,7 +82,10 @@ The CLI MUST produce deterministic output for the same:
 
 The CLI MUST support these commands and command forms:
 
-- `depmesh [GLOBAL_OPTIONS] show [OPTIONS] ARTIFACT...` — query dependencies for one or more artifacts.
+- `depmesh [GLOBAL_OPTIONS] dependencies [OPTIONS] ARTIFACT...` — query dependencies for one or more artifacts.
+- `depmesh [GLOBAL_OPTIONS] deps [OPTIONS] ARTIFACT...` — alias for `dependencies`.
+- `depmesh [GLOBAL_OPTIONS] relations` — list configured relations.
+- `depmesh [GLOBAL_OPTIONS] rels` — alias for `relations`.
 - `depmesh [GLOBAL_OPTIONS] skill` — print extensive agent-oriented instructions for using `depmesh`.
 - `depmesh [GLOBAL_OPTIONS] version` — print the tool version.
 - `depmesh --help` — print root help information.
@@ -99,7 +108,7 @@ Dependency query output MUST order relation groups alphabetically by relation id
 
 Dependency query output MUST order dependencies alphabetically inside each relation group.
 
-The `show` command MUST always treat each input artifact as the left side of selected relations and MUST output artifacts found on the right side of those relations.
+The `dependencies` command MUST always treat each input artifact as the left side of selected relations and MUST output artifacts found on the right side of those relations.
 
 Relations are single-directional. Reverse lookups MUST be represented by separate configured relations and rules.
 
@@ -114,6 +123,8 @@ Dependency query output MUST NOT group dependencies by input artifact. Users and
 Output SHOULD include non-fatal problems discovered while processing the request.
 
 Non-fatal problems SHOULD be represented as warnings.
+
+Relation list output MUST order relations alphabetically by relation id.
 
 ## Output protocols
 
@@ -188,6 +199,7 @@ The common JSONL record fields MUST be:
 Known record types MUST include:
 
 - `dependency` — one merged dependency entry.
+- `relation` — one configured relation entry.
 - `warning` — non-fatal problem.
 - `skill` — record emitted by `depmesh --protocol automation skill`; record content is outside this specification.
 - `error` — fatal problem, emitted before a non-zero exit when possible.
@@ -214,7 +226,7 @@ The selected protocol MUST be available to every subcommand.
 
 Subcommands that render protocol-specific output MUST use the selected protocol.
 
-For `depmesh show`, the default protocol MUST be `human`.
+For `depmesh dependencies` and `depmesh relations`, the default protocol MUST be `human`.
 
 For `depmesh skill`, the default protocol MUST be `llm`.
 
@@ -238,15 +250,18 @@ Subcommands that do not load workspace configuration MAY ignore this option.
 
 `PATH` MAY be relative to the current working directory or absolute.
 
-## Show Command
+## Dependencies Command
 
-The `show` command MUST query dependencies for one or more artifacts.
+The `dependencies` command MUST query dependencies for one or more artifacts.
 
 ```bash
-depmesh show [OPTIONS] ARTIFACT...
+depmesh dependencies [OPTIONS] ARTIFACT...
+depmesh deps [OPTIONS] ARTIFACT...
 ```
 
-The `show` command MUST accept:
+The `deps` command MUST be an alias for `dependencies`.
+
+The `dependencies` command MUST accept:
 
 - `-r`, `--relation RELATION_ID`.
 
@@ -273,17 +288,62 @@ When this option is repeated, output MUST include dependencies whose relation ma
 Example:
 
 ```bash
-depmesh show -r imports -r tests ./src/do_smth.py
+depmesh dependencies -r imports -r tests ./src/do_smth.py
 ```
 
 If omitted, all configured relation ids MUST be included.
+
+## Relations Command
+
+The `relations` command MUST list configured relations.
+
+```bash
+depmesh relations
+depmesh rels
+```
+
+The `rels` command MUST be an alias for `relations`.
+
+The command MUST NOT accept artifact arguments or dependency query options.
+
+The command MUST render all configured relations in deterministic order by relation id.
+
+For human output, each relation SHOULD be rendered as the relation id followed by its description when present.
+
+For LLM output, each relation MUST be rendered as a Markdown `h2` heading. The relation description MUST be included below the heading when present.
+
+For automation output, each relation MUST be rendered as one JSON Lines record:
+
+```json
+{"type":"relation","id":"tests","description":"Tests related to the input artifacts."}
+```
+
+The `description` field MUST be omitted when the relation has no description.
+
+### Example: relations human output
+
+Command:
+
+```bash
+depmesh relations
+```
+
+Example output:
+
+```text
+imports:
+  Python files imported by the input Python file.
+
+tests:
+  Tests related to the input artifacts.
+```
 
 ### Example: default human output
 
 Command:
 
 ```bash
-depmesh show ./src/do_smth.py
+depmesh dependencies ./src/do_smth.py
 ```
 
 Example output:
@@ -307,7 +367,7 @@ tests:
 Command:
 
 ```bash
-depmesh show ./src/do_smth.py ./src/another_module.py
+depmesh dependencies ./src/do_smth.py ./src/another_module.py
 ```
 
 Example output:
@@ -328,7 +388,7 @@ tests:
 Command:
 
 ```bash
-depmesh show --relation tests ./src/do_smth.py
+depmesh dependencies --relation tests ./src/do_smth.py
 ```
 
 Example output:
@@ -343,7 +403,7 @@ tests:
 Command:
 
 ```bash
-depmesh show --relation imported_by ./src/some_module.py
+depmesh dependencies --relation imported_by ./src/some_module.py
 ```
 
 Example output:
@@ -359,7 +419,7 @@ imported_by:
 Command:
 
 ```bash
-depmesh --protocol llm show ./src/do_smth.py
+depmesh --protocol llm dependencies ./src/do_smth.py
 ```
 
 Example output:
@@ -392,7 +452,7 @@ Tests related to the input artifacts.
 Command:
 
 ```bash
-depmesh --protocol automation show ./src/do_smth.py
+depmesh --protocol automation dependencies ./src/do_smth.py
 ```
 
 Example output:
@@ -411,7 +471,7 @@ Example output:
 Command:
 
 ```bash
-depmesh show ./src/do_smth.py
+depmesh dependencies ./src/do_smth.py
 ```
 
 Example output:
@@ -430,7 +490,7 @@ warnings:
 Command:
 
 ```bash
-depmesh --protocol llm show ./src/do_smth.py
+depmesh --protocol llm dependencies ./src/do_smth.py
 ```
 
 Example output:
@@ -453,7 +513,7 @@ Files imported by the input artifacts.
 Command:
 
 ```bash
-depmesh --protocol automation show ./src/do_smth.py
+depmesh --protocol automation dependencies ./src/do_smth.py
 ```
 
 Example output:

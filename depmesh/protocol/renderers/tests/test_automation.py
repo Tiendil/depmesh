@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 from depmesh.discovery.entities import QueryResult
-from depmesh.domain.entities import Dependency
+from depmesh.domain.entities import Dependency, Relation
 from depmesh.protocol.renderers.automation import AutomationRendered, to_jsonl
 
 
@@ -53,6 +53,24 @@ class TestAutomationRendered:
         record = json.loads(AutomationRendered().render_skill())
 
         assert record["type"] == "skill"
+
+    def test_render_relations__returns_json_lines_records(self) -> None:
+        records = [
+            json.loads(line)
+            for line in AutomationRendered()
+            .render_relations(
+                (
+                    Relation(id="tests", description="Tests related to input artifacts."),
+                    Relation(id="imports"),
+                )
+            )
+            .splitlines()
+        ]
+
+        assert records == [
+            {"type": "relation", "id": "imports"},
+            {"type": "relation", "id": "tests", "description": "Tests related to input artifacts."},
+        ]
 
     def test_render_error__returns_json_record(self) -> None:
         record = json.loads(AutomationRendered().render_error({"type": "error", "code": "x", "message": "failed"}))
