@@ -156,16 +156,16 @@ output = { type = "union", items = [
   { type = "list", artifacts = ["./depmesh/__main__.py"] },
 ] }
 
-# Built-in skill fixtures are governed by the skill fixture architecture spec.
+# Built-in skill fixtures are governed by the skill fixture behavior spec.
 [[rules]]
 relation = "governed_by"
 input = { type = "glob", pattern = "./depmesh/skills/fixtures/*.md" }
-output = { type = "list", artifacts = ["./specs/architecture/skill_fixtures.md"] }
+output = { type = "list", artifacts = ["./specs/behavior/skill_fixtures.md"] }
 
-# The skill fixture architecture spec governs built-in skill fixtures.
+# The skill fixture behavior spec governs built-in skill fixtures.
 [[rules]]
 relation = "governs"
-input = { type = "one_of", artifacts = ["./specs/architecture/skill_fixtures.md"] }
+input = { type = "one_of", artifacts = ["./specs/behavior/skill_fixtures.md"] }
 output = { type = "files", pattern = "./depmesh/skills/fixtures/*.md" }
 
 # Configuration behavior governs the config file, helper scripts, and config/discovery code.
