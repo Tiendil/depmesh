@@ -8,6 +8,29 @@ Use it to explore a codebase, find related files, inspect the impact of a possib
 
 `depmesh` gives one stable interface for navigating dependency relationships, while each project decides how dependencies are discovered exactly: path patterns, fixed lists, filesystem searches, static-analysis commands, or project-specific scripts.
 
+## Example
+
+Before changing a CLI module, ask `depmesh` for the specifications and tests connected to it:
+
+```bash
+depmesh dependencies --relation governed_by --relation tested_by ./depmesh/cli/application.py
+```
+
+Example output:
+
+```text
+governed_by:
+  ./specs/architecture/entities.md
+  ./specs/architecture/errors.md
+  ./specs/architecture/modules_layout.md
+  ./specs/architecture/naming.md
+  ./specs/architecture/tests.md
+  ./specs/behavior/cli.md
+
+tested_by:
+  ./depmesh/cli/tests/test_application.py
+```
+
 ## What Is depmesh?
 
 Coding agents often need to answer practical questions before editing:
@@ -32,29 +55,6 @@ For example, a project can define relations such as:
 
 - You decide which relations are useful and how they are discovered.
 - `depmesh` gives you and your agents a consistent interface to query them regardless of how they are extracted under the hood.
-
-## Example
-
-Before changing a CLI module, ask `depmesh` for the specifications and tests connected to it:
-
-```bash
-depmesh dependencies --relation governed_by --relation tested_by ./depmesh/cli/application.py
-```
-
-Example output:
-
-```text
-governed_by:
-  ./specs/architecture/entities.md
-  ./specs/architecture/errors.md
-  ./specs/architecture/modules_layout.md
-  ./specs/architecture/naming.md
-  ./specs/architecture/tests.md
-  ./specs/behavior/cli.md
-
-tested_by:
-  ./depmesh/cli/tests/test_application.py
-```
 
 ## Quick Usage
 

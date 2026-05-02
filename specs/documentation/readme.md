@@ -37,18 +37,20 @@ The following topics are out of scope:
 
 The first paragraphs after the h1 heading SHOULD explain the core value proposition in plain language.
 
-`README.md` SHOULD include sections for:
+`README.md` MUST use the following h2 sections in this order:
 
-- what `depmesh` is.
-- why dependency discovery is useful for coding agents.
-- features or supported capabilities.
-- quick usage.
-- installation.
-- configuration.
-- development.
-- links to specifications.
+1. `Example`
+2. `What Is depmesh?`
+3. `Features`
+4. `Quick Usage`
+5. `Installation`
+6. `Configuration`
+7. `Specifications`
+8. `Development`
 
-`README.md` MAY include additional sections when they help human readers.
+The `Example` section MUST be the first h2 section after the introductory paragraphs.
+
+Additional h2 sections MUST NOT be added without updating this specification first. Lower-level subsections MAY be added under the required h2 sections when they help human readers.
 
 `README.md` SHOULD avoid deep implementation details.
 
