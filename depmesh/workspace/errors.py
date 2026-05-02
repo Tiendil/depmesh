@@ -26,6 +26,22 @@ class ConfigUnreadable(Error):
             self.__cause__ = original
 
 
+class ConfigUnwritable(Error):
+    code = "config_unwritable"
+
+    def __init__(self, path: Path, original: Exception | None = None) -> None:
+        super().__init__(f"could not write configuration file `{path}`", details={"path": str(path)})
+        if original is not None:
+            self.__cause__ = original
+
+
+class ConfigAlreadyExists(Error):
+    code = "config_already_exists"
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(f"configuration file `{path}` already exists", details={"path": str(path)})
+
+
 class ConfigInvalid(Error):
     code = "config_invalid"
 
@@ -34,4 +50,3 @@ class ConfigInvalid(Error):
         if path is not None:
             merged_details = {"path": str(path), **merged_details}
         super().__init__(message, details=merged_details)
-

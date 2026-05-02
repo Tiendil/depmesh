@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import tomllib
 from pathlib import Path
 from typing import Any
 
 import pydantic
+import tomli
 
 from depmesh.workspace import errors
 from depmesh.workspace.entities import Config, Workspace
@@ -28,10 +28,10 @@ def load_config(path: Path | None = None, *, cwd: Path | None = None) -> Workspa
 
     try:
         with config_path.open("rb") as config_file:
-            raw = tomllib.load(config_file)
+            raw = tomli.load(config_file)
     except OSError as error:
         raise errors.ConfigUnreadable(config_path, error) from error
-    except tomllib.TOMLDecodeError as error:
+    except tomli.TOMLDecodeError as error:
         raise errors.ConfigInvalid(f"invalid TOML: {error}", path=config_path) from error
 
     config = parse_config(raw, config_path=config_path)

@@ -75,3 +75,15 @@ class TestLLMRendered:
             "Artifacts tested by the input artifacts.\n\n"
             "- ./src/a.py\n"
         )
+
+    def test_render_relations__orders_relations_and_descriptions(self) -> None:
+        assert LLMRendered().render_relations(
+            (
+                Relation(id="tests", description="Tests related to input artifacts."),
+                Relation(id="imports"),
+            )
+        ) == (
+            "## imports\n\n"
+            "## tests\n\n"
+            "Tests related to input artifacts.\n"
+        )

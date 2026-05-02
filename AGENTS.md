@@ -8,10 +8,6 @@ Every agent MUST follow these instructions.
 
 `depmesh` is a Python CLI tool that helps coding agents understand dependencies of project artifacts.
 
-The project is under active early development. Some behavior described in specifications may not be implemented yet.
-
-Agents MUST NOT implement missing functionality unless explicitly asked to do so.
-
 ## Source Of Truth
 
 Project behavior and architecture are specified in `./specs/`.
@@ -66,6 +62,22 @@ When code is added, tests SHOULD follow `./specs/architecture/tests.md`.
 When entities, errors, warnings, or module layout are affected, agents MUST check the corresponding architecture specs.
 
 ## Tool Priority
+
+Use `depmesh` to discover dependencies between project artifacts.
+
+Agents MUST use `depmesh` for dependency types supported by its configuration.
+
+Run `depmesh` through the development container:
+
+```bash
+./bin/dev.sh uv run -- depmesh ...
+```
+
+At the start of each work session, read the `depmesh` usage instructions:
+
+```bash
+./bin/dev.sh uv run -- depmesh -p llm skill usage
+```
 
 Use `rg` for text and file searches unless a structural code query is needed.
 

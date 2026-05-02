@@ -220,8 +220,8 @@ Configuration tests SHOULD cover:
 - supported TOML structure.
 - relation validation.
 - rule validation.
-- matcher validation.
-- dependency expression validation.
+- artifact predicate validation.
+- artifact source validation.
 - path normalization.
 - invalid configuration failures.
 
@@ -230,6 +230,7 @@ CLI tests SHOULD cover:
 - command forms.
 - option parsing.
 - output protocol selection.
+- relation list output.
 - dependency output grouping and ordering.
 - relation filtering.
 - explicitly configured reverse relation queries.

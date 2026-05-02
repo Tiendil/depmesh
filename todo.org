@@ -7,13 +7,6 @@
 
 * package building and publishing
 
-* AGENTS.md
-
-* text for --skill
-
-* README.md
-
-* `init` command
 
 * .ignore mechanic (like in pydantic config) to simplify traversing the codebase
 
@@ -21,7 +14,8 @@
 
 * should depmesh paths logic be in sync with donna's paths logic?
 
-* Improve CLI help texts
-
 * sync all files between each other, especially specs
-* list all relations
+
+* `not` predicate is incompatible with matching, should fix somehow
+
+* on the example of test rule, should we list as dependency not existed files?

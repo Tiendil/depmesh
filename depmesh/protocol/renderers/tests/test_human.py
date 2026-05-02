@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from depmesh.discovery.entities import QueryResult
-from depmesh.domain.entities import Dependency
+from depmesh.domain.entities import Dependency, Relation
 from depmesh.protocol.renderers.human import HumanRendered
 
 
@@ -38,4 +38,16 @@ class TestHumanRendered:
             "  ./tests/test_a.py\n\n"
             "warnings:\n"
             "  warning\n"
+        )
+
+    def test_render_relations__orders_relations_and_descriptions(self) -> None:
+        assert HumanRendered().render_relations(
+            (
+                Relation(id="tests", description="Tests related to input artifacts."),
+                Relation(id="imports"),
+            )
+        ) == (
+            "imports:\n\n"
+            "tests:\n"
+            "  Tests related to input artifacts.\n"
         )

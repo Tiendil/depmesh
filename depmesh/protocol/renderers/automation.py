@@ -5,7 +5,8 @@ import json
 from depmesh.discovery.entities import QueryResult
 from depmesh.domain.entities import Relation
 from depmesh.protocol.renderers.base import Rendered
-from depmesh.skills import load_skill_text
+from depmesh.skills.entities import SkillDocument
+from depmesh.skills.fixtures import load_skill_text
 
 
 def to_jsonl(record: dict[str, object]) -> str:
@@ -38,8 +39,22 @@ class AutomationRendered(Rendered):
 
         return "".join(lines)
 
-    def render_skill(self) -> str:
-        return to_jsonl({"type": "skill", "text": load_skill_text()})
+    def render_skill(self, document: SkillDocument = SkillDocument.usage) -> str:
+        return to_jsonl({"type": "skill", "document": document, "text": load_skill_text(document)})
+
+    def render_relations(self, relations: tuple[Relation, ...]) -> str:
+        lines = []
+
+        for relation in sorted(relations, key=lambda item: item.id):
+            record: dict[str, object] = {
+                "type": "relation",
+                "id": relation.id,
+            }
+            if relation.description is not None:
+                record["description"] = relation.description
+            lines.append(to_jsonl(record))
+
+        return "".join(lines)
 
     def render_error(self, error_record: dict[str, object]) -> str:
         return to_jsonl(error_record)

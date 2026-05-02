@@ -15,6 +15,7 @@ Detailed requirements for individual specifications are out of scope except for 
 - `./specs/` — directory with all specifications.
 - `./specs/architecture/` — specifications related to the architecture of the system.
 - `./specs/behavior/` — specifications related to the behavior of the system.
+- `./specs/documentation/` — specifications related to project documentation artifacts.
 - `./specs/meta/` — specifications related to requirements for specification documents.
 
 ## Specification documents
@@ -28,4 +29,6 @@ Detailed requirements for individual specifications are out of scope except for 
 - `./specs/architecture/tests.md` — specification of project test architecture.
 - `./specs/behavior/cli.md` — specification of the `depmesh` command line interface.
 - `./specs/behavior/config.md` — specification of the `depmesh.toml` configuration file behavior.
+- `./specs/behavior/skill_fixtures.md` — specification of built-in skill documentation fixture behavior.
+- `./specs/documentation/readme.md` — specification of the root `README.md` content and purpose.
 - `./specs/meta/general.md` — general requirements for specification documents.

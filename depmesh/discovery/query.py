@@ -5,8 +5,7 @@ from pathlib import Path
 
 from depmesh.discovery import errors
 from depmesh.discovery.entities import DependencyRule, QueryResult
-from depmesh.discovery.expressions import EvaluationContext
-from depmesh.discovery.paths import normalize_path
+from depmesh.discovery.sources import EvaluationContext, ListSource
 from depmesh.domain.entities import ArtifactId, Dependency, Relation, RelationId
 
 
@@ -14,81 +13,75 @@ def query_dependencies(
     root: Path,
     relations_by_id: Mapping[RelationId, Relation],
     rules: tuple[DependencyRule, ...],
-    artifacts: list[ArtifactId],
+    artifact: ArtifactId,
     *,
-    relation_filters: list[RelationId] | None = None,
+    relation_ids: set[RelationId],
     cwd: Path | None = None,
 ) -> QueryResult:
-    relation_ids = _selected_relation_ids(relations_by_id, relation_filters)
+    dependencies: set[Dependency] = set()
 
-    return _query_relations(
-        root,
-        relations_by_id,
-        _filter_rules(rules, relation_ids),
-        artifacts,
-        cwd=cwd,
+    for rule in rules:
+        if rule.relation not in relation_ids:
+            continue
+
+        captures = rule.input_predicate.match(artifact, root)
+        if captures is None:
+            continue
+
+        relation = relations_by_id.get(rule.relation)
+        if relation is None:
+            continue
+
+        for dependency in _evaluate_rule_dependencies(root, rule, captures, cwd=cwd):
+            dependencies.add(Dependency(relation=relation.id, dependency=dependency))
+
+    return QueryResult(dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency))))
+
+
+def normalize_input_artifacts(
+    root: Path,
+    artifacts: list[ArtifactId],
+    *,
+    cwd: Path | None = None,
+) -> list[ArtifactId]:
+    input_source = ListSource(
+        type="list",
+        artifacts=tuple(str(artifact) for artifact in artifacts),
     )
+    input_context = EvaluationContext(root=root, relation_id=RelationId(""), captures={}, cwd=cwd)
+    return input_source.evaluate(input_context)
 
 
-def _selected_relation_ids(
+def selected_relation_ids(
     relations_by_id: Mapping[RelationId, Relation],
     relation_filters: list[RelationId] | None,
 ) -> set[RelationId]:
     if not relation_filters:
         return set(relations_by_id)
 
-    selected_relation_ids: set[RelationId] = set()
+    selected: set[RelationId] = set()
 
     for relation_filter in relation_filters:
         relation = relations_by_id.get(relation_filter)
         if relation is not None:
-            selected_relation_ids.add(relation.id)
+            selected.add(relation.id)
             continue
 
         raise errors.UnknownRelationFilter(relation_filter)
 
-    return selected_relation_ids
+    return selected
 
 
-def _query_relations(
+def _evaluate_rule_dependencies(
     root: Path,
-    relations_by_id: Mapping[RelationId, Relation],
-    rules: tuple[DependencyRule, ...],
-    artifacts: list[ArtifactId],
+    rule: DependencyRule,
+    captures: dict[str, str],
     *,
     cwd: Path | None,
-) -> QueryResult:
-    dependencies: set[Dependency] = set()
-
-    for artifact in artifacts:
-        normalized_artifact = ArtifactId(normalize_path(artifact, root, cwd=cwd))
-
-        for rule in rules:
-            captures = rule.artifact.match(normalized_artifact, root)
-            if captures is None:
-                continue
-
-            relation = relations_by_id.get(rule.relation)
-            if relation is None:
-                continue
-
-            for dependency in _evaluate_rule_dependencies(root, rule, captures):
-                dependencies.add(Dependency(relation=relation.id, dependency=dependency))
-
-    return QueryResult(dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency))))
-
-
-def _filter_rules(
-    rules: tuple[DependencyRule, ...],
-    allowed_relations: set[RelationId],
-) -> tuple[DependencyRule, ...]:
-    return tuple(rule for rule in rules if rule.relation in allowed_relations)
-
-
-def _evaluate_rule_dependencies(root: Path, rule: DependencyRule, captures: dict[str, str]) -> list[ArtifactId]:
+) -> list[ArtifactId]:
     dependencies: set[ArtifactId] = set()
-    context = EvaluationContext(root=root, relation_id=rule.relation, captures=captures)
+    context = EvaluationContext(root=root, relation_id=rule.relation, captures=captures, cwd=cwd)
 
-    dependencies.update(rule.dependency.evaluate(context))
+    dependencies.update(rule.output_source.evaluate(context))
 
     return sorted(dependencies)

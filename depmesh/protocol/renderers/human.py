@@ -26,3 +26,14 @@ class HumanRendered(Rendered):
             sections.append("\n".join(lines))
 
         return "\n\n".join(sections) + ("\n" if sections else "")
+
+    def render_relations(self, relations: tuple[Relation, ...]) -> str:
+        sections = []
+
+        for relation in sorted(relations, key=lambda item: item.id):
+            lines = [f"{relation.id}:"]
+            if relation.description is not None:
+                lines.append(f"  {relation.description}")
+            sections.append("\n".join(lines))
+
+        return "\n\n".join(sections) + ("\n" if sections else "")

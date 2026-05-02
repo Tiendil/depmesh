@@ -74,7 +74,7 @@ Project data structures MUST NOT use `dataclasses.dataclass`.
 
 Closed sets of named values MUST be represented as Python enums.
 
-String-valued external protocols, modes, record kinds, matcher kinds, expression kinds, and similar closed type sets MUST use `enum.StrEnum`.
+String-valued external protocols, modes, record kinds, predicate kinds, source kinds, and similar closed type sets MUST use `enum.StrEnum`.
 
 Integer-valued closed sets MUST use `enum.IntEnum` when the integer value is part of the external contract.
 
@@ -132,7 +132,7 @@ Workspace entities MUST expose shared project concepts as domain entities rather
 
 Configuration entities MUST preserve enough information to report useful configuration errors.
 
-Configuration entities MUST NOT execute dependency expressions.
+Configuration entities MUST NOT execute artifact sources.
 
 Configuration entities MAY reference domain entities when the referenced concept has already been validated as a domain concept.
 
