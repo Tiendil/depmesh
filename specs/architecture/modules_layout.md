@@ -36,8 +36,8 @@ The following topics are out of scope:
   - no subsystem-specific rule evaluation, protocol rendering, workspace loading, or CLI behavior.
 - `./depmesh/discovery/` — module responsible for dependency discovery logic. Contains:
   - dependency discovery rules.
-  - artifact matcher definitions and matching behavior.
-  - dependency expression definitions and evaluation behavior.
+  - artifact predicate definitions and matching behavior.
+  - artifact source definitions and evaluation behavior.
   - dependency query results.
   - dependency query evaluation.
 - `./depmesh/protocol/` — module responsible for output protocol types and rendering. Contains:

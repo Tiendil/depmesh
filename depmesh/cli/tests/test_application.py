@@ -32,13 +32,13 @@ description = "Artifacts tested by the input artifacts."
 
 [[rules]]
 relation = "tests"
-artifact = { type = "glob", pattern = "./src/{*module}.py" }
-dependency = { type = "path", path = "./tests/test_{module}.py" }
+input = { type = "glob", pattern = "./src/{*module}.py" }
+output = { type = "list", artifacts = ["./tests/test_{module}.py"] }
 
 [[rules]]
 relation = "tested_by"
-artifact = { type = "glob", pattern = "./tests/test_{*module}.py" }
-dependency = { type = "path", path = "./src/{module}.py" }
+input = { type = "glob", pattern = "./tests/test_{*module}.py" }
+output = { type = "list", artifacts = ["./src/{module}.py"] }
 """,
         encoding="utf-8",
     )
@@ -75,6 +75,17 @@ class TestDependencies:
 
         assert result.exit_code == 0
         assert result.output == "tests:\n  ./tests/test_a.py\n"
+
+    def test_human_query_output_merges_multiple_input_artifacts(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        write_project(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["dependencies", "./src/a.py", "./src/b.py"])
+
+        assert result.exit_code == 0
+        assert result.output == "tests:\n  ./tests/test_a.py\n  ./tests/test_b.py\n"
 
     def test_llm_query_output_includes_relation_description(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -220,8 +220,8 @@ Configuration tests SHOULD cover:
 - supported TOML structure.
 - relation validation.
 - rule validation.
-- matcher validation.
-- dependency expression validation.
+- artifact predicate validation.
+- artifact source validation.
 - path normalization.
 - invalid configuration failures.
 

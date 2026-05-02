@@ -13,7 +13,9 @@ from depmesh.cli.entities import ArtifactsArgument, ConfigOption, GlobalOptions,
 from depmesh.core import errors as core_errors
 from depmesh.core import warnings
 from depmesh.discovery import errors as discovery_errors
-from depmesh.discovery.query import query_dependencies
+from depmesh.discovery.entities import QueryResult
+from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
+from depmesh.domain.entities import Dependency
 from depmesh.protocol import OutputProtocol, renderer
 from depmesh.protocol.renderers import Rendered
 from depmesh.workspace import errors as workspace_errors
@@ -58,14 +60,23 @@ def dependencies(
 
     with command_context(context, default_protocol=OutputProtocol.human) as command:
         workspace = command.load_workspace()
-        result = query_dependencies(
-            Path(workspace.root),
-            workspace.relations_by_id,
-            workspace.rules,
-            artifacts,
-            relation_filters=relations,
-            cwd=Path.cwd(),
-        )
+        root = Path(workspace.root)
+        cwd = Path.cwd()
+        relation_ids = selected_relation_ids(workspace.relations_by_id, relations)
+        dependencies: set[Dependency] = set()
+
+        for artifact in normalize_input_artifacts(root, artifacts, cwd=cwd):
+            result = query_dependencies(
+                root,
+                workspace.relations_by_id,
+                workspace.rules,
+                artifact,
+                relation_ids=relation_ids,
+                cwd=cwd,
+            )
+            dependencies.update(result.dependencies)
+
+        result = QueryResult(dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency))))
         command.write(
             command.renderer.render_query(
                 result,

@@ -86,8 +86,8 @@ class TestParseConfig:
                 "rules": [
                     {
                         "relation": "tests",
-                        "artifact": {"type": "glob", "pattern": "./src/{*module}.py"},
-                        "dependency": {"type": "path", "path": "./tests/test_{module}.py"},
+                        "input": {"type": "glob", "pattern": "./src/{*module}.py"},
+                        "output": {"type": "list", "artifacts": ["./tests/test_{module}.py"]},
                     }
                 ],
             },
@@ -100,7 +100,7 @@ class TestParseConfig:
                 description="Tests related to the input artifacts.",
             ),
         )
-        assert config.rules[0].artifact.type == "glob"
+        assert config.rules[0].input_predicate.type == "glob"
         assert config.version == 1
 
     def test_version_omitted_defaults_to_one(self, tmp_path: Path) -> None:
@@ -156,15 +156,15 @@ class TestParseConfig:
                     "rules": [
                         {
                             "relation": "imports",
-                            "artifact": {"type": "paths", "paths": ["./src/a.py"]},
-                            "dependency": {"type": "path", "path": "./src/b.py"},
+                            "input": {"type": "one_of", "artifacts": ["./src/a.py"]},
+                            "output": {"type": "list", "artifacts": ["./src/b.py"]},
                         }
                     ],
                 },
                 config_path=tmp_path / "depmesh.toml",
             )
 
-    def test_dependency_template_must_be_provided_by_every_matcher(self, tmp_path: Path) -> None:
+    def test_output_template_must_be_provided_by_every_input_predicate(self, tmp_path: Path) -> None:
         with pytest.raises(errors.ConfigInvalid):
             parse_config(
                 {
@@ -172,14 +172,14 @@ class TestParseConfig:
                     "rules": [
                         {
                             "relation": "tests",
-                            "artifact": {
+                            "input": {
                                 "type": "any",
                                 "items": [
                                     {"type": "glob", "pattern": "./src/{*module}.py"},
-                                    {"type": "paths", "paths": ["./src/special.py"]},
+                                    {"type": "one_of", "artifacts": ["./src/special.py"]},
                                 ],
                             },
-                            "dependency": {"type": "path", "path": "./tests/test_{module}.py"},
+                            "output": {"type": "list", "artifacts": ["./tests/test_{module}.py"]},
                         }
                     ],
                 },

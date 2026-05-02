@@ -139,9 +139,9 @@ The CLI MUST render stored warnings according to the selected output protocol.
 
 Examples of warning-producing situations include:
 
-- a path dependency expression that points to a missing file.
-- a command dependency expression that writes stderr output but still produces usable dependencies.
-- a command dependency expression that exits with a non-zero status when other dependency expressions can still produce useful output.
+- a files source pattern that cannot be resolved inside the project.
+- a command source that writes stderr output but still produces usable dependencies.
+- a command source that exits with a non-zero status when other artifact sources can still produce useful output.
 
 ## Pydantic validation errors
 

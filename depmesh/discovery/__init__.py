@@ -1,5 +1,5 @@
 from depmesh.discovery.entities import DependencyRule, QueryResult
-from depmesh.discovery.query import query_dependencies
+from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
 
 
-__all__ = ["DependencyRule", "QueryResult", "query_dependencies"]
+__all__ = ["DependencyRule", "QueryResult", "normalize_input_artifacts", "query_dependencies", "selected_relation_ids"]

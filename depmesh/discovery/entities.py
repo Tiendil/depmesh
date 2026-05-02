@@ -3,25 +3,35 @@ from __future__ import annotations
 import pydantic
 
 from depmesh.core.entities import BaseEntity
-from depmesh.discovery.expressions import DependencyExpression
-from depmesh.discovery.matchers import ArtifactMatcher
+from depmesh.discovery.predicates import ArtifactPredicate
+from depmesh.discovery.sources import ArtifactSource
 from depmesh.domain.entities import ArtifactId, Dependency, RelationId
 
 
 class DependencyRule(BaseEntity):
     relation: RelationId
-    artifact: ArtifactMatcher
-    dependency: DependencyExpression
+    input_predicate: ArtifactPredicate = pydantic.Field(
+        validation_alias=pydantic.AliasChoices("input", "input_predicate"),
+        serialization_alias="input",
+    )
+    output_source: ArtifactSource = pydantic.Field(
+        validation_alias=pydantic.AliasChoices("output", "output_source"),
+        serialization_alias="output",
+    )
 
     @pydantic.model_validator(mode="after")
     def validate_templates(self) -> "DependencyRule":
-        dependency_variables = self.dependency.variables()
+        input_variables = self.input_predicate.variables()
+        if input_variables:
+            raise ValueError(f"input predicate references unknown capture `{sorted(input_variables)[0]}`")
 
-        missing = dependency_variables - self.artifact.captures()
+        output_variables = self.output_source.variables()
+
+        missing = output_variables - self.input_predicate.captures()
         if missing:
             raise ValueError(
-                f"dependency expression references capture `{sorted(missing)[0]}` "
-                "that is not provided by every artifact matcher"
+                f"output source references capture `{sorted(missing)[0]}` "
+                "that is not provided by every input predicate"
             )
 
         return self
