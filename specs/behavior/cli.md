@@ -18,7 +18,6 @@ The following topics are out of scope:
 - dependency discovery rules.
 - relation properties.
 - relation semantics.
-- plugin behavior.
 - configuration file semantics.
 
 This specification may refer to the following concepts only to describe how the CLI accepts arguments and renders output:
@@ -29,16 +28,24 @@ This specification may refer to the following concepts only to describe how the 
 - relation descriptions.
 - configuration paths.
 
-The exact Markdown text emitted by `depmesh --skill` is out of scope.
+The exact Markdown text emitted by `depmesh skill` is out of scope.
 
 ## General behavior
 
-`depmesh` is a command line tool that prints dependency information for one or more artifacts.
+`depmesh` is a command line tool with explicit subcommands for dependency queries, skill text, and version output.
 
-The root command MUST be the primary dependency query command:
+The root command MUST be a command group.
+
+Dependency queries MUST use the `show` command:
 
 ```bash
-depmesh [OPTIONS] ARTIFACT...
+depmesh show [OPTIONS] ARTIFACT...
+```
+
+Global options, when present, MUST be provided before the subcommand:
+
+```bash
+depmesh [GLOBAL_OPTIONS] COMMAND [COMMAND_OPTIONS]
 ```
 
 `ARTIFACT` is an artifact identifier accepted by the configured dependency rules.
@@ -70,10 +77,12 @@ The CLI MUST produce deterministic output for the same:
 
 The CLI MUST support these commands and command forms:
 
-- `depmesh [OPTIONS] ARTIFACT...` — query dependencies for one or more artifacts.
-- `depmesh --skill` — print extensive agent-oriented instructions for using `depmesh`.
+- `depmesh [GLOBAL_OPTIONS] show [OPTIONS] ARTIFACT...` — query dependencies for one or more artifacts.
+- `depmesh [GLOBAL_OPTIONS] skill` — print extensive agent-oriented instructions for using `depmesh`.
+- `depmesh [GLOBAL_OPTIONS] version` — print the tool version.
 - `depmesh --help` — print root help information.
-- `depmesh --version` — print the tool version.
+
+The root command MUST NOT perform a dependency query directly.
 
 ## Output behavior
 
@@ -85,13 +94,20 @@ Output MUST NOT contain:
 - styling.
 - other control sequences.
 
-Dependency query output MUST group dependencies by relation.
+Dependency query output MUST group dependencies by directional relation id.
 
-Dependency query output MUST order relation groups alphabetically by displayed relation id.
+Dependency query output MUST order relation groups alphabetically by directional relation id.
 
 Dependency query output MUST order dependencies alphabetically inside each relation group.
 
-If a relation from `x` to `y` has relation id `relation_id` and reverse relation id `reverse_relation_id`, forward output for `x` MUST group `y` under `relation_id`, and reverse output for `y` MUST group `x` under `reverse_relation_id`.
+The `show` command MUST always treat each input artifact as the left side of selected directional relations and MUST output artifacts found on the right side of those directional relations.
+
+If a configured relation from `x` to `y` has relation id `relation_id` and reverse relation id `reverse_relation_id`:
+
+- selecting `relation_id` for input `x` MUST return `y`.
+- selecting `reverse_relation_id` for input `y` MUST return `x`.
+
+Dependency query output MUST group dependencies under the selected directional relation id that produced them.
 
 When multiple artifact identifiers are provided, dependency query output MUST contain merged dependencies for all input artifacts.
 
@@ -121,7 +137,7 @@ LLM output SHOULD be:
 - stable.
 - self-contained for coding agents that receive the output as a tool result.
 
-The output protocol MUST be selected with:
+For commands that support multiple output protocols, the output protocol MUST be selected with:
 
 ```bash
 --protocol PROTOCOL
@@ -151,9 +167,9 @@ LLM output SHOULD be concise and SHOULD avoid redundant information.
 
 LLM output SHOULD prefer stable identifiers and explicit paths over compact visual formatting.
 
-LLM output MUST include the configured relation description between a relation `h2` heading and the dependency list for that relation when the relation description is not `None`.
+LLM output MUST include the configured directional relation description between a relation `h2` heading and the dependency list for that relation when the directional relation description is not `None`.
 
-LLM output MUST NOT display a relation description, placeholder, or blank description paragraph when the relation description is `None`.
+LLM output MUST NOT display a relation description, placeholder, or blank description paragraph when the directional relation description is `None`.
 
 ### Automation output
 
@@ -177,7 +193,7 @@ Known record types MUST include:
 
 - `dependency` — one merged dependency entry.
 - `warning` — non-fatal problem.
-- `skill` — record emitted by `depmesh --skill --protocol automation`; record content is outside this specification.
+- `skill` — record emitted by `depmesh --protocol automation skill`; record content is outside this specification.
 - `error` — fatal problem, emitted before a non-zero exit when possible.
 
 Additional fields MAY be added in future versions. Consumers MUST ignore unknown fields.
@@ -194,23 +210,19 @@ Example:
 depmesh --help
 ```
 
-### `-V`, `--version`
-
-`-V` and `--version` MUST print the tool version and exit with status `0`.
-
-Version output MUST be a single line containing only the version number.
-
-Example output:
-
-```text
-0.1.0
-```
-
 ### `-p`, `--protocol PROTOCOL`
 
-`-p` and `--protocol PROTOCOL` MUST select output protocol.
+`-p` and `--protocol PROTOCOL` MUST be global options accepted before the subcommand.
 
-The default protocol MUST be `human`, except for `depmesh --skill`, whose default protocol MUST be `llm`.
+The selected protocol MUST be available to every subcommand.
+
+Subcommands that render protocol-specific output MUST use the selected protocol.
+
+For `depmesh show`, the default protocol MUST be `human`.
+
+For `depmesh skill`, the default protocol MUST be `llm`.
+
+Subcommands that do not render protocol-specific output MAY ignore this option.
 
 Allowed values MUST be:
 
@@ -220,17 +232,27 @@ Allowed values MUST be:
 
 ### `--config PATH`
 
-`--config PATH` MUST use a specific `depmesh.toml` file instead of discovering it from the current working directory.
+`--config PATH` MUST be a global option accepted before the subcommand.
+
+The resolved configuration path MUST be available to every subcommand.
+
+Subcommands that load configuration MUST use this path instead of discovering `depmesh.toml` from the current working directory.
+
+Subcommands that do not load workspace configuration MAY ignore this option.
 
 `PATH` MAY be relative to the current working directory or absolute.
 
-## Dependency query command
+## Show Command
 
-The root command MUST query dependencies for one or more artifacts.
+The `show` command MUST query dependencies for one or more artifacts.
 
 ```bash
-depmesh [OPTIONS] ARTIFACT...
+depmesh show [OPTIONS] ARTIFACT...
 ```
+
+The `show` command MUST accept:
+
+- `-r`, `--relation RELATION_ID`.
 
 ### Argument `ARTIFACT...`
 
@@ -246,7 +268,11 @@ The CLI MAY also include normalized or resolved artifact identifiers when useful
 
 `RELATION_ID` MUST match either a configured relation id or a configured reverse relation id.
 
-When a relation has different ids in different directions, the CLI MUST apply the filter to the underlying relation and MUST still display the relation id for the current query direction.
+`RELATION_ID` MUST be interpreted as a directional relation id.
+
+When `RELATION_ID` matches a configured relation id, the command MUST use configured forward dependency rules for that relation.
+
+When `RELATION_ID` matches a configured reverse relation id, the command MUST derive dependencies in the reverse direction from configured forward dependency rules for the corresponding relation.
 
 This option MAY be repeated to include multiple relations.
 
@@ -255,25 +281,17 @@ When this option is repeated, output MUST include dependencies whose relation ma
 Example:
 
 ```bash
-depmesh -r imports -r tests ./src/do_smth.py
+depmesh show -r imports -r tests ./src/do_smth.py
 ```
 
-If omitted, all configured relations MUST be included.
-
-### Option `--reverse`
-
-`--reverse` MUST show reverse dependencies: artifacts that depend on the specified artifacts.
-
-Reverse dependency output MUST use reverse relation ids.
-
-This option MUST change the direction of the dependency query but MUST NOT change the output protocol contract.
+If omitted, all configured directional relation ids MUST be included.
 
 ### Example: default human output
 
 Command:
 
 ```bash
-depmesh ./src/do_smth.py
+depmesh show ./src/do_smth.py
 ```
 
 Example output:
@@ -297,7 +315,7 @@ tests:
 Command:
 
 ```bash
-depmesh ./src/do_smth.py ./src/another_module.py
+depmesh show ./src/do_smth.py ./src/another_module.py
 ```
 
 Example output:
@@ -318,7 +336,7 @@ tests:
 Command:
 
 ```bash
-depmesh --relation tests ./src/do_smth.py
+depmesh show --relation tests ./src/do_smth.py
 ```
 
 Example output:
@@ -328,12 +346,12 @@ tests:
   ./src/tests/test_do_smth.py
 ```
 
-### Example: reverse dependencies
+### Example: reverse relation id
 
 Command:
 
 ```bash
-depmesh --reverse ./src/some_module.py
+depmesh show --relation imported_by ./src/some_module.py
 ```
 
 Example output:
@@ -349,7 +367,7 @@ imported_by:
 Command:
 
 ```bash
-depmesh --protocol llm ./src/do_smth.py
+depmesh --protocol llm show ./src/do_smth.py
 ```
 
 Example output:
@@ -382,7 +400,7 @@ Tests related to the input artifacts.
 Command:
 
 ```bash
-depmesh --protocol automation ./src/do_smth.py
+depmesh --protocol automation show ./src/do_smth.py
 ```
 
 Example output:
@@ -401,7 +419,7 @@ Example output:
 Command:
 
 ```bash
-depmesh ./src/do_smth.py
+depmesh show ./src/do_smth.py
 ```
 
 Example output:
@@ -420,7 +438,7 @@ warnings:
 Command:
 
 ```bash
-depmesh --protocol llm ./src/do_smth.py
+depmesh --protocol llm show ./src/do_smth.py
 ```
 
 Example output:
@@ -443,7 +461,7 @@ Files imported by the input artifacts.
 Command:
 
 ```bash
-depmesh --protocol automation ./src/do_smth.py
+depmesh --protocol automation show ./src/do_smth.py
 ```
 
 Example output:
@@ -454,44 +472,42 @@ Example output:
 {"type":"warning","relation":"imports","message":"skipped unresolved dependency `third_party_package`"}
 ```
 
-## Skill command form
+## Skill Command
 
-The `depmesh --skill` command form MUST print extensive instructions for coding agents that want to use `depmesh` effectively.
+The `skill` command MUST print extensive instructions for coding agents that want to use `depmesh` effectively.
 
 ```bash
-depmesh --skill
+depmesh skill
 ```
 
-For the `llm` protocol, `depmesh --skill` output MUST be Markdown-compatible text.
+For the `llm` protocol, `depmesh skill` output MUST be Markdown-compatible text.
 
 The command output SHOULD be suitable for coding agents that receive the output as a tool result.
 
-The default output protocol for this command MUST be `llm`.
+The default output protocol for this command MUST be `llm` when no global protocol is selected.
 
-The `depmesh --skill` command form MAY be combined with `--protocol PROTOCOL` and `--config PATH`.
+The `skill` command MUST NOT accept artifact arguments or dependency query options.
 
-The `depmesh --skill` command form MUST NOT be combined with artifact arguments or dependency query options.
-
-For `depmesh --skill`, `PROTOCOL` MAY be:
+For `depmesh skill`, `PROTOCOL` MAY be:
 
 - `llm`.
 - `human`.
 - `automation`.
 
-The `llm` protocol MUST be the canonical protocol for `depmesh --skill`.
+The `llm` protocol MUST be the canonical protocol for `depmesh skill`.
 
 ### Example: LLM output
 
 Command:
 
 ```bash
-depmesh --skill
+depmesh skill
 ```
 
 Example output:
 
 ```text
-The exact Markdown text emitted by `depmesh --skill` is not part of this specification.
+The exact Markdown text emitted by `depmesh skill` is not part of this specification.
 ```
 
 ### Example: automation output
@@ -499,16 +515,36 @@ The exact Markdown text emitted by `depmesh --skill` is not part of this specifi
 Command:
 
 ```bash
-depmesh --skill --protocol automation
+depmesh --protocol automation skill
 ```
 
 Example output:
 
 ```jsonl
-{"type":"skill","text":"The exact content emitted by `depmesh --skill` is not part of this specification."}
+{"type":"skill","text":"The exact content emitted by `depmesh skill` is not part of this specification."}
 ```
 
-## Help and version examples
+## Version Command
+
+The `version` command MUST print the tool version and exit with status `0`.
+
+Version output MUST be a single line containing only the version number.
+
+```bash
+depmesh [GLOBAL_OPTIONS] version
+```
+
+Example output:
+
+```text
+0.1.0
+```
+
+The `version` command MUST NOT accept dependency query options, skill options, or artifact arguments.
+
+The `version` command MAY ignore global options that do not affect version output.
+
+## Help Examples
 
 ### Help
 
@@ -523,20 +559,6 @@ Help output SHOULD be autogenerated from:
 - command definitions.
 - argument definitions.
 - option definitions.
-
-### Version
-
-Command:
-
-```bash
-depmesh --version
-```
-
-Example output:
-
-```text
-0.1.0
-```
 
 ## Errors and exit codes
 

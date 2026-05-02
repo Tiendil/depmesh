@@ -24,6 +24,7 @@ Detailed requirements for individual specifications are out of scope except for 
 - `./specs/architecture/entities.md` — specification of project entity and data structure architecture.
 - `./specs/architecture/errors.md` — specification of project error and diagnostic architecture.
 - `./specs/architecture/modules_layout.md` — specification of the project module structure.
+- `./specs/architecture/naming.md` — specification of project code naming conventions.
 - `./specs/architecture/tests.md` — specification of project test architecture.
 - `./specs/behavior/cli.md` — specification of the `depmesh` command line interface.
 - `./specs/behavior/config.md` — specification of the `depmesh.toml` configuration file behavior.

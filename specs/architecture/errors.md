@@ -52,12 +52,6 @@ Shared base error types MUST be owned by a common lower-level module that does n
 
 Module-specific error types MUST be defined in the module that can add the most useful context.
 
-Examples:
-
-- command line argument errors belong to `./depmesh/cli/`.
-- configuration discovery and parsing errors belong to `./depmesh/workspace/`.
-- dependency query errors that are independent of configuration loading and CLI rendering belong to `./depmesh/domain/`.
-
 Production errors MUST NOT be defined in test modules.
 
 Test-only error classes MAY be defined in test modules when they are required to verify error handling behavior.
@@ -72,7 +66,7 @@ The project root exception MUST inherit from `Exception`.
 
 The project root exception MUST NOT inherit from Pydantic model classes.
 
-The project root exception MUST be owned by `./depmesh/core/errors.py`.
+The project root exception MUST be owned by the core module.
 
 Each module that defines fatal errors SHOULD define one module root error class.
 
@@ -84,23 +78,13 @@ A module root error class MUST inherit from the project root exception or from a
 
 A module SHOULD NOT define multiple root error classes.
 
-Modules outside `./depmesh/cli/` MUST NOT know about CLI exit codes.
+Modules outside the CLI module MUST NOT know about CLI exit codes.
 
 Module root error classes SHOULD be abstract classification classes and SHOULD NOT be raised directly when a more specific concrete error is available.
 
 Intermediate abstract error classes MAY exist under a module root when a module needs a narrower ownership boundary.
 
-The hierarchy SHOULD follow this shape:
-
-```text
-depmesh.core.errors.Error
-  depmesh.cli.errors.Error
-    <CLI errors>
-  depmesh.workspace.errors.Error
-    <workspace and configuration errors>
-  depmesh.domain.errors.Error
-    <dependency query errors>
-```
+The hierarchy SHOULD keep module-specific root errors under the single project root exception.
 
 Concrete error class names MAY differ, but project and module root error classes MUST be named `Error`.
 
@@ -178,7 +162,6 @@ External systems include:
 - Pydantic model validation for external input.
 - regular expression compilation.
 - shell command execution.
-- plugin imports.
 
 Unexpected programming errors MAY propagate during development, but code that handles expected user or environment failures MUST convert them into project-specific errors.
 
@@ -190,7 +173,7 @@ The CLI MUST map fatal project errors to the exit code categories specified by t
 
 The CLI module MUST own the mapping from exception classes to exit codes.
 
-The CLI mapping SHOULD be defined in `./depmesh/cli/`.
+The CLI mapping SHOULD be defined in the CLI module.
 
 The CLI mapping MAY map specific module root error classes to specific exit codes.
 

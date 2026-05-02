@@ -29,20 +29,36 @@ The following topics are out of scope:
   - shared error base classes.
   - shared warning storage.
   - domain-independent utilities.
-- `./depmesh/domain/` — module responsible for the general domain logic that is used in all parts of the project. Contains:
-  - domain-specific types.
-  - data structures.
-  - code related to pure domain logic.
+- `./depmesh/domain/` — module responsible only for universal domain entities and logic required by all or most other modules. Contains:
+  - shared domain-specific types.
+  - shared domain data structures.
+  - pure domain logic that is independent of more specific subsystems.
+  - no subsystem-specific rule evaluation, protocol rendering, workspace loading, or CLI behavior.
+- `./depmesh/discovery/` — module responsible for dependency discovery logic. Contains:
+  - dependency discovery rules.
+  - artifact matcher definitions and matching behavior.
+  - dependency expression definitions and evaluation behavior.
+  - dependency query results.
+  - dependency query evaluation.
+- `./depmesh/protocol/` — module responsible for output protocol types and rendering. Contains:
+  - protocol enums.
+  - renderer selection.
+  - protocol-specific renderers.
+  - serialized record construction for external output protocols.
+- `./depmesh/skills/` — module responsible for built-in skill text loaded by the CLI and renderers.
 - `./depmesh/workspace/` — module responsible for workspace management, including:
   - finding and parsing config.
   - detecting current project root.
-  - managing plugins.
   - operations with the filesystem.
 - `./depmesh/cli/` — module responsible for the CLI interface of the `depmesh` tool.
 
 ## Submodules
 
 Modules can have submodules that are responsible for more specific parts of the functionality.
+
+When a module contains a small closed family of interchangeable components, and each component has meaningful component-specific behavior, the module SHOULD prefer one implementation submodule per component.
+
+Shared package-level code for such component families SHOULD be limited to common types, public unions, selection helpers, and iteration glue.
 
 Some submodules have specific names that reflect their responsibilities and MUST be similar across different modules.
 

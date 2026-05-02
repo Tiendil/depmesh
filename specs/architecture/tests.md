@@ -49,6 +49,12 @@ Tests MUST NOT depend on user-specific files outside test-created temporary dire
 
 Tests MUST NOT modify Docker configuration or runtime parameters.
 
+Tests SHOULD verify observable behavior and locally owned validation instead of implementation declarations such as annotations, imports, or exact helper types.
+
+Static typing requirements SHOULD be enforced by static analysis, code review, or dedicated architecture checks, not by ordinary unit tests that inspect runtime annotations.
+
+Tests MAY inspect annotations only in dedicated architecture tests that validate a broad project-wide convention. Per-entity unit tests MUST NOT inspect annotations only to restate the entity declaration.
+
 ## Test module layout
 
 Each implementation module or submodule SHOULD have corresponding tests under a `tests` submodule owned by the same parent module.
@@ -71,7 +77,7 @@ CLI integration tests SHOULD live under `./depmesh/cli/tests/`.
 
 Tests SHOULD be organized around the tested function or tested class.
 
-Each module-level function SHOULD have a corresponding test class.
+Each production module-level function MUST have a corresponding test class.
 
 Each class SHOULD have a corresponding test class.
 
@@ -79,7 +85,7 @@ Test classes MUST use `Test<SubjectName>` naming, where `<SubjectName>` is the t
 
 Examples:
 
-- function `build_plugin` -> `class TestBuildPlugin`.
+- function `build_parser` -> `class TestBuildParser`.
 - class `Accumulator` -> `class TestAccumulator`.
 - class `Rule` -> `class TestRule`.
 
@@ -109,9 +115,11 @@ test_<test_name>
 
 Examples:
 
-- `TestBuildPlugin.test_success`.
-- `TestBuildPlugin.test_import_error`.
-- `TestBuildPlugin.test_wrong_plugin_type`.
+- `TestBuildParser.test_success`.
+- `TestBuildParser.test_invalid_option`.
+- `TestBuildParser.test_default_values`.
+
+Test-only helper functions do not need corresponding test classes.
 
 Standalone test functions SHOULD be used only for module-level invariants or file-level checks that do not naturally belong to one tested function or class.
 
@@ -224,7 +232,7 @@ CLI tests SHOULD cover:
 - output protocol selection.
 - dependency output grouping and ordering.
 - relation filtering.
-- reverse queries.
+- reverse relation id queries.
 - warnings.
 - errors and exit codes.
 

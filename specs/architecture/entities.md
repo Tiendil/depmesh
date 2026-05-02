@@ -39,7 +39,6 @@ Entities MUST NOT perform:
 - process execution.
 - terminal output.
 - configuration file discovery.
-- plugin loading.
 
 Value entities SHOULD be immutable after construction when practical.
 
@@ -49,46 +48,63 @@ Entities that can be used for de-duplication SHOULD be hashable when practical.
 
 The project accepts Pydantic v2 as the default dependency for entity modeling.
 
-The project SHOULD define a shared base entity in `./depmesh/core/entities.py`.
+The project SHOULD provide shared base entity infrastructure owned by the core module.
 
-The shared base entity SHOULD inherit from `pydantic.BaseModel`.
+Project entities SHOULD inherit from the shared base entity unless they have a specific reason to use Pydantic directly.
 
-The shared base entity SHOULD configure Pydantic with:
+Shared entity defaults SHOULD:
 
-- `str_strip_whitespace=True`.
-- `validate_default=True`.
-- `extra="forbid"`.
-- `frozen=True`.
-- `validate_assignment=True`.
-- `from_attributes=False`.
+- strip surrounding whitespace from string values.
+- validate default values.
+- reject unknown fields.
+- prefer immutable value objects where practical.
+- avoid attribute-based construction unless a boundary explicitly needs it.
 
-Project entities SHOULD inherit from the shared base entity unless they have a specific reason to use `pydantic.BaseModel` directly.
-
-Entities SHOULD use `pydantic.Field` for default factories, validation constraints, discriminators, and metadata that belongs to the model field.
-
-Entities SHOULD use Pydantic validators for local field and model invariants.
+Entities SHOULD use Pydantic field metadata and validators for local field constraints, default factories, discriminators, and model invariants.
 
 Entities SHOULD use Pydantic serialization methods at boundaries that need model dumps or JSON.
 
-The shared base entity SHOULD provide a `replace` helper that returns a deep copied model with selected fields changed.
+The shared base entity SHOULD provide a copy-with-changes operation.
 
 Very small internal helper values MAY use plain Python classes with `__slots__` when Pydantic would add no practical value.
 
 Project data structures MUST NOT use `dataclasses.dataclass`.
 
+## Enumeration conventions
+
+Closed sets of named values MUST be represented as Python enums.
+
+String-valued external protocols, modes, record kinds, matcher kinds, expression kinds, and similar closed type sets MUST use `enum.StrEnum`.
+
+Integer-valued closed sets MUST use `enum.IntEnum` when the integer value is part of the external contract.
+
+Plain strings MUST NOT be used as the primary internal representation for values that have a finite configured or specified set of allowed names.
+
+Enum values that cross external boundaries MUST preserve the specified serialized value exactly.
+
+Output protocol values are a closed set of named string values and MUST be represented internally with an enum rather than raw strings or lists of strings.
+
+## Semantic primitive types
+
+Semantically specific primitive values MUST have semantically specific Python types before they cross module boundaries.
+
+For example, a relation id, artifact id, or template variable name MUST NOT be represented as an unqualified `str` in entities or public function signatures when the value has a distinct project meaning.
+
+Semantic primitive types SHOULD use `typing.NewType` when runtime behavior is identical to the underlying primitive.
+
+Raw primitive types MAY be used at parsing, rendering, and serialization boundaries where external data is converted into or out of project types.
+
+Raw primitive types MAY be used inside local helper code when the value has already been validated or when adding a semantic type would not improve module-boundary clarity.
+
+Semantic primitive types SHOULD be owned by the module that owns the corresponding project concept.
+
 ## Entity ownership
 
-Shared entity infrastructure MUST belong to `./depmesh/core/entities.py`.
+Shared entity infrastructure MUST belong to the core module.
 
-Shared domain entities MUST belong to `./depmesh/domain/entities.py` or to submodules under `./depmesh/domain/entities/` if the entity set grows.
+Shared domain entities MUST belong to the domain module.
 
 Module-specific entities MUST belong to the module that owns the corresponding responsibility.
-
-Examples:
-
-- configuration loading entities belong to `./depmesh/workspace/`.
-- CLI argument and command selection entities belong to `./depmesh/cli/`.
-- pure dependency query entities that are independent from CLI and workspace behavior belong to `./depmesh/domain/`.
 
 A module MAY expose entities from its public package interface when doing so simplifies imports for callers.
 
@@ -96,23 +112,23 @@ Public re-exports MUST NOT hide ownership. The defining module MUST remain clear
 
 ## Core domain entities
 
-The domain layer MUST contain entities for concepts that are shared by dependency query behavior and output behavior.
+The domain layer MUST contain only universal entities for concepts shared by all or most other modules.
 
-Domain entities MUST model dependency query concepts independently from the concrete interface that created or renders them.
+Domain entities MUST model universal dependency concepts independently from the concrete interface that created or renders them.
 
 Domain entities MUST NOT depend on CLI protocol names, CLI option parsing, or concrete configuration file syntax.
 
-Domain entities MAY store normalized artifact identifiers when normalization is part of the domain behavior.
-
-Domain entities MAY also preserve user-provided artifact spelling when that spelling is needed for output or error messages.
+Domain entities MUST NOT contain subsystem-specific entities when those entities are required only by one narrower module.
 
 ## Configuration entities
 
-Configuration entities MUST represent already parsed configuration data, not raw TOML documents.
+Configuration entities MAY represent parsed TOML data at the configuration loading boundary when their responsibility is to validate the configuration file shape.
 
 Configuration entities SHOULD use Pydantic validation to reject malformed parsed data before it reaches lower layers.
 
-Configuration entities MUST model validated configuration concepts independently from raw TOML table shapes.
+Workspace entities MUST model validated configuration concepts independently from raw TOML table shapes before data reaches lower layers.
+
+Workspace entities MUST expose shared project concepts as domain entities rather than configuration-specific entities.
 
 Configuration entities MUST preserve enough information to report useful configuration errors.
 

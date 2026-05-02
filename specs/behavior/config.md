@@ -20,8 +20,6 @@ The following topics are out of scope:
 - output ordering.
 - exit codes.
 - project module ownership.
-- plugin implementation.
-- plugin loading internals.
 - dependency discovery algorithms.
 - caching.
 - performance requirements.
@@ -30,7 +28,7 @@ This specification defines configuration semantics that the implementation MUST 
 
 ## Dictionary
 
-- `configuration file` - a TOML file named `depmesh.toml` that configures relations, dependency discovery rules, and optional plugins for one project.
+- `configuration file` - a TOML file named `depmesh.toml` that configures relations and dependency discovery rules for one project.
 - `configuration root` - the directory that contains the active configuration file.
 - `rule` - a configuration entry that connects matching input artifacts to dependency expressions for one relation.
 - `artifact matcher` - one configured pattern that can make a rule apply to an input artifact.
@@ -69,7 +67,6 @@ The configuration file MUST be valid TOML.
 The top-level configuration MAY contain these fields:
 
 - `version` - configuration schema version.
-- `plugins` - list of plugin Python import paths.
 - `relations` - list of configured relations.
 - `rules` - list of dependency discovery rules.
 
@@ -96,44 +93,24 @@ reverse_description = "Artifacts tested by the input artifacts."
 
 [[rules]]
 relation = "tests"
-artifacts = [
-  { type = "glob", pattern = "./depmesh/{module}.py" },
-]
-dependencies = [
-  { type = "path", path = "./depmesh/tests/test_{module}.py" },
-]
+artifact = { type = "glob", pattern = "./depmesh/{*module}.py" }
+dependency = { type = "path", path = "./depmesh/tests/test_{module}.py" }
 ```
-
-## Plugins
-
-The `plugins` field MAY be omitted.
-
-If present, `plugins` MUST be an array of Python import path strings.
-
-A plugin declaration MUST NOT have any interpretation other than a Python import path.
-
-Plugin declaration example:
-
-```toml
-plugins = ["depmesh_plugins.python"]
-```
-
-Plugin import paths MUST be non-empty strings.
-
-Plugin import paths MUST be unique within one configuration file.
-
-Plugins MUST be interpreted in configuration order.
 
 ## Relations
 
-The `relations` field MUST contain the relation definitions referenced by rules.
+The `relations` field MAY be omitted.
 
-At least one relation MUST be configured.
+If present, `relations` MUST be an array of relation definitions.
+
+If omitted, `relations` MUST be treated as an empty array.
+
+The `relations` field MUST contain the relation definitions referenced by rules.
 
 Each relation definition MUST include:
 
 - `id` - relation id used for forward dependencies.
-- `reverse_id` - reverse relation id used for reverse dependencies.
+- `reverse_id` - directional relation id used to query dependencies in the opposite direction.
 
 Each relation definition MAY include:
 
@@ -167,31 +144,27 @@ If present, `rules` MUST be an array of rule definitions.
 
 Each rule definition MUST include:
 
-- `artifacts` - artifact matchers.
+- `artifact` - artifact matcher.
 - `relation` - forward relation id for dependencies produced by the rule.
-- `dependencies` - dependency expressions evaluated for matched artifacts.
+- `dependency` - dependency expression evaluated for matched artifacts.
 
 The `relation` field MUST reference a configured relation `id`.
 
 The `relation` field MUST NOT reference a `reverse_id`.
 
-The `dependencies` field MUST contain at least one dependency expression.
-
 Rules MUST be evaluated as forward dependency rules.
 
-Reverse dependency queries MUST be derived from the same configured relations and rules.
+A rule MUST match an input artifact when its `artifact` matcher matches the artifact.
+
+Queries for reverse relation ids MUST be derived from the same configured relations and rules.
 
 If multiple rules match the same artifact, all matching rules MUST contribute dependencies.
 
-If multiple dependency expressions in matching rules produce the same dependency for the same relation, the dependency MUST be treated as a duplicate.
+If dependency expression composition produces the same dependency more than once for the same relation, the dependency MUST be treated as a duplicate.
 
 ## Artifact matchers
 
-The `artifacts` field MUST be an array of artifact matcher tables.
-
-The `artifacts` field MUST contain at least one artifact matcher.
-
-A rule MUST match an input artifact when at least one matcher in its `artifacts` field matches the artifact.
+The `artifact` field MUST be an artifact matcher table.
 
 Each artifact matcher MUST include:
 
@@ -202,12 +175,14 @@ Supported artifact matcher types MUST include:
 - `path` - fixed artifact path.
 - `glob` - glob pattern.
 - `regex` - regular expression.
+- `any` - composition that matches when any child matcher matches.
+- `all` - composition that matches when all child matchers match.
 
 Future artifact matcher types MAY be added in later schema versions.
 
-Every template variable referenced by a rule's dependency expressions MUST be provided by every artifact matcher that can match the rule.
+Every template variable referenced by a rule's dependency expression MUST be provided by the rule's artifact matcher.
 
-Configuration loading MUST fail if a dependency expression references a template variable that is not provided by every artifact matcher that can match the rule.
+Configuration loading MUST fail if a dependency expression references a template variable that is not provided by the rule's artifact matcher.
 
 Relative paths and glob patterns MUST be resolved against the configuration root.
 
@@ -227,9 +202,7 @@ A `path` matcher MUST include:
 Example:
 
 ```toml
-artifacts = [
-  { type = "path", path = "./depmesh/domain/entities.py" },
-]
+artifact = { type = "path", path = "./depmesh/domain/entities.py" }
 ```
 
 A `path` matcher MUST NOT define captures.
@@ -249,21 +222,20 @@ A `glob` matcher MUST include:
 
 `?` MUST match one character inside one path segment.
 
-A glob matcher MAY define captures with `{name}`.
+A glob matcher MAY define captures with `{*name}` and `{**name}`.
 
 A glob capture name MUST contain only ASCII letters, ASCII digits, and `_`, and MUST NOT start with a digit.
 
-`{name}` MUST match zero or more characters inside one path segment.
+`{*name}` MUST match zero or more characters inside one path segment and expose the matched text as capture `name`.
+
+`{**name}` MUST match zero or more path segments and expose the matched text as capture `name`.
 
 If a glob matcher defines captures, every successful match MUST make those captures available to dependency expressions in the same rule.
 
 Example:
 
 ```toml
-artifacts = [
-  { type = "glob", pattern = "./depmesh/{module}.py" },
-  { type = "glob", pattern = "./depmesh/{module}/__init__.py" },
-]
+artifact = { type = "glob", pattern = "./depmesh/{*module}.py" }
 ```
 
 ### Regex matcher
@@ -282,12 +254,60 @@ Named captures MUST be made available to dependency expressions in the same rule
 Example:
 
 ```toml
-artifacts = [
-  { type = "regex", pattern = "^\\./depmesh/(?P<module>[a-z_]+)\\.py$" },
-]
+artifact = { type = "regex", pattern = "^\\./depmesh/(?P<module>[a-z_]+)\\.py$" }
 ```
 
 The supported regular expression dialect is implementation-defined for schema version `1`, but the implementation MUST document any syntax that differs from Python regular expressions before relying on it in examples or generated configuration.
+
+### Any matcher
+
+An `any` matcher MUST match an artifact when at least one child matcher matches the artifact.
+
+An `any` matcher MUST include:
+
+- `type = "any"`.
+- `items` - array of child artifact matcher tables.
+
+The `items` field MUST contain at least one child matcher.
+
+For template validation, an `any` matcher MUST expose only captures that are provided by every child matcher.
+
+Child matchers MUST be evaluated in configuration order.
+
+When more than one child matcher could match an artifact, the captures from the first matching child matcher MUST be used.
+
+Example:
+
+```toml
+artifact = { type = "any", items = [
+  { type = "glob", pattern = "./depmesh/{*module}.py" },
+  { type = "glob", pattern = "./depmesh/{*module}/__init__.py" },
+] }
+```
+
+### All matcher
+
+An `all` matcher MUST match an artifact only when every child matcher matches the artifact.
+
+An `all` matcher MUST include:
+
+- `type = "all"`.
+- `items` - array of child artifact matcher tables.
+
+The `items` field MUST contain at least one child matcher.
+
+For template validation, an `all` matcher MUST expose captures provided by any child matcher.
+
+If multiple child matchers produce the same capture name for one artifact, the matcher MUST NOT expose conflicting capture values to dependency expressions.
+
+Example:
+
+```toml
+artifact = { type = "all", items = [
+  { type = "glob", pattern = "./depmesh/{*module}.py" },
+  { type = "regex", pattern = "^\\./depmesh/(?P<module>[a-z_]+)\\.py$" },
+] }
+```
 
 ## Dependency expressions
 
@@ -303,12 +323,14 @@ Supported dependency expression types MUST include:
 - `glob` - glob pattern that expands to dependency paths.
 - `regex` - regular expression that finds dependency paths in the project.
 - `command` - shell command that prints dependency identifiers.
+- `union` - composition that produces dependencies from all child expressions.
+- `intersection` - composition that produces dependencies produced by every child expression.
 
 Future dependency expression types MAY be added in later schema versions.
 
 Dependency expressions MAY use template variables.
 
-A template variable MUST use `{name}` syntax and MUST reference a capture produced by the rule's artifact matchers.
+A template variable MUST use `{name}` syntax and MUST reference a capture produced by the rule's artifact matcher.
 
 If a dependency expression references an unknown template variable, configuration loading MUST fail.
 
@@ -330,9 +352,7 @@ If the resolved path does not exist as a file, the expression SHOULD produce a w
 Example:
 
 ```toml
-dependencies = [
-  { type = "path", path = "./depmesh/tests/test_{module}.py" },
-]
+dependency = { type = "path", path = "./depmesh/tests/test_{module}.py" }
 ```
 
 ### Glob expression
@@ -351,9 +371,7 @@ Glob expression results MUST be deterministic for the same filesystem state.
 Example:
 
 ```toml
-dependencies = [
-  { type = "glob", pattern = "./specs/**/*{module}*.md" },
-]
+dependency = { type = "glob", pattern = "./specs/**/*{module}*.md" }
 ```
 
 ### Regex expression
@@ -372,9 +390,7 @@ The supported regular expression dialect has the same requirements as regex arti
 Example:
 
 ```toml
-dependencies = [
-  { type = "regex", pattern = "^\\./specs/.+{module}.+\\.md$" },
-]
+dependency = { type = "regex", pattern = "^\\./specs/.+{module}.+\\.md$" }
 ```
 
 ### Command expression
@@ -401,9 +417,49 @@ If the command exits with a non-zero status, dependency query processing SHOULD 
 Example:
 
 ```toml
-dependencies = [
-  { type = "command", command = "python -m tools.find_imports {module}" },
-]
+dependency = { type = "command", command = "python -m tools.find_imports {module}" }
+```
+
+### Union expression
+
+A `union` expression MUST produce all dependencies produced by its child expressions.
+
+A `union` expression MUST include:
+
+- `type = "union"`.
+- `items` - array of child dependency expression tables.
+
+The `items` field MUST contain at least one child expression.
+
+Duplicate dependencies produced by child expressions MUST be treated as duplicates.
+
+Example:
+
+```toml
+dependency = { type = "union", items = [
+  { type = "path", path = "./depmesh/tests/test_{module}.py" },
+  { type = "glob", pattern = "./depmesh/tests/{module}/test_*.py" },
+] }
+```
+
+### Intersection expression
+
+An `intersection` expression MUST produce only dependencies produced by every child expression.
+
+An `intersection` expression MUST include:
+
+- `type = "intersection"`.
+- `items` - array of child dependency expression tables.
+
+The `items` field MUST contain at least one child expression.
+
+Example:
+
+```toml
+dependency = { type = "intersection", items = [
+  { type = "glob", pattern = "./specs/**/*.md" },
+  { type = "regex", pattern = "^\\./specs/.+{module}.+\\.md$" },
+] }
 ```
 
 ## Path normalization

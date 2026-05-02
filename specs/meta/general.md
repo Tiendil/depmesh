@@ -68,3 +68,42 @@ The `Dictionary` section SHOULD be placed immediately after the `Scope` section.
 - Specifications MUST follow [RFC 2119](https://datatracker.ietf.org/doc/html/rfc2119).
 - Specifications MUST NOT break long lines to fit within 80 characters or any other number; they MUST use as many characters as needed to express the idea clearly.
 - Long enumerations SHOULD be organized as Markdown lists when possible.
+
+## Abstraction level
+
+Specifications MUST describe project behavior, architecture, constraints, terminology, and compatibility contracts at the highest level that is still precise enough to guide implementation.
+
+Specifications SHOULD define:
+
+- externally visible behavior and data contracts.
+- stable architectural boundaries and ownership responsibilities.
+- constraints that must hold across implementations.
+- technology choices when they are part of the intended architecture.
+- examples that clarify the requirement being specified.
+
+Specifications MUST NOT define incidental implementation details.
+
+Incidental implementation details include:
+
+- private helper function names.
+- exact class names that are not part of a stable project convention or public boundary.
+- exact file paths for code that is not owned by a module-layout or ownership requirement.
+- local constructor signatures.
+- temporary implementation strategies.
+- repeated examples that restate ownership already defined elsewhere without adding a new constraint.
+
+Specifications MAY name concrete files, modules, symbols, commands, or formats when the name itself is a stable contract.
+
+Stable contracts include:
+
+- public CLI commands, options, arguments, and output records.
+- configuration file names, fields, and values.
+- module ownership boundaries defined by the module-layout specification.
+- naming conventions that all implementations are expected to follow.
+- concrete dependencies or language features that are intentional architectural choices.
+
+When a requirement can be expressed either as an implementation detail or as a general architectural rule, the specification MUST prefer the general rule.
+
+For example, a specification SHOULD require closed sets of named values to use enums instead of raw strings. It SHOULD NOT require a specific enum class name or file location unless that class name or location is itself a stable architectural boundary.
+
+Examples in specifications SHOULD illustrate behavior or ownership. Examples SHOULD NOT be treated as a place to enumerate every current implementation file or symbol.
