@@ -24,4 +24,3 @@
 * Improve CLI help texts
 
 * sync all files between each other, especially specs
-* list all relations
