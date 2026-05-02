@@ -7,21 +7,14 @@
 
 * package building and publishing
 
-* AGENTS.md
-
-* text for --skill
 
 * README.md
-
-* `init` command
 
 * .ignore mechanic (like in pydantic config) to simplify traversing the codebase
 
 * should depmesh work with path only under the root of the project? probably yes.
 
 * should depmesh paths logic be in sync with donna's paths logic?
-
-* Improve CLI help texts
 
 * sync all files between each other, especially specs
 
