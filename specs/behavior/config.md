@@ -86,10 +86,10 @@ Example:
 version = 1
 
 [[relations]]
-id = "tests"
-description = "Tests related to the input artifacts."
-reverse_id = "tested_by"
-reverse_description = "Artifacts tested by the input artifacts."
+forward_id = "tests"
+forward_description = "Tests related to the input artifacts."
+backward_id = "tested_by"
+backward_description = "Artifacts tested by the input artifacts."
 
 [[rules]]
 relation = "tests"
@@ -109,32 +109,32 @@ The `relations` field MUST contain the relation definitions referenced by rules.
 
 Each relation definition MUST include:
 
-- `id` - relation id used for forward dependencies.
-- `reverse_id` - directional relation id used to query dependencies in the opposite direction.
+- `forward_id` - directional relation id used for forward dependencies.
+- `backward_id` - directional relation id used to query dependencies in the opposite direction.
 
 Each relation definition MAY include:
 
-- `description` - relation description.
-- `reverse_description` - reverse relation description.
+- `forward_description` - forward relation description.
+- `backward_description` - backward relation description.
 
-Relation ids and reverse relation ids MUST be non-empty strings.
+Forward relation ids and backward relation ids MUST be non-empty strings.
 
-Relation ids and reverse relation ids MUST be unique across all configured relations.
+Forward relation ids and backward relation ids MUST be unique across all configured relations.
 
-Relation ids and reverse relation ids MUST contain only:
+Forward relation ids and backward relation ids MUST contain only:
 
 - lowercase ASCII letters.
 - ASCII digits.
 - `_`.
 
-If `description` is omitted, its value MUST be `None`.
+If `forward_description` is omitted, its value MUST be `None`.
 
-If `reverse_description` is omitted, its value MUST be `None`.
+If `backward_description` is omitted, its value MUST be `None`.
 
 The following relation fields MUST be non-empty strings when present:
 
 - relation descriptions.
-- reverse relation descriptions.
+- backward relation descriptions.
 
 ## Rules
 
@@ -148,15 +148,15 @@ Each rule definition MUST include:
 - `relation` - forward relation id for dependencies produced by the rule.
 - `dependency` - dependency expression evaluated for matched artifacts.
 
-The `relation` field MUST reference a configured relation `id`.
+The `relation` field MUST reference a configured relation `forward_id`.
 
-The `relation` field MUST NOT reference a `reverse_id`.
+The `relation` field MUST NOT reference a `backward_id`.
 
 Rules MUST be evaluated as forward dependency rules.
 
 A rule MUST match an input artifact when its `artifact` matcher matches the artifact.
 
-Queries for reverse relation ids MUST be derived from the same configured relations and rules.
+Queries for backward relation ids MUST be derived from the same configured relations and rules.
 
 If multiple rules match the same artifact, all matching rules MUST contribute dependencies.
 
@@ -479,7 +479,7 @@ Configuration loading MUST fail for:
 - invalid TOML.
 - unsupported schema version.
 - missing required relation fields.
-- duplicate relation ids or reverse relation ids.
+- duplicate forward relation ids or backward relation ids.
 - rules that reference unknown relation ids.
 - malformed artifact matchers.
 - malformed dependency expressions.

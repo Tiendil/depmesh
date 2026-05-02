@@ -16,14 +16,14 @@ def touch(path: Path) -> None:
     path.write_text("", encoding="utf-8")
 
 
-def make_relation(relation_id: str, reverse_id: str) -> Relation:
-    return Relation(id=RelationId(relation_id), reverse_id=RelationId(reverse_id))
+def make_relation(forward_id: str, backward_id: str) -> Relation:
+    return Relation(forward_id=RelationId(forward_id), backward_id=RelationId(backward_id))
 
 
 def make_relation_indexes(*relations: Relation) -> tuple[dict[RelationId, Relation], dict[RelationId, Relation]]:
     return (
-        {relation.id: relation for relation in relations},
-        {relation.reverse_id: relation for relation in relations},
+        {relation.forward_id: relation for relation in relations},
+        {relation.backward_id: relation for relation in relations},
     )
 
 
@@ -131,7 +131,7 @@ class TestQueryDependencies:
         assert warnings.read() == ["relation `tests`: skipped missing dependency `./tests/test_a.py`"]
         warnings.clear()
 
-    def test_relation_filter_uses_reverse_relation_id_direction(self, tmp_path: Path) -> None:
+    def test_relation_filter_uses_backward_relation_id_direction(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")
         touch(tmp_path / "tests/test_a.py")
         touch(tmp_path / "specs/a.md")
@@ -246,7 +246,7 @@ class TestQueryDependencies:
                 cwd=tmp_path,
             )
 
-    def test_reverse_relation_id_query_uses_reverse_relation_id(self, tmp_path: Path) -> None:
+    def test_backward_relation_id_query_uses_backward_relation_id(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")
         touch(tmp_path / "tests/test_a.py")
         relations = (make_relation("tests", "tested_by"),)

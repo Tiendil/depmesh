@@ -17,8 +17,8 @@ class LLMRendered(Rendered):
         descriptions = {}
 
         for relation in relations:
-            descriptions[relation.id] = relation.description
-            descriptions[relation.reverse_id] = relation.reverse_description
+            descriptions[relation.forward_id] = relation.forward_description
+            descriptions[relation.backward_id] = relation.backward_description
 
         for relation, dependencies in result.grouped().items():
             lines = [f"## {relation}"]

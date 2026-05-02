@@ -16,7 +16,7 @@ def write_config(path: Path, text: str) -> None:
 
 @pytest.fixture
 def relation_config_text() -> str:
-    return '[[relations]]\nid = "tests"\nreverse_id = "tested_by"\n'
+    return '[[relations]]\nforward_id = "tests"\nbackward_id = "tested_by"\n'
 
 
 @pytest.fixture
@@ -66,7 +66,7 @@ class TestLoadConfig:
         workspace = load_config(Path("project/depmesh.toml"), cwd=project_config_path.parent.parent)
 
         assert workspace.root == project_config_path.parent
-        assert workspace.relations == (Relation(id="tests", reverse_id="tested_by"),)
+        assert workspace.relations == (Relation(forward_id="tests", backward_id="tested_by"),)
 
     def test_invalid_toml(self, invalid_config_path: Path) -> None:
         with pytest.raises(errors.ConfigInvalid):
@@ -79,9 +79,9 @@ class TestParseConfig:
             {
                 "relations": [
                     {
-                        "id": "tests",
-                        "reverse_id": "tested_by",
-                        "description": "Tests related to the input artifacts.",
+                        "forward_id": "tests",
+                        "backward_id": "tested_by",
+                        "forward_description": "Tests related to the input artifacts.",
                     }
                 ],
                 "rules": [
@@ -97,9 +97,9 @@ class TestParseConfig:
 
         assert config.relations == (
             RelationConfig(
-                id="tests",
-                reverse_id="tested_by",
-                description="Tests related to the input artifacts.",
+                forward_id="tests",
+                backward_id="tested_by",
+                forward_description="Tests related to the input artifacts.",
             ),
         )
         assert config.rules[0].artifact.type == "glob"
@@ -107,12 +107,12 @@ class TestParseConfig:
 
     def test_version_omitted_defaults_to_one(self, tmp_path: Path) -> None:
         config = parse_config(
-            {"relations": [{"id": "tests", "reverse_id": "tested_by"}]},
+            {"relations": [{"forward_id": "tests", "backward_id": "tested_by"}]},
             config_path=tmp_path / "depmesh.toml",
         )
 
         assert config.version == 1
-        assert config.relations[0].id == "tests"
+        assert config.relations[0].forward_id == "tests"
 
     def test_relations_omitted_defaults_to_empty(self, tmp_path: Path) -> None:
         config = parse_config({}, config_path=tmp_path / "depmesh.toml")
@@ -127,14 +127,14 @@ class TestParseConfig:
     def test_unknown_top_level_field(self, tmp_path: Path) -> None:
         with pytest.raises(errors.ConfigInvalid):
             parse_config(
-                {"relations": [{"id": "tests", "reverse_id": "tested_by"}], "unknown": True},
+                {"relations": [{"forward_id": "tests", "backward_id": "tested_by"}], "unknown": True},
                 config_path=tmp_path / "depmesh.toml",
             )
 
     def test_unsupported_version(self, tmp_path: Path) -> None:
         with pytest.raises(errors.ConfigInvalid):
             parse_config(
-                {"version": 2, "relations": [{"id": "tests", "reverse_id": "tested_by"}]},
+                {"version": 2, "relations": [{"forward_id": "tests", "backward_id": "tested_by"}]},
                 config_path=tmp_path / "depmesh.toml",
             )
 
@@ -143,8 +143,8 @@ class TestParseConfig:
             parse_config(
                 {
                     "relations": [
-                        {"id": "tests", "reverse_id": "related"},
-                        {"id": "related", "reverse_id": "tested_by"},
+                        {"forward_id": "tests", "backward_id": "related"},
+                        {"forward_id": "related", "backward_id": "tested_by"},
                     ]
                 },
                 config_path=tmp_path / "depmesh.toml",
@@ -154,7 +154,7 @@ class TestParseConfig:
         with pytest.raises(errors.ConfigInvalid):
             parse_config(
                 {
-                    "relations": [{"id": "tests", "reverse_id": "tested_by"}],
+                    "relations": [{"forward_id": "tests", "backward_id": "tested_by"}],
                     "rules": [
                         {
                             "relation": "imports",
@@ -170,7 +170,7 @@ class TestParseConfig:
         with pytest.raises(errors.ConfigInvalid):
             parse_config(
                 {
-                    "relations": [{"id": "tests", "reverse_id": "tested_by"}],
+                    "relations": [{"forward_id": "tests", "backward_id": "tested_by"}],
                     "rules": [
                         {
                             "relation": "tests",

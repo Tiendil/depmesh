@@ -58,7 +58,7 @@ def _selected_relation_ids(
     if not relation_filters:
         return (
             set(relations_by_forward_id),
-            {relation.id for relation in relations_by_backward_id.values()},
+            {relation.forward_id for relation in relations_by_backward_id.values()},
         )
 
     forward_relation_ids: set[RelationId] = set()
@@ -67,12 +67,12 @@ def _selected_relation_ids(
     for relation_filter in relation_filters:
         forward_relation = relations_by_forward_id.get(relation_filter)
         if forward_relation is not None:
-            forward_relation_ids.add(forward_relation.id)
+            forward_relation_ids.add(forward_relation.forward_id)
             continue
 
         backward_relation = relations_by_backward_id.get(relation_filter)
         if backward_relation is not None:
-            backward_relation_ids.add(backward_relation.id)
+            backward_relation_ids.add(backward_relation.forward_id)
             continue
 
         raise errors.UnknownRelationFilter(relation_filter)
@@ -103,7 +103,7 @@ def _query_forward(
                 continue
 
             for dependency in _evaluate_rule_dependencies(root, rule, captures):
-                dependencies.add(Dependency(relation=relation.id, dependency=dependency))
+                dependencies.add(Dependency(relation=relation.forward_id, dependency=dependency))
 
     return QueryResult(dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency))))
 
@@ -155,7 +155,7 @@ def _query_backward_without_warnings(
             if relation is None:
                 continue
 
-            dependencies.add(Dependency(relation=relation.reverse_id, dependency=candidate))
+            dependencies.add(Dependency(relation=relation.backward_id, dependency=candidate))
 
     return QueryResult(dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency))))
 

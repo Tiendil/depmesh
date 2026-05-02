@@ -23,8 +23,8 @@ The following topics are out of scope:
 This specification may refer to the following concepts only to describe how the CLI accepts arguments and renders output:
 
 - configured relations.
-- relation ids.
-- reverse relation ids.
+- forward relation ids.
+- backward relation ids.
 - relation descriptions.
 - configuration paths.
 
@@ -102,10 +102,10 @@ Dependency query output MUST order dependencies alphabetically inside each relat
 
 The `show` command MUST always treat each input artifact as the left side of selected directional relations and MUST output artifacts found on the right side of those directional relations.
 
-If a configured relation from `x` to `y` has relation id `relation_id` and reverse relation id `reverse_relation_id`:
+If a configured relation from `x` to `y` has forward relation id `forward_relation_id` and backward relation id `backward_relation_id`:
 
-- selecting `relation_id` for input `x` MUST return `y`.
-- selecting `reverse_relation_id` for input `y` MUST return `x`.
+- selecting `forward_relation_id` for input `x` MUST return `y`.
+- selecting `backward_relation_id` for input `y` MUST return `x`.
 
 Dependency query output MUST group dependencies under the selected directional relation id that produced them.
 
@@ -266,13 +266,13 @@ The CLI MAY also include normalized or resolved artifact identifiers when useful
 
 `-r RELATION_ID` and `--relation RELATION_ID` MUST limit output to the specified relation.
 
-`RELATION_ID` MUST match either a configured relation id or a configured reverse relation id.
+`RELATION_ID` MUST match either a configured forward relation id or a configured backward relation id.
 
 `RELATION_ID` MUST be interpreted as a directional relation id.
 
-When `RELATION_ID` matches a configured relation id, the command MUST use configured forward dependency rules for that relation.
+When `RELATION_ID` matches a configured forward relation id, the command MUST use configured forward dependency rules for that relation.
 
-When `RELATION_ID` matches a configured reverse relation id, the command MUST derive dependencies in the reverse direction from configured forward dependency rules for the corresponding relation.
+When `RELATION_ID` matches a configured backward relation id, the command MUST derive dependencies in the backward direction from configured forward dependency rules for the corresponding relation.
 
 This option MAY be repeated to include multiple relations.
 
@@ -346,7 +346,7 @@ tests:
   ./src/tests/test_do_smth.py
 ```
 
-### Example: reverse relation id
+### Example: backward relation id
 
 Command:
 

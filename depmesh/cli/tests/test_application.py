@@ -23,10 +23,10 @@ def write_project(tmp_path: Path) -> None:
     (tmp_path / "depmesh.toml").write_text(
         """
 [[relations]]
-id = "tests"
-reverse_id = "tested_by"
-description = "Tests related to the input artifacts."
-reverse_description = "Artifacts tested by the input artifacts."
+forward_id = "tests"
+backward_id = "tested_by"
+forward_description = "Tests related to the input artifacts."
+backward_description = "Artifacts tested by the input artifacts."
 
 [[rules]]
 relation = "tests"
@@ -96,7 +96,7 @@ class TestShow:
         records = [json.loads(line) for line in result.output.splitlines()]
         assert records == [{"type": "dependency", "relation": "tests", "dependency": "./tests/test_a.py"}]
 
-    def test_reverse_relation_id_query_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_backward_relation_id_query_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)
         monkeypatch.chdir(tmp_path)
 
@@ -105,7 +105,7 @@ class TestShow:
         assert result.exit_code == 0
         assert result.output == "tested_by:\n  ./src/a.py\n"
 
-    def test_default_query_output_includes_reverse_relation_ids(
+    def test_default_query_output_includes_backward_relation_ids(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         write_project(tmp_path)

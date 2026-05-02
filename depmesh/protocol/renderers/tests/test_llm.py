@@ -18,8 +18,12 @@ class TestLLMRendered:
             )
         )
         relations = (
-            Relation(id="tests", reverse_id="tested_by", description="Tests related to the input artifacts."),
-            Relation(id="specs", reverse_id="specified_by"),
+            Relation(
+                forward_id="tests",
+                backward_id="tested_by",
+                forward_description="Tests related to the input artifacts.",
+            ),
+            Relation(forward_id="specs", backward_id="specified_by"),
         )
 
         assert LLMRendered().render_query(
@@ -43,9 +47,9 @@ class TestLLMRendered:
             {
                 "relations": [
                     {
-                        "id": "tests",
-                        "reverse_id": "tested_by",
-                        "description": "Tests related to the input artifacts.",
+                        "forward_id": "tests",
+                        "backward_id": "tested_by",
+                        "forward_description": "Tests related to the input artifacts.",
                     }
                 ]
             },
@@ -59,12 +63,12 @@ class TestLLMRendered:
             "- ./tests/test_a.py\n"
         )
 
-    def test_render_query__includes_reverse_relation_description(self) -> None:
+    def test_render_query__includes_backward_relation_description(self) -> None:
         relations = (
             Relation(
-                id="tests",
-                reverse_id="tested_by",
-                reverse_description="Artifacts tested by the input artifacts.",
+                forward_id="tests",
+                backward_id="tested_by",
+                backward_description="Artifacts tested by the input artifacts.",
             ),
         )
         result = QueryResult(dependencies=(Dependency(relation="tested_by", dependency="./src/a.py"),))
