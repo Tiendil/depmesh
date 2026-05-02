@@ -4,7 +4,8 @@ import abc
 
 from depmesh.discovery.entities import QueryResult
 from depmesh.domain.entities import Relation
-from depmesh.skills import load_skill_text
+from depmesh.skills.entities import SkillDocument
+from depmesh.skills.fixtures import load_skill_text
 
 
 class Rendered(abc.ABC):
@@ -18,8 +19,8 @@ class Rendered(abc.ABC):
     ) -> str:
         raise NotImplementedError
 
-    def render_skill(self) -> str:
-        return load_skill_text()
+    def render_skill(self, document: SkillDocument = SkillDocument.usage) -> str:
+        return load_skill_text(document)
 
     @abc.abstractmethod
     def render_relations(self, relations: tuple[Relation, ...]) -> str:

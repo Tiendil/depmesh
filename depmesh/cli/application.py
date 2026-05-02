@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from importlib import metadata
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -18,9 +19,11 @@ from depmesh.discovery.query import normalize_input_artifacts, query_dependencie
 from depmesh.domain.entities import Dependency
 from depmesh.protocol import OutputProtocol, renderer
 from depmesh.protocol.renderers import Rendered
+from depmesh.skills.entities import SkillDocument
 from depmesh.workspace import errors as workspace_errors
 from depmesh.workspace.config import load_config
 from depmesh.workspace.entities import Workspace
+from depmesh.workspace.init import initialize_config
 
 EXIT_INVALID_ARGUMENTS = 1
 EXIT_CONFIG = 2
@@ -95,9 +98,19 @@ def relations(context: typer.Context) -> None:
 
 
 @app.command("skill")
-def skill(context: typer.Context) -> None:
+def skill(
+    context: typer.Context,
+    document: Annotated[SkillDocument, typer.Argument()] = SkillDocument.usage,
+) -> None:
     with command_context(context, default_protocol=OutputProtocol.llm) as command:
-        command.write(command.renderer.render_skill())
+        command.write(command.renderer.render_skill(document))
+
+
+@app.command("init")
+def init(context: typer.Context) -> None:
+    with command_context(context, default_protocol=OutputProtocol.human) as command:
+        config_path = initialize_config(command.global_options.config)
+        command.write(f"created {config_path}\n")
 
 
 @app.command("version")

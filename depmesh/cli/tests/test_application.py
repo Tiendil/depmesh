@@ -250,7 +250,33 @@ class TestSkill:
         result = CliRunner().invoke(app, ["skill"])
 
         assert result.exit_code == 0
-        assert result.output.startswith("# depmesh usage\n")
+        assert result.output.startswith("# `depmesh` Usage\n")
+
+    def test_skill_usage_document(self) -> None:
+        result = CliRunner().invoke(app, ["skill", "usage"])
+
+        assert result.exit_code == 0
+        assert result.output.startswith("# `depmesh` Usage\n")
+
+    def test_skill_configuration_document(self) -> None:
+        result = CliRunner().invoke(app, ["skill", "configuration"])
+
+        assert result.exit_code == 0
+        assert result.output.startswith("# `depmesh` Configuration\n")
+
+    def test_skill_initialization_document(self) -> None:
+        result = CliRunner().invoke(app, ["skill", "initialization"])
+
+        assert result.exit_code == 0
+        assert result.output.startswith("# `depmesh` Initialization\n")
+
+    def test_skill_rejects_unknown_document(self) -> None:
+        result = CliRunner().invoke(app, ["skill", "missing"])
+
+        assert result.exit_code != 0
+        assert "usage" in result.output
+        assert "configuration" in result.output
+        assert "initialization" in result.output
 
     def test_skill_automation_protocol(self) -> None:
         result = CliRunner().invoke(app, ["--protocol", "automation", "skill"])
@@ -258,11 +284,51 @@ class TestSkill:
         assert result.exit_code == 0
         assert json.loads(result.output)["type"] == "skill"
 
+    def test_skill_automation_protocol_includes_selected_document(self) -> None:
+        result = CliRunner().invoke(app, ["--protocol", "automation", "skill", "configuration"])
+
+        assert result.exit_code == 0
+        record = json.loads(result.output)
+        assert record["document"] == "configuration"
+        assert record["text"].startswith("# `depmesh` Configuration\n")
+
     def test_global_config_option_is_accepted(self, tmp_path: Path) -> None:
         result = CliRunner().invoke(app, ["--config", str(tmp_path / "missing.toml"), "skill"])
 
         assert result.exit_code == 0
-        assert result.output.startswith("# depmesh usage\n")
+        assert result.output.startswith("# `depmesh` Usage\n")
+
+
+class TestInit:
+    def test_creates_default_config(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["init"])
+
+        config_path = tmp_path / "depmesh.toml"
+        assert result.exit_code == 0
+        assert result.output == f"created {config_path}\n"
+        assert 'id = "governed_by"' in config_path.read_text(encoding="utf-8")
+        assert 'id = "governs"' in config_path.read_text(encoding="utf-8")
+
+    def test_uses_global_config_path(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["--config", "custom.toml", "init"])
+
+        assert result.exit_code == 0
+        assert (tmp_path / "custom.toml").is_file()
+
+    def test_does_not_overwrite_existing_config(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.chdir(tmp_path)
+        config_path = tmp_path / "depmesh.toml"
+        config_path.write_text("version = 1\n", encoding="utf-8")
+
+        result = CliRunner().invoke(app, ["init"])
+
+        assert result.exit_code == 2
+        assert "already exists" in result.output
+        assert config_path.read_text(encoding="utf-8") == "version = 1\n"
 
 
 class TestVersion:

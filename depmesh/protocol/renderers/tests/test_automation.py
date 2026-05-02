@@ -53,6 +53,13 @@ class TestAutomationRendered:
         record = json.loads(AutomationRendered().render_skill())
 
         assert record["type"] == "skill"
+        assert record["document"] == "usage"
+
+    def test_render_skill__returns_selected_document(self) -> None:
+        record = json.loads(AutomationRendered().render_skill("initialization"))
+
+        assert record["document"] == "initialization"
+        assert record["text"].startswith("# `depmesh` Initialization\n")
 
     def test_render_relations__returns_json_lines_records(self) -> None:
         records = [

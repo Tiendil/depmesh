@@ -86,7 +86,8 @@ The CLI MUST support these commands and command forms:
 - `depmesh [GLOBAL_OPTIONS] deps [OPTIONS] ARTIFACT...` — alias for `dependencies`.
 - `depmesh [GLOBAL_OPTIONS] relations` — list configured relations.
 - `depmesh [GLOBAL_OPTIONS] rels` — alias for `relations`.
-- `depmesh [GLOBAL_OPTIONS] skill` — print extensive agent-oriented instructions for using `depmesh`.
+- `depmesh [GLOBAL_OPTIONS] skill [DOCUMENT]` — print built-in agent-oriented documentation for using `depmesh`.
+- `depmesh [GLOBAL_OPTIONS] init` — create a starter configuration file.
 - `depmesh [GLOBAL_OPTIONS] version` — print the tool version.
 - `depmesh --help` — print root help information.
 
@@ -526,10 +527,13 @@ Example output:
 
 ## Skill Command
 
-The `skill` command MUST print extensive instructions for coding agents that want to use `depmesh` effectively.
+The `skill` command MUST print built-in documentation for coding agents.
 
 ```bash
 depmesh skill
+depmesh skill usage
+depmesh skill configuration
+depmesh skill initialization
 ```
 
 For the `llm` protocol, `depmesh skill` output MUST be Markdown-compatible text.
@@ -539,6 +543,18 @@ The command output SHOULD be suitable for coding agents that receive the output 
 The default output protocol for this command MUST be `llm` when no global protocol is selected.
 
 The `skill` command MUST NOT accept artifact arguments or dependency query options.
+
+The `skill` command MUST accept an optional document argument.
+
+Allowed document argument values MUST be:
+
+- `usage` - print general command usage documentation.
+- `configuration` - print configuration documentation.
+- `initialization` - print initialization documentation.
+
+When no document argument is provided, `depmesh skill` MUST behave like `depmesh skill usage`.
+
+Unknown document argument values MUST fail with an invalid-arguments exit.
 
 For `depmesh skill`, `PROTOCOL` MAY be:
 
@@ -575,6 +591,37 @@ Example output:
 ```jsonl
 {"type":"skill","text":"The exact content emitted by `depmesh skill` is not part of this specification."}
 ```
+
+## Init Command
+
+The `init` command MUST create a starter configuration file.
+
+```bash
+depmesh init
+depmesh --config ./path/to/depmesh.toml init
+```
+
+When no `--config` path is provided, the command MUST create `depmesh.toml` in the current working directory.
+
+When `--config PATH` is provided, the command MUST create the file at that path.
+
+Relative `--config` paths MUST be resolved against the current working directory.
+
+The command MUST NOT discover an existing configuration file in parent directories.
+
+The command MUST NOT overwrite an existing file.
+
+The generated configuration MUST:
+
+- be valid TOML.
+- use schema version `1`.
+- include the `governed_by` relation.
+- include the `governs` relation.
+- include commented examples of relation rules.
+
+The command SHOULD print the created configuration path to stdout.
+
+The command MUST NOT accept artifact arguments, relation options, dependency query options, or skill document arguments.
 
 ## Version Command
 

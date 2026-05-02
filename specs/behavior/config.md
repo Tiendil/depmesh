@@ -87,7 +87,7 @@ version = 1
 
 [[relations]]
 id = "tests"
-description = "Tests related to the input artifacts."
+description = "Tests that verify the artifact."
 
 [[rules]]
 relation = "tests"
@@ -132,6 +132,46 @@ The following relation fields MUST be non-empty strings when present:
 Relations are single-directional.
 
 Configurations that need reverse lookups MUST declare a separate relation and separate rules for that direction.
+
+### Relation descriptions
+
+A relation description SHOULD describe the artifacts produced on the right side of the relation for the artifact being queried.
+
+Descriptions SHOULD be written from the point of view of the query result, not from the implementation mechanism that discovers it.
+
+Descriptions SHOULD make the queried artifact role clear when the relation name alone does not.
+
+Descriptions SHOULD use domain-specific roles such as specification, test, Python file, source module, or artifact.
+
+For example, this description is useful for a relation queried with a specification artifact:
+
+```toml
+[[relations]]
+id = "governs"
+description = "Artifacts governed by the specification."
+```
+
+This description is less useful because it hides the role of the queried artifact:
+
+```toml
+[[relations]]
+id = "governs"
+description = "Artifacts governed by the artifact."
+```
+
+Reverse relation descriptions SHOULD be written independently instead of mechanically reusing the forward relation wording.
+
+Example:
+
+```toml
+[[relations]]
+id = "governed_by"
+description = "Specifications that apply to the artifact."
+
+[[relations]]
+id = "governs"
+description = "Artifacts governed by the specification."
+```
 
 ## Rules
 

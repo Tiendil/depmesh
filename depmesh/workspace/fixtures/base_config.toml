@@ -1,0 +1,33 @@
+version = 1
+
+################################
+# Relation: governed_by / governs
+################################
+
+[[relations]]
+id = "governed_by"
+# Describe what this relation returns for the queried artifact.
+# Use project terms such as specification, test, Python file, source module, or artifact.
+description = "Specifications that apply to the artifact."
+
+[[relations]]
+id = "governs"
+# Reverse relations should get their own wording.
+# Here the queried artifact is a specification.
+description = "Artifacts governed by the specification."
+
+# Example: implementation files are governed by specification documents.
+# Uncomment and adjust this rule when the paths match your project.
+#
+# [[rules]]
+# relation = "governed_by"
+# input = { type = "glob", pattern = "./src/**/*.py" }
+# output = { type = "files", pattern = "./specs/**/*.md" }
+
+# Example: specification documents govern implementation files.
+# Uncomment and adjust this rule when the paths match your project.
+#
+# [[rules]]
+# relation = "governs"
+# input = { type = "glob", pattern = "./specs/**/*.md" }
+# output = { type = "files", pattern = "./src/**/*.py" }

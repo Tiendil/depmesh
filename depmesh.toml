@@ -130,6 +130,9 @@ input = { type = "any", items = [
   { type = "glob", pattern = "./depmesh/protocol/**/*.py" },
   { type = "glob", pattern = "./depmesh/skills/**/*.py" },
   { type = "glob", pattern = "./depmesh/skills/**/*.md" },
+  { type = "glob", pattern = "./depmesh/workspace/init.py" },
+  { type = "glob", pattern = "./depmesh/workspace/tests/test_init.py" },
+  { type = "glob", pattern = "./depmesh/workspace/fixtures/*.toml" },
   { type = "one_of", artifacts = [
     "./depmesh/__init__.py",
     "./depmesh/__main__.py",
@@ -146,9 +149,24 @@ output = { type = "union", items = [
   { type = "files", pattern = "./depmesh/protocol/**/*.py" },
   { type = "files", pattern = "./depmesh/skills/**/*.py" },
   { type = "files", pattern = "./depmesh/skills/**/*.md" },
+  { type = "list", artifacts = ["./depmesh/workspace/init.py"] },
+  { type = "list", artifacts = ["./depmesh/workspace/tests/test_init.py"] },
+  { type = "files", pattern = "./depmesh/workspace/fixtures/*.toml" },
   { type = "list", artifacts = ["./depmesh/__init__.py"] },
   { type = "list", artifacts = ["./depmesh/__main__.py"] },
 ] }
+
+# Built-in skill fixtures are governed by the skill fixture architecture spec.
+[[rules]]
+relation = "governed_by"
+input = { type = "glob", pattern = "./depmesh/skills/fixtures/*.md" }
+output = { type = "list", artifacts = ["./specs/architecture/skill_fixtures.md"] }
+
+# The skill fixture architecture spec governs built-in skill fixtures.
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["./specs/architecture/skill_fixtures.md"] }
+output = { type = "files", pattern = "./depmesh/skills/fixtures/*.md" }
 
 # Configuration behavior governs the config file, helper scripts, and config/discovery code.
 [[rules]]
@@ -157,6 +175,7 @@ input = { type = "any", items = [
   { type = "one_of", artifacts = ["./depmesh.toml"] },
   { type = "glob", pattern = "./bin/depmesh/**" },
   { type = "glob", pattern = "./depmesh/workspace/**/*.py" },
+  { type = "glob", pattern = "./depmesh/workspace/fixtures/*.toml" },
   { type = "glob", pattern = "./depmesh/discovery/**/*.py" },
 ] }
 output = { type = "list", artifacts = ["./specs/behavior/config.md"] }
@@ -169,6 +188,7 @@ output = { type = "union", items = [
   { type = "list", artifacts = ["./depmesh.toml"] },
   { type = "files", pattern = "./bin/depmesh/**/*" },
   { type = "files", pattern = "./depmesh/workspace/**/*.py" },
+  { type = "files", pattern = "./depmesh/workspace/fixtures/*.toml" },
   { type = "files", pattern = "./depmesh/discovery/**/*.py" },
 ] }
 

@@ -8,10 +8,6 @@ Every agent MUST follow these instructions.
 
 `depmesh` is a Python CLI tool that helps coding agents understand dependencies of project artifacts.
 
-The project is under active early development. Some behavior described in specifications may not be implemented yet.
-
-Agents MUST NOT implement missing functionality unless explicitly asked to do so.
-
 ## Source Of Truth
 
 Project behavior and architecture are specified in `./specs/`.
