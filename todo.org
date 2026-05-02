@@ -19,3 +19,5 @@
 * sync all files between each other, especially specs
 
 * `not` predicate is incompatible with matching, should fix somehow
+
+* on the example of test rule, should we list as dependency not existed files?

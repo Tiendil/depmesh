@@ -168,6 +168,22 @@ relation = "governs"
 input = { type = "one_of", artifacts = ["./specs/behavior/skill_fixtures.md"] }
 output = { type = "files", pattern = "./depmesh/skills/fixtures/*.md" }
 
+################################
+# Relation: README documentation
+################################
+
+# README.md is governed by its documentation spec.
+[[rules]]
+relation = "governed_by"
+input = { type = "one_of", artifacts = ["./README.md"] }
+output = { type = "list", artifacts = ["./specs/documentation/readme.md"] }
+
+# The README documentation spec governs README.md.
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["./specs/documentation/readme.md"] }
+output = { type = "list", artifacts = ["./README.md"] }
+
 # Configuration behavior governs the config file, helper scripts, and config/discovery code.
 [[rules]]
 relation = "governed_by"
@@ -211,7 +227,10 @@ relation = "terms_defined_by"
 input = { type = "any", items = [
   { type = "glob", pattern = "./specs/**/*.md" },
   { type = "glob", pattern = "./depmesh/**/*.py" },
-  { type = "one_of", artifacts = ["./depmesh.toml"] },
+  { type = "one_of", artifacts = [
+    "./depmesh.toml",
+    "./README.md",
+  ] },
 ] }
 output = { type = "list", artifacts = ["./specs/dictionary.md"] }
 
@@ -223,7 +242,10 @@ input = { type = "one_of", artifacts = ["./specs/dictionary.md"] }
 output = { type = "union", items = [
   { type = "files", pattern = "./specs/**/*.md" },
   { type = "files", pattern = "./depmesh/**/*.py" },
-  { type = "list", artifacts = ["./depmesh.toml"] },
+  { type = "list", artifacts = [
+    "./depmesh.toml",
+    "./README.md",
+  ] },
 ] }
 
 #############################
