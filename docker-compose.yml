@@ -1,0 +1,11 @@
+
+services:
+
+  depmesh:
+
+    build:
+      context: ./
+      dockerfile: ./docker/Dockerfile
+
+    volumes:
+      - ${PWD}:/repository

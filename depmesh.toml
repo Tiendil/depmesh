@@ -1,0 +1,36 @@
+version = 1
+
+#############################
+# Relation: tested_by / tests
+#############################
+
+[[relations]]
+forward_id = "tested_by"
+backward_id = "tests"
+forward_description = "Test files that cover implementation files."
+backward_description = "Implementation files covered by test files."
+
+[[rules]]
+relation = "tested_by"
+artifact = { type = "glob", pattern = "./depmesh/{**package_path}/__init__.py" }
+dependency = { type = "glob", pattern = "./depmesh/{package_path}/tests/test_init.py" }
+
+[[rules]]
+relation = "tested_by"
+artifact = { type = "glob", pattern = "./depmesh/{**package_path}/{*module}.py" }
+dependency = { type = "glob", pattern = "./depmesh/{package_path}/tests/test_{module}.py" }
+
+#################################
+# Relation: imports / imported_by
+#################################
+
+[[relations]]
+forward_id = "imports"
+backward_id = "imported_by"
+forward_description = "Python files imported by the input Python file."
+backward_description = "Python files that import the input Python file."
+
+[[rules]]
+relation = "imports"
+artifact = { type = "glob", pattern = "./depmesh/{**module_path}.py" }
+dependency = { type = "command", command = "python ./bin/depmesh/tach_map_query.py --direction dependencies --artifact ./depmesh/{module_path}.py" }
