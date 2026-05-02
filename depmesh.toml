@@ -6,11 +6,11 @@ version = 1
 
 [[relations]]
 id = "tested_by"
-description = "Test files that cover implementation files."
+description = "Tests that verify the artifact."
 
 [[relations]]
 id = "tests"
-description = "Implementation files covered by test files."
+description = "Artifacts verified by the test."
 
 [[rules]]
 relation = "tested_by"
@@ -19,7 +19,10 @@ dependency = { type = "glob", pattern = "./depmesh/{package_path}/tests/test_ini
 
 [[rules]]
 relation = "tested_by"
-artifact = { type = "regex", pattern = "^\\./depmesh/(?P<package_path>.+)/(?P<module>(?!__init__$)[a-z_]+)\\.py$" }
+artifact = { type = "all", items = [
+  { type = "glob", pattern = "./depmesh/{**package_path}/{*module}.py" },
+  { type = "not", item = { type = "glob", pattern = "./depmesh/{**package_path}/__init__.py" } },
+] }
 dependency = { type = "glob", pattern = "./depmesh/{package_path}/tests/test_{module}.py" }
 
 [[rules]]
@@ -29,7 +32,10 @@ dependency = { type = "path", path = "./depmesh/{package_path}/__init__.py" }
 
 [[rules]]
 relation = "tests"
-artifact = { type = "regex", pattern = "^\\./depmesh/(?P<package_path>.+)/tests/test_(?P<module>(?!init$)[a-z_]+)\\.py$" }
+artifact = { type = "all", items = [
+  { type = "glob", pattern = "./depmesh/{**package_path}/tests/test_{*module}.py" },
+  { type = "not", item = { type = "glob", pattern = "./depmesh/{**package_path}/tests/test_init.py" } },
+] }
 dependency = { type = "path", path = "./depmesh/{package_path}/{module}.py" }
 
 #################################
@@ -38,11 +44,11 @@ dependency = { type = "path", path = "./depmesh/{package_path}/{module}.py" }
 
 [[relations]]
 id = "imports"
-description = "Python files imported by the input Python file."
+description = "Python files imported by the artifact."
 
 [[relations]]
 id = "imported_by"
-description = "Python files that import the input Python file."
+description = "Python files that import the artifact."
 
 [[rules]]
 relation = "imports"
@@ -53,3 +59,288 @@ dependency = { type = "command", command = "python ./bin/depmesh/tach_map_query.
 relation = "imported_by"
 artifact = { type = "glob", pattern = "./depmesh/{**module_path}.py" }
 dependency = { type = "command", command = "python ./bin/depmesh/tach_map_query.py --direction dependents --artifact ./depmesh/{module_path}.py" }
+
+################################
+# Relation: governed_by / governs
+################################
+
+[[relations]]
+id = "governed_by"
+description = "Specifications that apply to the artifact."
+
+[[relations]]
+id = "governs"
+description = "Artifacts governed by the specification."
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "all", items = [
+  { type = "glob", pattern = "./specs/{**path}.md" },
+  { type = "not", item = { type = "paths", paths = ["./specs/meta/general.md"] } },
+] }
+dependency = { type = "path", path = "./specs/meta/general.md" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/meta/general.md"] }
+dependency = { type = "difference", include = { type = "glob", pattern = "./specs/**/*.md" }, exclude = { type = "path", path = "./specs/meta/general.md" } }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "glob", pattern = "./depmesh/{**module_path}.py" }
+dependency = { type = "path", path = "./specs/architecture/modules_layout.md" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "glob", pattern = "./depmesh/{**module_path}.py" }
+dependency = { type = "path", path = "./specs/architecture/naming.md" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "paths", paths = ["./tach.toml"] }
+dependency = { type = "path", path = "./specs/architecture/modules_layout.md" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/architecture/modules_layout.md"] }
+dependency = { type = "glob", pattern = "./depmesh/**/*.py" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/architecture/modules_layout.md"] }
+dependency = { type = "path", path = "./tach.toml" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/architecture/naming.md"] }
+dependency = { type = "glob", pattern = "./depmesh/**/*.py" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "any", items = [
+  { type = "paths", paths = [
+    "./depmesh/core/entities.py",
+    "./depmesh/domain/entities.py",
+    "./depmesh/cli/entities.py",
+    "./depmesh/workspace/entities.py",
+    "./depmesh/discovery/entities.py",
+    "./depmesh/protocol/entities.py",
+  ] },
+  { type = "glob", pattern = "./depmesh/discovery/matchers/{*module}.py" },
+  { type = "glob", pattern = "./depmesh/discovery/expressions/{*module}.py" },
+] }
+dependency = { type = "path", path = "./specs/architecture/entities.md" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/architecture/entities.md"] }
+dependency = { type = "union", items = [
+  { type = "path", path = "./depmesh/core/entities.py" },
+  { type = "path", path = "./depmesh/domain/entities.py" },
+  { type = "path", path = "./depmesh/cli/entities.py" },
+  { type = "path", path = "./depmesh/workspace/entities.py" },
+  { type = "path", path = "./depmesh/discovery/entities.py" },
+  { type = "path", path = "./depmesh/protocol/entities.py" },
+  { type = "glob", pattern = "./depmesh/discovery/matchers/*.py" },
+  { type = "glob", pattern = "./depmesh/discovery/expressions/*.py" },
+] }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "glob", pattern = "./depmesh/{**package_path}/errors.py" }
+dependency = { type = "path", path = "./specs/architecture/errors.md" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "regex", pattern = "^\\./depmesh/(core/warnings|cli/(application|entities)|discovery/(entities|query|matchers/(glob|regex)|expressions/(command|glob|path))|protocol/renderers/base|workspace/(config|entities))\\.py$" }
+dependency = { type = "path", path = "./specs/architecture/errors.md" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "regex", pattern = "^\\./depmesh/(core/tests/test_warnings|cli/tests/test_application|discovery/tests/(test_errors|test_query)|discovery/expressions/tests/test_(command|glob|path)|workspace/tests/test_config)\\.py$" }
+dependency = { type = "path", path = "./specs/architecture/errors.md" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/architecture/errors.md"] }
+dependency = { type = "glob", pattern = "./depmesh/**/errors.py" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/architecture/errors.md"] }
+dependency = { type = "regex", pattern = "^\\./depmesh/(core/warnings|cli/(application|entities)|discovery/(entities|query|matchers/(glob|regex)|expressions/(command|glob|path))|protocol/renderers/base|workspace/(config|entities))\\.py$" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/architecture/errors.md"] }
+dependency = { type = "regex", pattern = "^\\./depmesh/(core/tests/test_warnings|cli/tests/test_application|discovery/tests/(test_errors|test_query)|discovery/expressions/tests/test_(command|glob|path)|workspace/tests/test_config)\\.py$" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "regex", pattern = "^\\./depmesh/.+/tests/test_[^/]+\\.py$" }
+dependency = { type = "path", path = "./specs/architecture/tests.md" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/architecture/tests.md"] }
+dependency = { type = "regex", pattern = "^\\./depmesh/.+/tests/test_[^/]+\\.py$" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "glob", pattern = "./depmesh/cli/{**path}.py" }
+dependency = { type = "path", path = "./specs/behavior/cli.md" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "glob", pattern = "./depmesh/protocol/{**path}.py" }
+dependency = { type = "path", path = "./specs/behavior/cli.md" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "glob", pattern = "./depmesh/skills/{**path}.py" }
+dependency = { type = "path", path = "./specs/behavior/cli.md" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "glob", pattern = "./depmesh/skills/{**path}.md" }
+dependency = { type = "path", path = "./specs/behavior/cli.md" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "regex", pattern = "^\\./depmesh/(__init__|__main__)\\.py$" }
+dependency = { type = "path", path = "./specs/behavior/cli.md" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/behavior/cli.md"] }
+dependency = { type = "glob", pattern = "./depmesh/cli/**/*.py" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/behavior/cli.md"] }
+dependency = { type = "glob", pattern = "./depmesh/protocol/**/*.py" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/behavior/cli.md"] }
+dependency = { type = "glob", pattern = "./depmesh/skills/**/*.py" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/behavior/cli.md"] }
+dependency = { type = "glob", pattern = "./depmesh/skills/**/*.md" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/behavior/cli.md"] }
+dependency = { type = "regex", pattern = "^\\./depmesh/(__init__|__main__)\\.py$" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "paths", paths = ["./depmesh.toml"] }
+dependency = { type = "path", path = "./specs/behavior/config.md" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "glob", pattern = "./depmesh/workspace/{**path}.py" }
+dependency = { type = "path", path = "./specs/behavior/config.md" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "glob", pattern = "./depmesh/discovery/{**path}.py" }
+dependency = { type = "path", path = "./specs/behavior/config.md" }
+
+[[rules]]
+relation = "governed_by"
+artifact = { type = "paths", paths = ["./bin/depmesh/tach_map_query.py"] }
+dependency = { type = "path", path = "./specs/behavior/config.md" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/behavior/config.md"] }
+dependency = { type = "path", path = "./depmesh.toml" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/behavior/config.md"] }
+dependency = { type = "glob", pattern = "./depmesh/workspace/**/*.py" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/behavior/config.md"] }
+dependency = { type = "glob", pattern = "./depmesh/discovery/**/*.py" }
+
+[[rules]]
+relation = "governs"
+artifact = { type = "paths", paths = ["./specs/behavior/config.md"] }
+dependency = { type = "path", path = "./bin/depmesh/tach_map_query.py" }
+
+############################################
+# Relation: terms_defined_by / defines_terms_for
+############################################
+
+[[relations]]
+id = "terms_defined_by"
+description = "Dictionaries that define terms used by the artifact."
+
+[[relations]]
+id = "defines_terms_for"
+description = "Artifacts that use terms from the dictionary."
+
+[[rules]]
+relation = "terms_defined_by"
+artifact = { type = "all", items = [
+  { type = "glob", pattern = "./specs/{**path}.md" },
+  { type = "not", item = { type = "paths", paths = ["./specs/dictionary.md"] } },
+] }
+dependency = { type = "path", path = "./specs/dictionary.md" }
+
+[[rules]]
+relation = "terms_defined_by"
+artifact = { type = "glob", pattern = "./depmesh/{**path}.py" }
+dependency = { type = "path", path = "./specs/dictionary.md" }
+
+[[rules]]
+relation = "terms_defined_by"
+artifact = { type = "paths", paths = ["./depmesh.toml"] }
+dependency = { type = "path", path = "./specs/dictionary.md" }
+
+[[rules]]
+relation = "defines_terms_for"
+artifact = { type = "paths", paths = ["./specs/dictionary.md"] }
+dependency = { type = "difference", include = { type = "glob", pattern = "./specs/**/*.md" }, exclude = { type = "path", path = "./specs/dictionary.md" } }
+
+[[rules]]
+relation = "defines_terms_for"
+artifact = { type = "paths", paths = ["./specs/dictionary.md"] }
+dependency = { type = "glob", pattern = "./depmesh/**/*.py" }
+
+[[rules]]
+relation = "defines_terms_for"
+artifact = { type = "paths", paths = ["./specs/dictionary.md"] }
+dependency = { type = "path", path = "./depmesh.toml" }
+
+#############################
+# Relation: indexed_by / indexes
+#############################
+
+[[relations]]
+id = "indexed_by"
+description = "Indexes that list the specification."
+
+[[relations]]
+id = "indexes"
+description = "Specifications listed by the index."
+
+[[rules]]
+relation = "indexed_by"
+artifact = { type = "all", items = [
+  { type = "glob", pattern = "./specs/{**path}.md" },
+  { type = "not", item = { type = "paths", paths = ["./specs/intro.md"] } },
+] }
+dependency = { type = "path", path = "./specs/intro.md" }
+
+[[rules]]
+relation = "indexes"
+artifact = { type = "paths", paths = ["./specs/intro.md"] }
+dependency = { type = "difference", include = { type = "glob", pattern = "./specs/**/*.md" }, exclude = { type = "path", path = "./specs/intro.md" } }

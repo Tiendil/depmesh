@@ -1,23 +1,22 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal, NewType
+from typing import TYPE_CHECKING, Literal
 
 from depmesh.core.entities import BaseEntity
 from depmesh.discovery.matchers.entities import CaptureName
-from depmesh.discovery.paths import normalize_path
 from depmesh.domain.entities import ArtifactId
 
-PathMatcherValue = NewType("PathMatcherValue", str)
+if TYPE_CHECKING:
+    from depmesh.discovery.matchers import ArtifactMatcher
 
 
-class PathMatcher(BaseEntity):
-    type: Literal["path"]
-    path: PathMatcherValue
+class NotMatcher(BaseEntity):
+    type: Literal["not"]
+    item: ArtifactMatcher
 
     def captures(self) -> set[CaptureName]:
         return set()
 
     def match(self, artifact: ArtifactId, root: Path) -> dict[str, str] | None:
-        pattern = normalize_path(self.path, root)
-        return {} if artifact == pattern else None
+        return {} if self.item.match(artifact, root) is None else None

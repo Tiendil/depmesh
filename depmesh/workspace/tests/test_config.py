@@ -156,7 +156,7 @@ class TestParseConfig:
                     "rules": [
                         {
                             "relation": "imports",
-                            "artifact": {"type": "path", "path": "./src/a.py"},
+                            "artifact": {"type": "paths", "paths": ["./src/a.py"]},
                             "dependency": {"type": "path", "path": "./src/b.py"},
                         }
                     ],
@@ -176,7 +176,7 @@ class TestParseConfig:
                                 "type": "any",
                                 "items": [
                                     {"type": "glob", "pattern": "./src/{*module}.py"},
-                                    {"type": "path", "path": "./src/special.py"},
+                                    {"type": "paths", "paths": ["./src/special.py"]},
                                 ],
                             },
                             "dependency": {"type": "path", "path": "./tests/test_{module}.py"},

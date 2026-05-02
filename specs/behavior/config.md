@@ -165,11 +165,12 @@ Each artifact matcher MUST include:
 
 Supported artifact matcher types MUST include:
 
-- `path` - fixed artifact path.
+- `paths` - fixed artifact paths.
 - `glob` - glob pattern.
 - `regex` - regular expression.
 - `any` - composition that matches when any child matcher matches.
 - `all` - composition that matches when all child matchers match.
+- `not` - composition that matches when its child matcher does not match.
 
 Future artifact matcher types MAY be added in later schema versions.
 
@@ -177,28 +178,33 @@ Every template variable referenced by a rule's dependency expression MUST be pro
 
 Configuration loading MUST fail if a dependency expression references a template variable that is not provided by the rule's artifact matcher.
 
-Relative paths and glob patterns MUST be resolved against the configuration root.
+Relative artifact paths and glob patterns MUST be resolved against the configuration root.
 
 Absolute paths MAY be used, but project configurations SHOULD prefer relative paths.
 
 For matching, file paths inside the configuration root SHOULD be normalized to a relative path that starts with `./` and uses `/` as the separator.
 
-### Path matcher
+### Paths matcher
 
-A `path` matcher MUST match exactly one artifact path after path normalization.
+A `paths` matcher MUST match an artifact when it is equal to one of the configured artifact paths after path normalization.
 
-A `path` matcher MUST include:
+A `paths` matcher MUST include:
 
-- `type = "path"`.
-- `path` - fixed artifact path.
+- `type = "paths"`.
+- `paths` - array of fixed artifact paths.
+
+The `paths` field MUST contain at least one path.
 
 Example:
 
 ```toml
-artifact = { type = "path", path = "./depmesh/domain/entities.py" }
+artifact = { type = "paths", paths = [
+  "./depmesh/domain/entities.py",
+  "./depmesh/domain/__init__.py",
+] }
 ```
 
-A `path` matcher MUST NOT define captures.
+A `paths` matcher MUST NOT define captures.
 
 ### Glob matcher
 
@@ -302,6 +308,28 @@ artifact = { type = "all", items = [
 ] }
 ```
 
+### Not matcher
+
+A `not` matcher MUST match an artifact only when its child matcher does not match the artifact.
+
+A `not` matcher MUST include:
+
+- `type = "not"`.
+- `item` - one child artifact matcher table.
+
+A `not` matcher MUST NOT expose captures.
+
+For template validation, a `not` matcher MUST expose no captures, even when its child matcher defines captures.
+
+Example:
+
+```toml
+artifact = { type = "all", items = [
+  { type = "glob", pattern = "./specs/{**path}.md" },
+  { type = "not", item = { type = "paths", paths = ["./specs/meta/general.md"] } },
+] }
+```
+
 ## Dependency expressions
 
 A dependency expression MUST be a typed table.
@@ -318,6 +346,7 @@ Supported dependency expression types MUST include:
 - `command` - shell command that prints dependency identifiers.
 - `union` - composition that produces dependencies from all child expressions.
 - `intersection` - composition that produces dependencies produced by every child expression.
+- `difference` - composition that produces dependencies from one expression except dependencies produced by another expression.
 
 Future dependency expression types MAY be added in later schema versions.
 
@@ -453,6 +482,26 @@ dependency = { type = "intersection", items = [
   { type = "glob", pattern = "./specs/**/*.md" },
   { type = "regex", pattern = "^\\./specs/.+{module}.+\\.md$" },
 ] }
+```
+
+### Difference expression
+
+A `difference` expression MUST produce dependencies produced by its include expression, except dependencies also produced by its exclude expression.
+
+A `difference` expression MUST include:
+
+- `type = "difference"`.
+- `include` - child dependency expression table that produces the initial dependency set.
+- `exclude` - child dependency expression table that produces dependencies to remove from the initial dependency set.
+
+Duplicate dependencies produced by either child expression MUST be treated as duplicates before the difference is calculated.
+
+Example:
+
+```toml
+dependency.type = "difference"
+dependency.include = { type = "glob", pattern = "./specs/**/*.md" }
+dependency.exclude = { type = "path", path = "./specs/meta/general.md" }
 ```
 
 ## Path normalization

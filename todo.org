@@ -24,3 +24,9 @@
 * Improve CLI help texts
 
 * sync all files between each other, especially specs
+
+* `not` operator for rules
+
+* currently, all matchers are independent, but it would be more efficient to optimize all/any matchers to not run each child matcher separately, but apply next matchers to the result of the previous one => this will lead to a single pass through the codebase. The same are for expressions. Or should we introduce separate matcher/expression "chain"?
+
+* use matchers in expressions? I.e. expression returns results then we apply matchers to them. In that case we can treat input artifacts as a kind of expression?
