@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import sys
+from importlib import metadata
 from pathlib import Path
 
 import typer
 
-from depmesh import __version__
 from depmesh.cli import errors as cli_errors
 from depmesh.cli.entities import ArtifactsArgument, ConfigOption, GlobalOptions, ProtocolOption, RelationOption
 from depmesh.core import errors as core_errors
@@ -106,7 +106,7 @@ def version(context: typer.Context) -> None:
     warnings.clear()
     _global_options(context)
 
-    sys.stdout.write(__version__ + "\n")
+    sys.stdout.write(metadata.version("depmesh") + "\n")
     raise typer.Exit(0)
 
 

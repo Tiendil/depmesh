@@ -1,0 +1,98 @@
+source_roots = ["."]
+root_module = "ignore"
+ignore_type_checking_imports = true
+forbid_circular_dependencies = true
+layers_explicit_depends_on = true
+
+exclude = [
+    ".git/",
+    ".venv/",
+    "build/",
+    "dist/",
+    "**/__pycache__/",
+]
+
+layers = [
+    "cli",
+    "protocol",
+    "workspace",
+    "discovery",
+    "domain",
+    "support",
+    "core",
+]
+
+[[modules]]
+path = "depmesh"
+depends_on = []
+visibility = []
+
+[[modules]]
+path = "depmesh.__main__"
+depends_on = ["depmesh.cli"]
+layer = "cli"
+
+[[modules]]
+path = "depmesh.cli"
+depends_on = [
+    "depmesh.core",
+    "depmesh.discovery",
+    "depmesh.domain",
+    "depmesh.protocol",
+    "depmesh.workspace",
+]
+layer = "cli"
+
+[[modules]]
+path = "depmesh.core"
+depends_on = []
+layer = "core"
+
+[[modules]]
+path = "depmesh.discovery"
+depends_on = [
+    "depmesh.core",
+    "depmesh.domain",
+]
+layer = "discovery"
+
+[[modules]]
+path = "depmesh.domain"
+depends_on = ["depmesh.core"]
+layer = "domain"
+
+[[modules]]
+path = "depmesh.protocol"
+depends_on = [
+    "depmesh.discovery",
+    "depmesh.domain",
+    "depmesh.skills",
+    "depmesh.workspace",
+]
+layer = "protocol"
+
+[[modules]]
+path = "depmesh.skills"
+depends_on = []
+layer = "support"
+
+[[modules]]
+path = "depmesh.workspace"
+depends_on = [
+    "depmesh.core",
+    "depmesh.discovery",
+    "depmesh.domain",
+]
+layer = "workspace"
+
+[external]
+exclude = [
+    "pytest",
+    "pytest_mock",
+    "tach",
+    "typer",
+]
+
+[rules]
+unused_ignore_directives = "warn"
+require_ignore_directive_reasons = "off"
