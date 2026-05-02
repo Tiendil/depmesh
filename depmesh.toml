@@ -1,0 +1,17 @@
+version = 1
+
+[[relations]]
+forward_id = "tested_by"
+backward_id = "tests"
+forward_description = "Test files that cover implementation files."
+backward_description = "Implementation files covered by test files."
+
+[[rules]]
+relation = "tested_by"
+artifact = { type = "glob", pattern = "./depmesh/{**package_path}/__init__.py" }
+dependency = { type = "glob", pattern = "./depmesh/{package_path}/tests/test_init.py" }
+
+[[rules]]
+relation = "tested_by"
+artifact = { type = "glob", pattern = "./depmesh/{**package_path}/{*module}.py" }
+dependency = { type = "glob", pattern = "./depmesh/{package_path}/tests/test_{module}.py" }
