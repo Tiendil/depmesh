@@ -208,6 +208,24 @@ output = { type = "union", items = [
   { type = "files", pattern = "./depmesh/discovery/**/*.py" },
 ] }
 
+# File path behavior governs project file path normalization, CLI path inputs, and sources that produce file paths.
+[[rules]]
+relation = "governed_by"
+input = { type = "any", items = [
+  { type = "glob", pattern = "./depmesh/cli/**/*.py" },
+  { type = "glob", pattern = "./depmesh/discovery/**/*.py" },
+] }
+output = { type = "list", artifacts = ["./specs/behavior/file_paths.md"] }
+
+# The file path behavior spec governs path normalization, CLI path inputs, and sources that produce file paths.
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["./specs/behavior/file_paths.md"] }
+output = { type = "union", items = [
+  { type = "files", pattern = "./depmesh/cli/**/*.py" },
+  { type = "files", pattern = "./depmesh/discovery/**/*.py" },
+] }
+
 ############################################
 # Relation: terms_defined_by / defines_terms_for
 ############################################

@@ -93,6 +93,14 @@ Fields:
 
 When the input predicate matches an input artifact, the output source produces dependencies for the configured relation.
 
+## Recommendations
+
+Prefer glob or regex patterns over enumerating individual files when a dependency rule applies to a family of artifacts.
+
+Pattern-based rules are more scalable and more evolution-proof: they continue to cover new files that follow the same project layout without requiring configuration edits.
+
+It is usually better to overspecify dependencies by adding a connection that is not required than to underspecify dependencies by missing a connection that should be reported.
+
 ## Paths
 
 Paths in configuration should be stable from the configuration root, which is the directory containing the active `depmesh.toml`.
