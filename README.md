@@ -54,10 +54,8 @@ For example, a project can define relations such as:
 
 ## Features
 
-`depmesh` has one single goal — **provide a consistent deterministic interface for discovering project dependencies.**
-
-- You decide which relations are useful and how they are discovered.
-- `depmesh` gives you and your agents a consistent interface to query them regardless of how they are extracted under the hood.
+- Unified interface for discovering project dependencies.
+- Configurable ways to detect dependencies behind the scenes: path patterns, fixed lists, calling CLI commands, or running project-specific scripts.
 
 ## Quick Usage
 
