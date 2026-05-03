@@ -1,21 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-
-from depmesh.discovery.artifacts import CaptureName
 from depmesh.discovery.predicates.base import ArtifactPredicateBase
+from depmesh.discovery.predicates.entities import NotPredicateConfig
 from depmesh.domain.entities import ArtifactId, ProjectRootPath
-
-if TYPE_CHECKING:
-    from depmesh.discovery.predicates import ArtifactPredicate
 
 
 class NotPredicate(ArtifactPredicateBase):
-    type: Literal["not"]
-    item: ArtifactPredicate
+    __slots__ = ("config", "item")
 
-    def variables(self) -> set[CaptureName]:
-        return self.item.variables()
+    def __init__(self, config: NotPredicateConfig, item: ArtifactPredicateBase) -> None:
+        self.config = config
+        self.item = item
 
     def match(
         self,
@@ -24,3 +19,6 @@ class NotPredicate(ArtifactPredicateBase):
         captures: dict[str, str] | None = None,
     ) -> dict[str, str] | None:
         return {} if self.item.match(artifact, root, captures) is None else None
+
+
+__all__ = ["NotPredicate", "NotPredicateConfig"]

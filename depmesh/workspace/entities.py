@@ -7,7 +7,7 @@ from typing import Literal
 import pydantic
 
 from depmesh.core.entities import BaseEntity
-from depmesh.discovery.entities import DependencyRule
+from depmesh.discovery.entities import DependencyRule, DependencyRuleConfig
 from depmesh.domain.entities import (
     Relation,
     RelationDescription,
@@ -42,7 +42,7 @@ class RelationConfig(Relation):
 class Config(BaseEntity):
     version: Literal[1] = 1
     relations: tuple[RelationConfig, ...] = ()
-    rules: tuple[DependencyRule, ...] = ()
+    rules: tuple[DependencyRuleConfig, ...] = ()
 
     @pydantic.model_validator(mode="after")
     def validate_references(self) -> "Config":
@@ -62,6 +62,8 @@ class Config(BaseEntity):
 
 
 class Workspace(BaseEntity):
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
     root: pydantic.DirectoryPath
     relations: tuple[Relation, ...] = ()
     rules: tuple[DependencyRule, ...] = ()

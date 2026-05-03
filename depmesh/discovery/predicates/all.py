@@ -1,26 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-
-import pydantic
-
-from depmesh.discovery.artifacts import CaptureName
 from depmesh.discovery.predicates.base import ArtifactPredicateBase
+from depmesh.discovery.predicates.entities import AllPredicateConfig
 from depmesh.domain.entities import ArtifactId, ProjectRootPath
-
-if TYPE_CHECKING:
-    from depmesh.discovery.predicates import ArtifactPredicate
 
 
 class AllPredicate(ArtifactPredicateBase):
-    type: Literal["all"]
-    items: tuple[ArtifactPredicate, ...] = pydantic.Field(min_length=1)
+    __slots__ = ("config", "items")
 
-    def variables(self) -> set[CaptureName]:
-        return set().union(*(item.variables() for item in self.items))
-
-    def captures(self) -> set[CaptureName]:
-        return set().union(*(item.captures() for item in self.items))
+    def __init__(self, config: AllPredicateConfig, items: tuple[ArtifactPredicateBase, ...]) -> None:
+        self.config = config
+        self.items = items
 
     def match(
         self,
@@ -41,3 +31,6 @@ class AllPredicate(ArtifactPredicateBase):
                 result[name] = value
 
         return result
+
+
+__all__ = ["AllPredicate", "AllPredicateConfig"]

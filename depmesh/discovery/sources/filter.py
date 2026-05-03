@@ -1,23 +1,24 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-
-from depmesh.discovery.artifacts import CaptureName, EvaluationContext
-from depmesh.discovery.predicates import ArtifactPredicate
+from depmesh.discovery.artifacts import EvaluationContext
+from depmesh.discovery.predicates.base import ArtifactPredicateBase
 from depmesh.discovery.sources.base import ArtifactSourceBase
+from depmesh.discovery.sources.entities import FilterSourceConfig
 from depmesh.domain.entities import ArtifactId
-
-if TYPE_CHECKING:
-    from depmesh.discovery.sources import ArtifactSource
 
 
 class FilterSource(ArtifactSourceBase):
-    type: Literal["filter"]
-    source: ArtifactSource
-    predicate: ArtifactPredicate
+    __slots__ = ("config", "predicate", "source")
 
-    def variables(self) -> set[CaptureName]:
-        return self.source.variables() | self.predicate.variables()
+    def __init__(
+        self,
+        config: FilterSourceConfig,
+        source: ArtifactSourceBase,
+        predicate: ArtifactPredicateBase,
+    ) -> None:
+        self.config = config
+        self.source = source
+        self.predicate = predicate
 
     def evaluate(self, context: EvaluationContext) -> list[ArtifactId]:
         return [
@@ -25,3 +26,6 @@ class FilterSource(ArtifactSourceBase):
             for artifact in self.source.evaluate(context)
             if self.predicate.match(artifact, context.root, context.captures) is not None
         ]
+
+
+__all__ = ["FilterSource", "FilterSourceConfig"]

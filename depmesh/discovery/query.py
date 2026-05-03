@@ -3,9 +3,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from depmesh.discovery import errors
+from depmesh.discovery.artifacts import EvaluationContext
 from depmesh.discovery.entities import DependencyRule, QueryResult
 from depmesh.discovery.paths import normalize_path
-from depmesh.discovery.sources import EvaluationContext, ListSource
 from depmesh.domain.entities import ArtifactId, Dependency, ProjectRootPath, Relation, RelationId, UntrustedPath
 
 
@@ -51,17 +51,18 @@ def normalize_input_artifacts(
     *,
     cwd: UntrustedPath | None = None,
 ) -> list[ArtifactId]:
-    input_source = ListSource(
-        type="list",
-        artifacts=tuple(str(artifact) for artifact in artifacts),
+    return sorted(
+        {
+            ArtifactId(
+                normalize_path(
+                    str(artifact),
+                    root,
+                    cwd=cwd,
+                )
+            )
+            for artifact in artifacts
+        }
     )
-    input_context = EvaluationContext(
-        root=root,
-        relation_id=RelationId(""),
-        captures={},
-        cwd=cwd,
-    )
-    return input_source.evaluate(input_context)
 
 
 def selected_relation_ids(

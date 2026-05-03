@@ -5,13 +5,15 @@ from depmesh.discovery.artifacts import CaptureName
 from depmesh.domain.entities import ArtifactId, ProjectRootPath
 
 
-class ArtifactPredicateBase(BaseEntity):
+class ArtifactPredicateConfigBase(BaseEntity):
     def variables(self) -> set[CaptureName]:
         return set()
 
     def captures(self) -> set[CaptureName]:
         return set()
 
+
+class ArtifactPredicateBase:
     def match(
         self,
         artifact: ArtifactId,
