@@ -32,13 +32,13 @@ description = "Artifacts tested by the input artifacts."
 
 [[rules]]
 relation = "tests"
-input = { type = "glob", pattern = "./src/{*module}.py" }
-output = { type = "list", artifacts = ["./tests/test_{module}.py"] }
+input = { type = "glob", pattern = "@/src/{*module}.py" }
+output = { type = "list", artifacts = ["@/tests/test_{module}.py"] }
 
 [[rules]]
 relation = "tested_by"
-input = { type = "glob", pattern = "./tests/test_{*module}.py" }
-output = { type = "list", artifacts = ["./src/{module}.py"] }
+input = { type = "glob", pattern = "@/tests/test_{*module}.py" }
+output = { type = "list", artifacts = ["@/src/{module}.py"] }
 """,
         encoding="utf-8",
     )
@@ -74,7 +74,47 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["dependencies", "./src/a.py"])
 
         assert result.exit_code == 0
-        assert result.output == "tests:\n  ./tests/test_a.py\n"
+        assert result.output == "tests:\n  @/tests/test_a.py\n"
+
+    def test_human_query_accepts_root_anchored_input(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        write_project(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["dependencies", "@/src/a.py"])
+
+        assert result.exit_code == 0
+        assert result.output == "tests:\n  @/tests/test_a.py\n"
+
+    def test_human_query_accepts_absolute_input(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        write_project(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["dependencies", str(tmp_path / "src" / "a.py")])
+
+        assert result.exit_code == 0
+        assert result.output == "tests:\n  @/tests/test_a.py\n"
+
+    def test_human_query_accepts_relative_input_from_working_directory(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        write_project(tmp_path)
+        monkeypatch.chdir(tmp_path / "src")
+
+        result = CliRunner().invoke(app, ["dependencies", "a.py"])
+
+        assert result.exit_code == 0
+        assert result.output == "tests:\n  @/tests/test_a.py\n"
+
+    def test_human_query_rejects_input_outside_project(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        write_project(tmp_path)
+        outside = tmp_path.parent / "outside.py"
+        outside.write_text("", encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["dependencies", str(outside)])
+
+        assert result.exit_code == 1
+        assert "invalid project path" in result.output
 
     def test_human_query_output_merges_multiple_input_artifacts(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -85,7 +125,7 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["dependencies", "./src/a.py", "./src/b.py"])
 
         assert result.exit_code == 0
-        assert result.output == "tests:\n  ./tests/test_a.py\n  ./tests/test_b.py\n"
+        assert result.output == "tests:\n  @/tests/test_a.py\n  @/tests/test_b.py\n"
 
     def test_llm_query_output_includes_relation_description(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -99,7 +139,7 @@ class TestDependencies:
         assert result.output == (
             "## tests\n\n"
             "Tests related to the input artifacts.\n\n"
-            "- ./tests/test_a.py\n"
+            "- @/tests/test_a.py\n"
         )
 
     def test_automation_query_output_is_json_lines(
@@ -112,7 +152,7 @@ class TestDependencies:
 
         assert result.exit_code == 0
         records = [json.loads(line) for line in result.output.splitlines()]
-        assert records == [{"type": "dependency", "relation": "tests", "dependency": "./tests/test_a.py"}]
+        assert records == [{"type": "dependency", "relation": "tests", "dependency": "@/tests/test_a.py"}]
 
     def test_reverse_relation_query_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)
@@ -121,7 +161,7 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["dependencies", "--relation", "tested_by", "./tests/test_a.py"])
 
         assert result.exit_code == 0
-        assert result.output == "tested_by:\n  ./src/a.py\n"
+        assert result.output == "tested_by:\n  @/src/a.py\n"
 
     def test_default_query_output_includes_reverse_relations_when_configured(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -132,7 +172,7 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["dependencies", "./tests/test_a.py"])
 
         assert result.exit_code == 0
-        assert result.output == "tested_by:\n  ./src/a.py\n"
+        assert result.output == "tested_by:\n  @/src/a.py\n"
 
     def test_short_alias(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)
@@ -141,7 +181,7 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["deps", "./src/a.py"])
 
         assert result.exit_code == 0
-        assert result.output == "tests:\n  ./tests/test_a.py\n"
+        assert result.output == "tests:\n  @/tests/test_a.py\n"
 
     def test_protocol_is_not_a_dependencies_option(self) -> None:
         result = CliRunner().invoke(app, ["dependencies", "--protocol", "llm", "./src/a.py"])

@@ -7,13 +7,18 @@ import pytest
 from depmesh.core import warnings
 from depmesh.discovery import errors
 from depmesh.discovery.entities import DependencyRule
+from depmesh.discovery.paths import resolve_project_root
 from depmesh.discovery.query import query_dependencies, selected_relation_ids
-from depmesh.domain.entities import ArtifactId, Relation, RelationId
+from depmesh.domain.entities import ArtifactId, ProjectRootPath, Relation, RelationId, UntrustedPath
 
 
 def touch(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("", encoding="utf-8")
+
+
+def project_root(path: Path) -> ProjectRootPath:
+    return resolve_project_root(UntrustedPath(path))
 
 
 def make_relation(relation_id: str) -> Relation:
@@ -41,27 +46,27 @@ class TestQueryDependencies:
         rules = make_rules(
             {
                 "relation": "tests",
-                "input": {"type": "glob", "pattern": "./src/{*module}.py"},
+                "input": {"type": "glob", "pattern": "@/src/{*module}.py"},
                 "output": {
                     "type": "union",
                     "items": [
-                        {"type": "list", "artifacts": ["./tests/test_{module}.py"]},
-                        {"type": "files", "pattern": "./tests/test_*.py"},
+                        {"type": "list", "artifacts": ["@/tests/test_{module}.py"]},
+                        {"type": "files", "pattern": "@/tests/test_*.py"},
                     ],
                 },
             }
         )
 
         result = query_dependencies(
-            tmp_path,
+            project_root(tmp_path),
             make_relation_index(*relations),
             rules,
-            ArtifactId("./src/a.py"),
+            ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
-            cwd=tmp_path,
+            cwd=UntrustedPath(tmp_path),
         )
 
-        assert result.grouped() == {"tests": ["./tests/test_a.py", "./tests/test_b.py"]}
+        assert result.grouped() == {"tests": ["@/tests/test_a.py", "@/tests/test_b.py"]}
 
     def test_uses_filter_source_with_regex_predicate(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")
@@ -71,25 +76,25 @@ class TestQueryDependencies:
         rules = make_rules(
             {
                 "relation": "specs",
-                "input": {"type": "regex", "pattern": r"^\./src/(?P<module>[a-z]+)\.py$"},
+                "input": {"type": "regex", "pattern": r"^@/src/(?P<module>[a-z]+)\.py$"},
                 "output": {
                     "type": "filter",
-                    "source": {"type": "files", "pattern": "./specs/*.md"},
-                    "predicate": {"type": "regex", "pattern": r"^\./specs/{module}\.md$"},
+                    "source": {"type": "files", "pattern": "@/specs/*.md"},
+                    "predicate": {"type": "regex", "pattern": r"^@/specs/{module}\.md$"},
                 },
             }
         )
 
         result = query_dependencies(
-            tmp_path,
+            project_root(tmp_path),
             make_relation_index(*relations),
             rules,
-            ArtifactId("./src/a.py"),
+            ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
-            cwd=tmp_path,
+            cwd=UntrustedPath(tmp_path),
         )
 
-        assert result.grouped() == {"specs": ["./specs/a.md"]}
+        assert result.grouped() == {"specs": ["@/specs/a.md"]}
 
     def test_uses_command_source(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")
@@ -98,21 +103,21 @@ class TestQueryDependencies:
         rules = make_rules(
             {
                 "relation": "tests",
-                "input": {"type": "glob", "pattern": "./src/{*module}.py"},
-                "output": {"type": "command", "command": "printf './tests/test_{module}.py\\n'"},
+                "input": {"type": "glob", "pattern": "@/src/{*module}.py"},
+                "output": {"type": "command", "command": "printf '@/tests/test_{module}.py\\n'"},
             }
         )
 
         result = query_dependencies(
-            tmp_path,
+            project_root(tmp_path),
             make_relation_index(*relations),
             rules,
-            ArtifactId("./src/a.py"),
+            ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
-            cwd=tmp_path,
+            cwd=UntrustedPath(tmp_path),
         )
 
-        assert result.grouped() == {"tests": ["./tests/test_a.py"]}
+        assert result.grouped() == {"tests": ["@/tests/test_a.py"]}
 
     def test_files_source_missing_file_returns_empty_result(self, tmp_path: Path) -> None:
         warnings.clear()
@@ -121,18 +126,18 @@ class TestQueryDependencies:
         rules = make_rules(
             {
                 "relation": "tests",
-                "input": {"type": "glob", "pattern": "./src/{*module}.py"},
-                "output": {"type": "files", "pattern": "./tests/test_{module}.py"},
+                "input": {"type": "glob", "pattern": "@/src/{*module}.py"},
+                "output": {"type": "files", "pattern": "@/tests/test_{module}.py"},
             }
         )
 
         result = query_dependencies(
-            tmp_path,
+            project_root(tmp_path),
             make_relation_index(*relations),
             rules,
-            ArtifactId("./src/a.py"),
+            ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
-            cwd=tmp_path,
+            cwd=UntrustedPath(tmp_path),
         )
 
         assert result.grouped() == {}
@@ -147,26 +152,26 @@ class TestQueryDependencies:
         rules = make_rules(
             {
                 "relation": "tests",
-                "input": {"type": "glob", "pattern": "./src/{*module}.py"},
-                "output": {"type": "list", "artifacts": ["./tests/test_{module}.py"]},
+                "input": {"type": "glob", "pattern": "@/src/{*module}.py"},
+                "output": {"type": "list", "artifacts": ["@/tests/test_{module}.py"]},
             },
             {
                 "relation": "specs",
-                "input": {"type": "glob", "pattern": "./src/{*module}.py"},
-                "output": {"type": "list", "artifacts": ["./specs/{module}.md"]},
+                "input": {"type": "glob", "pattern": "@/src/{*module}.py"},
+                "output": {"type": "list", "artifacts": ["@/specs/{module}.md"]},
             },
         )
 
         result = query_dependencies(
-            tmp_path,
+            project_root(tmp_path),
             make_relation_index(*relations),
             rules,
-            ArtifactId("./src/a.py"),
+            ArtifactId("@/src/a.py"),
             relation_ids={RelationId("tests")},
-            cwd=tmp_path,
+            cwd=UntrustedPath(tmp_path),
         )
 
-        assert result.grouped() == {"tests": ["./tests/test_a.py"]}
+        assert result.grouped() == {"tests": ["@/tests/test_a.py"]}
 
     def test_all_selected_relations_can_contribute_for_one_artifact(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")
@@ -176,28 +181,28 @@ class TestQueryDependencies:
         rules = make_rules(
             {
                 "relation": "tests",
-                "input": {"type": "glob", "pattern": "./src/{*module}.py"},
-                "output": {"type": "list", "artifacts": ["./tests/test_{module}.py"]},
+                "input": {"type": "glob", "pattern": "@/src/{*module}.py"},
+                "output": {"type": "list", "artifacts": ["@/tests/test_{module}.py"]},
             },
             {
                 "relation": "specs",
-                "input": {"type": "glob", "pattern": "./src/{*module}.py"},
-                "output": {"type": "list", "artifacts": ["./specs/{module}.md"]},
+                "input": {"type": "glob", "pattern": "@/src/{*module}.py"},
+                "output": {"type": "list", "artifacts": ["@/specs/{module}.md"]},
             },
         )
 
         result = query_dependencies(
-            tmp_path,
+            project_root(tmp_path),
             make_relation_index(*relations),
             rules,
-            ArtifactId("./src/a.py"),
+            ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
-            cwd=tmp_path,
+            cwd=UntrustedPath(tmp_path),
         )
 
         assert result.grouped() == {
-            "specs": ["./specs/a.md"],
-            "tests": ["./tests/test_a.py"],
+            "specs": ["@/specs/a.md"],
+            "tests": ["@/tests/test_a.py"],
         }
 
     def test_reverse_lookup_requires_explicit_relation_and_rule(self, tmp_path: Path) -> None:
@@ -207,21 +212,21 @@ class TestQueryDependencies:
         rules = make_rules(
             {
                 "relation": "tested_by",
-                "input": {"type": "glob", "pattern": "./tests/test_{*module}.py"},
-                "output": {"type": "list", "artifacts": ["./src/{module}.py"]},
+                "input": {"type": "glob", "pattern": "@/tests/test_{*module}.py"},
+                "output": {"type": "list", "artifacts": ["@/src/{module}.py"]},
             }
         )
 
         result = query_dependencies(
-            tmp_path,
+            project_root(tmp_path),
             make_relation_index(*relations),
             rules,
-            ArtifactId("./tests/test_a.py"),
+            ArtifactId("@/tests/test_a.py"),
             relation_ids={RelationId("tested_by")},
-            cwd=tmp_path,
+            cwd=UntrustedPath(tmp_path),
         )
 
-        assert result.grouped() == {"tested_by": ["./src/a.py"]}
+        assert result.grouped() == {"tested_by": ["@/src/a.py"]}
 
     def test_skips_rule_with_missing_relation(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")
@@ -229,18 +234,18 @@ class TestQueryDependencies:
         rules = make_rules(
             {
                 "relation": "tests",
-                "input": {"type": "glob", "pattern": "./src/{*module}.py"},
-                "output": {"type": "list", "artifacts": ["./tests/test_{module}.py"]},
+                "input": {"type": "glob", "pattern": "@/src/{*module}.py"},
+                "output": {"type": "list", "artifacts": ["@/tests/test_{module}.py"]},
             }
         )
 
         result = query_dependencies(
-            tmp_path,
+            project_root(tmp_path),
             {},
             rules,
-            ArtifactId("./src/a.py"),
+            ArtifactId("@/src/a.py"),
             relation_ids={RelationId("tests")},
-            cwd=tmp_path,
+            cwd=UntrustedPath(tmp_path),
         )
 
         assert result.grouped() == {}

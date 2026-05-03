@@ -13,13 +13,13 @@ class TestAnyPredicate:
             {
                 "type": "any",
                 "items": [
-                    {"type": "glob", "pattern": "./src/{*module}.py"},
-                    {"type": "glob", "pattern": "./lib/{*module}.py"},
+                    {"type": "glob", "pattern": "@/src/{*module}.py"},
+                    {"type": "glob", "pattern": "@/lib/{*module}.py"},
                 ],
             }
         )
 
-        assert predicate.match(ArtifactId("./lib/a.py"), tmp_path) == {"module": "a"}
+        assert predicate.match(ArtifactId("@/lib/a.py"), tmp_path) == {"module": "a"}
 
 
 class TestAllPredicate:
@@ -28,26 +28,26 @@ class TestAllPredicate:
             {
                 "type": "all",
                 "items": [
-                    {"type": "glob", "pattern": "./src/{*module}.py"},
-                    {"type": "regex", "pattern": r"^\./src/(?P<module>[a-z]+)\.py$"},
+                    {"type": "glob", "pattern": "@/src/{*module}.py"},
+                    {"type": "regex", "pattern": r"^@/src/(?P<module>[a-z]+)\.py$"},
                 ],
             }
         )
 
-        assert predicate.match(ArtifactId("./src/a.py"), tmp_path) == {"module": "a"}
+        assert predicate.match(ArtifactId("@/src/a.py"), tmp_path) == {"module": "a"}
 
 
 class TestNotPredicate:
     def test_variables__exposes_child_template_variables(self) -> None:
         predicate = NotPredicate.model_validate(
-            {"type": "not", "item": {"type": "glob", "pattern": "./src/{package}/{*module}.py"}}
+            {"type": "not", "item": {"type": "glob", "pattern": "@/src/{package}/{*module}.py"}}
         )
 
         assert predicate.variables() == {CaptureName("package")}
 
     def test_match__success_when_item_does_not_match(self, tmp_path: Path) -> None:
         predicate = NotPredicate.model_validate(
-            {"type": "not", "item": {"type": "one_of", "artifacts": ["./src/excluded.py"]}}
+            {"type": "not", "item": {"type": "one_of", "artifacts": ["@/src/excluded.py"]}}
         )
 
-        assert predicate.match(ArtifactId("./src/included.py"), tmp_path) == {}
+        assert predicate.match(ArtifactId("@/src/included.py"), tmp_path) == {}

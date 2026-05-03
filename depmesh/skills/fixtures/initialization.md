@@ -16,7 +16,7 @@ depmesh -p llm skill configuration
 
 Run initialization from the directory that should contain `depmesh.toml`.
 
-Without `--config`, `depmesh init` creates `./depmesh.toml` in the current working directory. With `--config PATH`, it creates that exact file and treats its parent directory as the project root for later commands.
+Without `--config`, `depmesh init` creates `depmesh.toml` in the current working directory. With `--config PATH`, it creates that exact file and treats its parent directory as the project root for later commands.
 
 The project root matters because artifact paths, glob patterns, file sources, and command sources are resolved from the directory containing `depmesh.toml`.
 
@@ -104,13 +104,13 @@ description = "Artifacts governed by the specification."
 
 [[rules]]
 relation = "governed_by"
-input = { type = "glob", pattern = "./src/**/*.py" }
-output = { type = "files", pattern = "./specs/**/*.md" }
+input = { type = "glob", pattern = "@/src/**/*.py" }
+output = { type = "files", pattern = "@/specs/**/*.md" }
 
 [[rules]]
 relation = "governs"
-input = { type = "glob", pattern = "./specs/**/*.md" }
-output = { type = "files", pattern = "./src/**/*.py" }
+input = { type = "glob", pattern = "@/specs/**/*.md" }
+output = { type = "files", pattern = "@/src/**/*.py" }
 ```
 
 Use narrower patterns when only some specs apply to some implementation files.
@@ -130,26 +130,26 @@ description = "Python files that import the Python file."
 
 [[rules]]
 relation = "imports"
-input = { type = "glob", pattern = "./src/{**module_path}.py" }
+input = { type = "glob", pattern = "@/src/{**module_path}.py" }
 output = {
   type = "command",
-  command = "python ./tools/list_imports.py --artifact ./src/{module_path}.py",
+  command = "python ./tools/list_imports.py --artifact @/src/{module_path}.py",
 }
 
 [[rules]]
 relation = "imported_by"
-input = { type = "glob", pattern = "./src/{**module_path}.py" }
+input = { type = "glob", pattern = "@/src/{**module_path}.py" }
 output = {
   type = "command",
-  command = "python ./tools/list_imports.py --reverse --artifact ./src/{module_path}.py",
+  command = "python ./tools/list_imports.py --reverse --artifact @/src/{module_path}.py",
 }
 ```
 
 Example command output:
 
 ```text
-./src/settings.py
-./src/database.py
+@/src/settings.py
+@/src/database.py
 ```
 
 3. Connect source files to predictable tests.
@@ -167,13 +167,13 @@ description = "Artifacts verified by the test."
 
 [[rules]]
 relation = "tested_by"
-input = { type = "glob", pattern = "./src/{*module}.py" }
-output = { type = "files", pattern = "./tests/test_{module}.py" }
+input = { type = "glob", pattern = "@/src/{*module}.py" }
+output = { type = "files", pattern = "@/tests/test_{module}.py" }
 
 [[rules]]
 relation = "tests"
-input = { type = "glob", pattern = "./tests/test_{*module}.py" }
-output = { type = "list", artifacts = ["./src/{module}.py"] }
+input = { type = "glob", pattern = "@/tests/test_{*module}.py" }
+output = { type = "list", artifacts = ["@/src/{module}.py"] }
 ```
 
 The capture name `module` from the predicate is reused as `{module}` in the output. Capture names must match exactly.
@@ -203,7 +203,7 @@ Tests that verify the artifact.
 Then query representative artifacts:
 
 ```bash
-depmesh -p llm dependencies --relation governed_by --relation tested_by ./src/app.py
+depmesh -p llm dependencies --relation governed_by --relation tested_by @/src/app.py
 ```
 
 Example output:
@@ -211,11 +211,11 @@ Example output:
 ```text
 ## governed_by
 
-- ./specs/behavior/app.md
+- @/specs/behavior/app.md
 
 ## tested_by
 
-- ./tests/test_app.py
+- @/tests/test_app.py
 ```
 
-When a query returns too many dependencies, narrow the rule predicate or output source. When it returns none, check path spelling, leading `./`, capture names, and whether the output source is `files` and the files exist.
+When a query returns too many dependencies, narrow the rule predicate or output source. When it returns none, check path spelling, leading `@/`, capture names, and whether the output source is `files` and the files exist.

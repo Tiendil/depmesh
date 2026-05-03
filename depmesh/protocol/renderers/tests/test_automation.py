@@ -18,9 +18,9 @@ class TestAutomationRendered:
     def test_render_query__complete_data(self) -> None:
         result = QueryResult(
             dependencies=(
-                Dependency(relation="specs", dependency="./specs/a.md"),
-                Dependency(relation="tests", dependency="./tests/test_a.py"),
-                Dependency(relation="tests", dependency="./tests/test_b.py"),
+                Dependency(relation="specs", dependency="@/specs/a.md"),
+                Dependency(relation="tests", dependency="@/tests/test_a.py"),
+                Dependency(relation="tests", dependency="@/tests/test_b.py"),
             )
         )
 
@@ -29,15 +29,15 @@ class TestAutomationRendered:
             ["first warning", "second warning"],
             relations=(),
         ) == (
-            '{"dependency": "./specs/a.md", "relation": "specs", "type": "dependency"}\n'
-            '{"dependency": "./tests/test_a.py", "relation": "tests", "type": "dependency"}\n'
-            '{"dependency": "./tests/test_b.py", "relation": "tests", "type": "dependency"}\n'
+            '{"dependency": "@/specs/a.md", "relation": "specs", "type": "dependency"}\n'
+            '{"dependency": "@/tests/test_a.py", "relation": "tests", "type": "dependency"}\n'
+            '{"dependency": "@/tests/test_b.py", "relation": "tests", "type": "dependency"}\n'
             '{"message": "first warning", "type": "warning"}\n'
             '{"message": "second warning", "type": "warning"}\n'
         )
 
     def test_render_query__returns_json_lines_records(self) -> None:
-        result = QueryResult(dependencies=(Dependency(relation="tests", dependency="./tests/test_a.py"),))
+        result = QueryResult(dependencies=(Dependency(relation="tests", dependency="@/tests/test_a.py"),))
 
         records = [
             json.loads(line)
@@ -45,7 +45,7 @@ class TestAutomationRendered:
         ]
 
         assert records == [
-            {"type": "dependency", "relation": "tests", "dependency": "./tests/test_a.py"},
+            {"type": "dependency", "relation": "tests", "dependency": "@/tests/test_a.py"},
             {"type": "warning", "message": "warning"},
         ]
 

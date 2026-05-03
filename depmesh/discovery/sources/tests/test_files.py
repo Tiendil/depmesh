@@ -15,7 +15,7 @@ def touch(path: Path) -> None:
 
 class TestFilesSource:
     def test_variables__extracts_template_variables(self) -> None:
-        source = FilesSource(type="files", pattern="./tests/test_{module}.py")
+        source = FilesSource(type="files", pattern="@/tests/test_{module}.py")
 
         assert source.variables() == {CaptureName("module")}
 
@@ -25,15 +25,15 @@ class TestFilesSource:
         source = FilesSource(type="files")
         context = EvaluationContext(root=tmp_path, relation_id=RelationId("all"), captures={})
 
-        assert source.evaluate(context) == [ArtifactId("./docs/a.md"), ArtifactId("./src/a.py")]
+        assert source.evaluate(context) == [ArtifactId("@/docs/a.md"), ArtifactId("@/src/a.py")]
 
     def test_evaluate__returns_matching_files(self, tmp_path: Path) -> None:
         touch(tmp_path / "tests/test_a.py")
         touch(tmp_path / "tests/test_b.py")
-        source = FilesSource(type="files", pattern="./tests/test_{module}.py")
+        source = FilesSource(type="files", pattern="@/tests/test_{module}.py")
         context = EvaluationContext(root=tmp_path, relation_id=RelationId("tests"), captures={"module": "a"})
 
-        assert source.evaluate(context) == [ArtifactId("./tests/test_a.py")]
+        assert source.evaluate(context) == [ArtifactId("@/tests/test_a.py")]
 
     def test_evaluate__invalid_pattern_adds_warning(self, tmp_path: Path) -> None:
         warnings.clear()

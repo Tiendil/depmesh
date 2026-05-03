@@ -91,8 +91,8 @@ description = "Tests that verify the artifact."
 
 [[rules]]
 relation = "tests"
-input = { type = "glob", pattern = "./depmesh/{*module}.py" }
-output = { type = "list", artifacts = ["./depmesh/tests/test_{module}.py"] }
+input = { type = "glob", pattern = "@/depmesh/{*module}.py" }
+output = { type = "list", artifacts = ["@/depmesh/tests/test_{module}.py"] }
 ```
 
 ## Relations
@@ -220,11 +220,15 @@ Every template variable referenced by a rule's `output` source MUST be provided 
 
 Configuration loading MUST fail if an `output` source references a template variable that is not provided by the rule's `input` predicate.
 
-Relative artifact paths and glob patterns MUST be resolved against the configuration root.
+Root-anchored artifact paths and glob patterns MUST be resolved against the configuration root.
 
-Absolute paths MAY be used, but project configurations SHOULD prefer relative paths.
+Relative artifact paths and glob patterns MAY be used by configuration fields that define the configuration root as their base path.
 
-For matching, file paths inside the configuration root SHOULD be normalized to a relative path that starts with `./` and uses `/` as the separator.
+Absolute host filesystem paths MAY be accepted only by fields that explicitly support host path input.
+
+Project configurations SHOULD prefer canonical root-anchored paths that start with `@/`.
+
+For matching, file paths inside the configuration root SHOULD be normalized to canonical root-anchored paths that start with `@/` and use `/` as the separator.
 
 ### One-of Predicate
 
@@ -241,8 +245,8 @@ Example:
 
 ```toml
 input = { type = "one_of", artifacts = [
-  "./depmesh/domain/entities.py",
-  "./depmesh/domain/__init__.py",
+  "@/depmesh/domain/entities.py",
+  "@/depmesh/domain/__init__.py",
 ] }
 ```
 
@@ -276,7 +280,7 @@ If a rule's input glob predicate defines captures, every successful match MUST m
 Example:
 
 ```toml
-input = { type = "glob", pattern = "./depmesh/{*module}.py" }
+input = { type = "glob", pattern = "@/depmesh/{*module}.py" }
 ```
 
 ### Regex Predicate
@@ -295,7 +299,7 @@ Named captures from a rule's input regex predicate MUST be made available to the
 Example:
 
 ```toml
-input = { type = "regex", pattern = "^\\./depmesh/(?P<module>[a-z_]+)\\.py$" }
+input = { type = "regex", pattern = "^@/depmesh/(?P<module>[a-z_]+)\\.py$" }
 ```
 
 The supported regular expression dialect is implementation-defined for schema version `1`, but the implementation MUST document any syntax that differs from Python regular expressions before relying on it in examples or generated configuration.
@@ -321,8 +325,8 @@ Example:
 
 ```toml
 input = { type = "any", items = [
-  { type = "glob", pattern = "./depmesh/{*module}.py" },
-  { type = "glob", pattern = "./depmesh/{*module}/__init__.py" },
+  { type = "glob", pattern = "@/depmesh/{*module}.py" },
+  { type = "glob", pattern = "@/depmesh/{*module}/__init__.py" },
 ] }
 ```
 
@@ -345,8 +349,8 @@ Example:
 
 ```toml
 input = { type = "all", items = [
-  { type = "glob", pattern = "./depmesh/{*module}.py" },
-  { type = "regex", pattern = "^\\./depmesh/(?P<module>[a-z_]+)\\.py$" },
+  { type = "glob", pattern = "@/depmesh/{*module}.py" },
+  { type = "regex", pattern = "^@/depmesh/(?P<module>[a-z_]+)\\.py$" },
 ] }
 ```
 
@@ -367,8 +371,8 @@ Example:
 
 ```toml
 input = { type = "all", items = [
-  { type = "glob", pattern = "./specs/**/*.md" },
-  { type = "not", item = { type = "one_of", artifacts = ["./specs/meta/general.md"] } },
+  { type = "glob", pattern = "@/specs/**/*.md" },
+  { type = "not", item = { type = "one_of", artifacts = ["@/specs/meta/general.md"] } },
 ] }
 ```
 
@@ -414,14 +418,16 @@ A `files` source MAY include:
 
 If `pattern` is omitted, a `files` source MUST produce all files under the configuration root.
 
-Relative file source patterns MUST be resolved against the configuration root.
+Root-anchored file source patterns MUST be resolved against the configuration root.
+
+Relative file source patterns MAY be used and MUST be resolved against the configuration root.
 
 File source results MUST be deterministic for the same filesystem state.
 
 Example:
 
 ```toml
-output = { type = "files", pattern = "./depmesh/tests/test_{module}.py" }
+output = { type = "files", pattern = "@/depmesh/tests/test_{module}.py" }
 ```
 
 ### List Source
@@ -438,7 +444,7 @@ The `artifacts` field MUST contain at least one artifact identifier.
 Example:
 
 ```toml
-output = { type = "list", artifacts = ["./specs/{module}.md"] }
+output = { type = "list", artifacts = ["@/specs/{module}.md"] }
 ```
 
 ### Command Source
@@ -485,8 +491,8 @@ Example:
 
 ```toml
 output = { type = "union", items = [
-  { type = "list", artifacts = ["./depmesh/tests/test_{module}.py"] },
-  { type = "files", pattern = "./depmesh/tests/{module}/test_*.py" },
+  { type = "list", artifacts = ["@/depmesh/tests/test_{module}.py"] },
+  { type = "files", pattern = "@/depmesh/tests/{module}/test_*.py" },
 ] }
 ```
 
@@ -505,11 +511,11 @@ Example:
 
 ```toml
 output = { type = "intersection", items = [
-  { type = "files", pattern = "./specs/**/*.md" },
+  { type = "files", pattern = "@/specs/**/*.md" },
   {
     type = "filter",
-    source = { type = "files", pattern = "./specs/**/*.md" },
-    predicate = { type = "regex", pattern = "^\\./specs/.+{module}.+\\.md$" },
+    source = { type = "files", pattern = "@/specs/**/*.md" },
+    predicate = { type = "regex", pattern = "^@/specs/.+{module}.+\\.md$" },
   },
 ] }
 ```
@@ -531,7 +537,7 @@ Example:
 ```toml
 output.type = "difference"
 output.include = { type = "command", command = "python -m tools.list_related_specs {module}" }
-output.exclude = { type = "list", artifacts = ["./specs/meta/general.md"] }
+output.exclude = { type = "list", artifacts = ["@/specs/meta/general.md"] }
 ```
 
 ### Filter Source
@@ -549,16 +555,16 @@ Example:
 ```toml
 output = {
   type = "filter",
-  source = { type = "files", pattern = "./specs/**/*.md" },
-  predicate = { type = "not", item = { type = "one_of", artifacts = ["./specs/meta/general.md"] } },
+  source = { type = "files", pattern = "@/specs/**/*.md" },
+  predicate = { type = "not", item = { type = "one_of", artifacts = ["@/specs/meta/general.md"] } },
 }
 ```
 
 ## Path normalization
 
-Configuration-relative file paths SHOULD be written with a leading `./`.
+Configuration project file paths SHOULD be written with a leading `@/`.
 
-Configuration-relative file paths MUST NOT escape the configuration root unless the field explicitly uses an absolute path.
+Configuration file paths MUST NOT escape the configuration root.
 
 Path normalization MUST remove redundant `.` path segments.
 

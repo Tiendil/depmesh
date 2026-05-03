@@ -21,3 +21,5 @@
 * on the example of test rule, should we list as dependency not existed files?
 
 * separate skills subcommand (how to use tool) from specs (how to write other docs, for example) from workflows (donna). On the example of donna: we have docs how to use it, we have workflows supplied with donna and we have specs for those workflows (they describe how to create specific fsms)
+
+* should we separate predicate class from its config and source class from its config?

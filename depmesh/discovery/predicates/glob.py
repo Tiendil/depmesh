@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 from typing import Literal, NewType
 
-from depmesh.core.entities import BaseEntity
 from depmesh.discovery.artifacts import CaptureName, TemplateText
-from depmesh.domain.entities import ArtifactId
+from depmesh.discovery.predicates.base import ArtifactPredicateBase
+from depmesh.discovery.paths import normalize_path_pattern
+from depmesh.domain.entities import ArtifactId, ProjectRootPath
 
 GlobPattern = NewType("GlobPattern", str)
 
@@ -14,7 +14,7 @@ CAPTURE_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 CAPTURE_RE = re.compile(r"\{([^{}]+)\}")
 
 
-class GlobPredicate(BaseEntity):
+class GlobPredicate(ArtifactPredicateBase):
     type: Literal["glob"]
     pattern: TemplateText
 
@@ -28,9 +28,17 @@ class GlobPredicate(BaseEntity):
             if token.startswith("*")
         }
 
-    def match(self, artifact: ArtifactId, root: Path, captures: dict[str, str] | None = None) -> dict[str, str] | None:
+    def match(
+        self,
+        artifact: ArtifactId,
+        root: ProjectRootPath,
+        captures: dict[str, str] | None = None,
+    ) -> dict[str, str] | None:
         pattern = self.pattern.substitute(captures or {})
-        match = _compile_glob(pattern).fullmatch(artifact)
+        normalized_pattern = normalize_path_pattern(pattern, root)
+        if normalized_pattern is None:
+            return None
+        match = _compile_glob(normalized_pattern).fullmatch(artifact)
         return {name: value or "" for name, value in match.groupdict().items()} if match else None
 
 

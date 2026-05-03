@@ -9,9 +9,9 @@ class TestHumanRendered:
     def test_render_query__complete_data(self) -> None:
         result = QueryResult(
             dependencies=(
-                Dependency(relation="tests", dependency="./tests/test_b.py"),
-                Dependency(relation="specs", dependency="./specs/a.md"),
-                Dependency(relation="tests", dependency="./tests/test_a.py"),
+                Dependency(relation="tests", dependency="@/tests/test_b.py"),
+                Dependency(relation="specs", dependency="@/specs/a.md"),
+                Dependency(relation="tests", dependency="@/tests/test_a.py"),
             )
         )
 
@@ -21,21 +21,21 @@ class TestHumanRendered:
             relations=(),
         ) == (
             "specs:\n"
-            "  ./specs/a.md\n\n"
+            "  @/specs/a.md\n\n"
             "tests:\n"
-            "  ./tests/test_a.py\n"
-            "  ./tests/test_b.py\n\n"
+            "  @/tests/test_a.py\n"
+            "  @/tests/test_b.py\n\n"
             "warnings:\n"
             "  first warning\n"
             "  second warning\n"
         )
 
     def test_render_query__groups_dependencies_and_warnings(self) -> None:
-        result = QueryResult(dependencies=(Dependency(relation="tests", dependency="./tests/test_a.py"),))
+        result = QueryResult(dependencies=(Dependency(relation="tests", dependency="@/tests/test_a.py"),))
 
         assert HumanRendered().render_query(result, ["warning"], relations=()) == (
             "tests:\n"
-            "  ./tests/test_a.py\n\n"
+            "  @/tests/test_a.py\n\n"
             "warnings:\n"
             "  warning\n"
         )

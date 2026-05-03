@@ -3,12 +3,11 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from functools import cached_property
-from pathlib import Path
 from typing import NewType
 
 import pydantic
 
-from depmesh.domain.entities import RelationId
+from depmesh.domain.entities import ProjectRootPath, RelationId, UntrustedPath
 
 CaptureName = NewType("CaptureName", str)
 
@@ -45,10 +44,10 @@ class EvaluationContext:
     def __init__(
         self,
         *,
-        root: Path,
+        root: ProjectRootPath,
         relation_id: RelationId,
         captures: dict[str, str],
-        cwd: Path | None = None,
+        cwd: UntrustedPath | None = None,
     ) -> None:
         self.root = root
         self.relation_id = relation_id
