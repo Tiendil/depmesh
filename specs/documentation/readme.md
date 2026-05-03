@@ -40,7 +40,7 @@ The first paragraphs after the h1 heading SHOULD explain the core value proposit
 `README.md` MUST use the following h2 sections in this order:
 
 1. `Example`
-2. `What Is depmesh?`
+2. `Rationale`
 3. `Features`
 4. `Quick Usage`
 5. `Installation`
