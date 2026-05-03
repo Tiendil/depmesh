@@ -1,6 +1,6 @@
 version = 1
 revision = 3
-requires-python = ">=3.12.5"
+requires-python = ">=3.12, <4.0"
 
 [[package]]
 name = "annotated-doc"
@@ -124,9 +124,6 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
-    { name = "pytest" },
-    { name = "pytest-mock" },
-    { name = "tach" },
     { name = "tomli" },
     { name = "typer" },
 ]
@@ -148,14 +145,14 @@ dev = [
     { name = "flake8-pytest" },
     { name = "isort" },
     { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-mock" },
+    { name = "tach" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "pydantic", specifier = "~=2.13.3" },
-    { name = "pytest", specifier = "~=9.0.3" },
-    { name = "pytest-mock", specifier = "~=3.15.1" },
-    { name = "tach", specifier = ">=0.34.1" },
     { name = "tomli", specifier = ">=2.4.0" },
     { name = "typer", specifier = "~=0.25.1" },
 ]
@@ -177,6 +174,9 @@ dev = [
     { name = "flake8-pytest", specifier = "==1.4.*" },
     { name = "isort", specifier = "==7.0.*" },
     { name = "mypy", specifier = "==1.19.*" },
+    { name = "pytest", specifier = "==9.0.*" },
+    { name = "pytest-mock", specifier = "==3.15.*" },
+    { name = "tach", specifier = "==0.34.*" },
 ]
 
 [[package]]

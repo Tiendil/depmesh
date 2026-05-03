@@ -636,7 +636,7 @@ depmesh [GLOBAL_OPTIONS] version
 Example output:
 
 ```text
-0.1.0
+1.2.3
 ```
 
 The `version` command MUST NOT accept dependency query options, skill options, or artifact arguments.
