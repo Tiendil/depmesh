@@ -56,9 +56,7 @@ class TestLLMRendered:
         result = QueryResult(dependencies=(Dependency(relation="tests", dependency="@/tests/test_a.py"),))
 
         assert LLMRendered().render_query(result, [], relations=config.relations) == (
-            "## tests\n\n"
-            "Tests related to the input artifacts.\n\n"
-            "- @/tests/test_a.py\n"
+            "## tests\n\nTests related to the input artifacts.\n\n- @/tests/test_a.py\n"
         )
 
     def test_render_query__includes_reverse_relation_description_when_configured(self) -> None:
@@ -71,19 +69,16 @@ class TestLLMRendered:
         result = QueryResult(dependencies=(Dependency(relation="tested_by", dependency="@/src/a.py"),))
 
         assert LLMRendered().render_query(result, [], relations=relations) == (
-            "## tested_by\n\n"
-            "Artifacts tested by the input artifacts.\n\n"
-            "- @/src/a.py\n"
+            "## tested_by\n\nArtifacts tested by the input artifacts.\n\n- @/src/a.py\n"
         )
 
     def test_render_relations__orders_relations_and_descriptions(self) -> None:
-        assert LLMRendered().render_relations(
-            (
-                Relation(id="tests", description="Tests related to input artifacts."),
-                Relation(id="imports"),
+        assert (
+            LLMRendered().render_relations(
+                (
+                    Relation(id="tests", description="Tests related to input artifacts."),
+                    Relation(id="imports"),
+                )
             )
-        ) == (
-            "## imports\n\n"
-            "## tests\n\n"
-            "Tests related to input artifacts.\n"
+            == "## imports\n\n## tests\n\nTests related to input artifacts.\n"
         )

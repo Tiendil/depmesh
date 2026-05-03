@@ -6,7 +6,6 @@ from depmesh.domain.entities import (
     RelationId,
 )
 
-
 __all__ = [
     "ArtifactId",
     "Dependency",

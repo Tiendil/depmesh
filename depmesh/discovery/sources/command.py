@@ -32,7 +32,9 @@ class CommandSource(ArtifactSourceBase):
             warnings.add(f"relation `{context.relation_id}`: command stderr: {completed.stderr.strip()}")
 
         if completed.returncode != 0:
-            warnings.add(f"relation `{context.relation_id}`: command exited with status {completed.returncode}: {command}")
+            warnings.add(
+                f"relation `{context.relation_id}`: command exited with status {completed.returncode}: {command}"
+            )
 
         return [
             ArtifactId(

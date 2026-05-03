@@ -9,9 +9,7 @@ from depmesh.protocol.renderers.automation import AutomationRendered, to_jsonl
 
 class TestToJsonl:
     def test_serializes_record_with_stable_options_and_newline(self) -> None:
-        assert to_jsonl({"type": "warning", "message": "привет"}) == (
-            '{"message": "привет", "type": "warning"}\n'
-        )
+        assert to_jsonl({"type": "warning", "message": "привет"}) == ('{"message": "привет", "type": "warning"}\n')
 
 
 class TestAutomationRendered:

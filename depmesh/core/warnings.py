@@ -13,4 +13,3 @@ def read() -> list[str]:
 
 def clear() -> None:
     _warnings.clear()
-

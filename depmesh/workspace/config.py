@@ -48,7 +48,9 @@ def parse_config(raw: dict[str, Any], *, config_path: Path) -> Config:
     try:
         return Config.model_validate(raw)
     except pydantic.ValidationError as error:
-        raise errors.ConfigInvalid("invalid configuration", path=config_path, details={"validation": str(error)}) from error
+        raise errors.ConfigInvalid(
+            "invalid configuration", path=config_path, details={"validation": str(error)}
+        ) from error
     except ValueError as error:
         raise errors.ConfigInvalid(str(error), path=config_path) from error
 

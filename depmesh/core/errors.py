@@ -21,4 +21,3 @@ class Error(Exception):
 
     def as_record(self) -> dict[str, Any]:
         return {"type": "error", "code": self.code, "message": self.message, **self.details}
-

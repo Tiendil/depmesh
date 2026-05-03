@@ -85,7 +85,9 @@ def dependencies(
             )
             dependencies.update(result.dependencies)
 
-        result = QueryResult(dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency))))
+        result = QueryResult(
+            dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency)))
+        )
         command.write(
             command.renderer.render_query(
                 result,

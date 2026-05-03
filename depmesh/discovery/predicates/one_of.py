@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from depmesh.discovery.paths import normalize_path
 from depmesh.discovery.predicates.base import ArtifactPredicateBase
 from depmesh.discovery.predicates.entities import OneOfPredicateConfig, OneOfPredicateValue
-from depmesh.discovery.paths import normalize_path
 from depmesh.domain.entities import ArtifactId, ProjectRootPath
 
 

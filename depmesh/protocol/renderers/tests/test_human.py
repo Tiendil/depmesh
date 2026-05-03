@@ -34,20 +34,16 @@ class TestHumanRendered:
         result = QueryResult(dependencies=(Dependency(relation="tests", dependency="@/tests/test_a.py"),))
 
         assert HumanRendered().render_query(result, ["warning"], relations=()) == (
-            "tests:\n"
-            "  @/tests/test_a.py\n\n"
-            "warnings:\n"
-            "  warning\n"
+            "tests:\n  @/tests/test_a.py\n\nwarnings:\n  warning\n"
         )
 
     def test_render_relations__orders_relations_and_descriptions(self) -> None:
-        assert HumanRendered().render_relations(
-            (
-                Relation(id="tests", description="Tests related to input artifacts."),
-                Relation(id="imports"),
+        assert (
+            HumanRendered().render_relations(
+                (
+                    Relation(id="tests", description="Tests related to input artifacts."),
+                    Relation(id="imports"),
+                )
             )
-        ) == (
-            "imports:\n\n"
-            "tests:\n"
-            "  Tests related to input artifacts.\n"
+            == "imports:\n\ntests:\n  Tests related to input artifacts.\n"
         )
