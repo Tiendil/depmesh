@@ -17,27 +17,27 @@ from depmesh.discovery.predicates.glob import GlobPredicate
 from depmesh.discovery.predicates.not_ import NotPredicate
 from depmesh.discovery.predicates.one_of import OneOfPredicate
 from depmesh.discovery.predicates.regex import RegexPredicate
-from depmesh.domain.entities import ArtifactId
+from depmesh.domain.entities import ArtifactId, ProjectRootPath
 
 
 class TestCompilePredicate:
     def test_one_of_predicate(self, tmp_path: Path) -> None:
-        predicate = compile_predicate(OneOfPredicateConfig(type="one_of", artifacts=("@/a.py",)))
+        predicate = compile_predicate(OneOfPredicateConfig.model_validate({"type": "one_of", "artifacts": ["@/a.py"]}))
 
         assert isinstance(predicate, OneOfPredicate)
-        assert predicate.match(ArtifactId("@/a.py"), tmp_path) == {}
+        assert predicate.match(ArtifactId("@/a.py"), ProjectRootPath(tmp_path)) == {}
 
     def test_glob_predicate(self, tmp_path: Path) -> None:
         predicate = compile_predicate(GlobPredicateConfig(type="glob", pattern="@/{*name}.py"))
 
         assert isinstance(predicate, GlobPredicate)
-        assert predicate.match(ArtifactId("@/a.py"), tmp_path) == {"name": "a"}
+        assert predicate.match(ArtifactId("@/a.py"), ProjectRootPath(tmp_path)) == {"name": "a"}
 
     def test_regex_predicate(self, tmp_path: Path) -> None:
         predicate = compile_predicate(RegexPredicateConfig(type="regex", pattern=r"^@/(?P<name>[a-z]+)\.py$"))
 
         assert isinstance(predicate, RegexPredicate)
-        assert predicate.match(ArtifactId("@/a.py"), tmp_path) == {"name": "a"}
+        assert predicate.match(ArtifactId("@/a.py"), ProjectRootPath(tmp_path)) == {"name": "a"}
 
     def test_any_predicate(self, tmp_path: Path) -> None:
         predicate = compile_predicate(
@@ -53,7 +53,7 @@ class TestCompilePredicate:
         )
 
         assert isinstance(predicate, AnyPredicate)
-        assert predicate.match(ArtifactId("@/lib/a.py"), tmp_path) == {"module": "a"}
+        assert predicate.match(ArtifactId("@/lib/a.py"), ProjectRootPath(tmp_path)) == {"module": "a"}
 
     def test_all_predicate(self, tmp_path: Path) -> None:
         predicate = compile_predicate(
@@ -69,7 +69,7 @@ class TestCompilePredicate:
         )
 
         assert isinstance(predicate, AllPredicate)
-        assert predicate.match(ArtifactId("@/src/a.py"), tmp_path) == {"module": "a"}
+        assert predicate.match(ArtifactId("@/src/a.py"), ProjectRootPath(tmp_path)) == {"module": "a"}
 
     def test_not_predicate(self, tmp_path: Path) -> None:
         predicate = compile_predicate(
@@ -79,4 +79,4 @@ class TestCompilePredicate:
         )
 
         assert isinstance(predicate, NotPredicate)
-        assert predicate.match(ArtifactId("@/included.py"), tmp_path) == {}
+        assert predicate.match(ArtifactId("@/included.py"), ProjectRootPath(tmp_path)) == {}

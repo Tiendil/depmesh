@@ -10,11 +10,11 @@ from depmesh.discovery.sources import (
     UnionSourceConfig,
     compile_source,
 )
-from depmesh.domain.entities import ArtifactId, RelationId
+from depmesh.domain.entities import ArtifactId, ProjectRootPath, RelationId
 
 
 def context(root: Path) -> EvaluationContext:
-    return EvaluationContext(root=root, relation_id=RelationId("tests"), captures={})
+    return EvaluationContext(root=ProjectRootPath(root), relation_id=RelationId("tests"), captures={})
 
 
 class TestUnionSource:

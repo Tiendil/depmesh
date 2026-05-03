@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from depmesh.discovery.sources.list import ListSource
-from depmesh.domain.entities import Relation
+from depmesh.domain.entities import Relation, RelationDescription, RelationId
 from depmesh.workspace import errors
 from depmesh.workspace.config import discover_config, load_config, parse_config
 from depmesh.workspace.entities import RelationConfig
@@ -67,7 +67,7 @@ class TestLoadConfig:
         workspace = load_config(Path("project/depmesh.toml"), cwd=project_config_path.parent.parent)
 
         assert workspace.root == project_config_path.parent
-        assert workspace.relations == (Relation(id="tests"),)
+        assert workspace.relations == (Relation(id=RelationId("tests")),)
 
     def test_rules_are_compiled_into_runtime_sources(self, tmp_path: Path) -> None:
         config_path = tmp_path / "depmesh.toml"
@@ -116,8 +116,8 @@ class TestParseConfig:
 
         assert config.relations == (
             RelationConfig(
-                id="tests",
-                description="Tests related to the input artifacts.",
+                id=RelationId("tests"),
+                description=RelationDescription("Tests related to the input artifacts."),
             ),
         )
         assert config.rules[0].input_predicate.type == "glob"

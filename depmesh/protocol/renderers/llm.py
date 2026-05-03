@@ -19,9 +19,9 @@ class LLMRendered(Rendered):
         for relation in relations:
             descriptions[relation.id] = relation.description
 
-        for relation, dependencies in result.grouped().items():
-            lines = [f"## {relation}"]
-            description = descriptions.get(relation)
+        for relation_id, dependencies in result.grouped().items():
+            lines = [f"## {relation_id}"]
+            description = descriptions.get(relation_id)
             if description is not None:
                 lines.extend(["", description])
             lines.append("")

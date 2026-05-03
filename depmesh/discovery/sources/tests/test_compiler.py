@@ -20,11 +20,11 @@ from depmesh.discovery.sources.filter import FilterSource
 from depmesh.discovery.sources.intersection import IntersectionSource
 from depmesh.discovery.sources.list import ListSource
 from depmesh.discovery.sources.union import UnionSource
-from depmesh.domain.entities import ArtifactId, RelationId
+from depmesh.domain.entities import ArtifactId, ProjectRootPath, RelationId
 
 
 def context(root: Path) -> EvaluationContext:
-    return EvaluationContext(root=root, relation_id=RelationId("tests"), captures={})
+    return EvaluationContext(root=ProjectRootPath(root), relation_id=RelationId("tests"), captures={})
 
 
 def touch(path: Path) -> None:
@@ -36,7 +36,7 @@ class TestCompileSource:
     def test_files_source(self, tmp_path: Path) -> None:
         touch(tmp_path / "a.py")
 
-        source = compile_source(FilesSourceConfig(type="files", pattern="@/*.py"))
+        source = compile_source(FilesSourceConfig.model_validate({"type": "files", "pattern": "@/*.py"}))
 
         assert isinstance(source, FilesSource)
         assert source.evaluate(context(tmp_path)) == [ArtifactId("@/a.py")]
@@ -48,7 +48,7 @@ class TestCompileSource:
         assert source.evaluate(context(tmp_path)) == [ArtifactId("@/a.py")]
 
     def test_list_source(self, tmp_path: Path) -> None:
-        source = compile_source(ListSourceConfig(type="list", artifacts=("@/a.py",)))
+        source = compile_source(ListSourceConfig.model_validate({"type": "list", "artifacts": ["@/a.py"]}))
 
         assert isinstance(source, ListSource)
         assert source.evaluate(context(tmp_path)) == [ArtifactId("@/a.py")]

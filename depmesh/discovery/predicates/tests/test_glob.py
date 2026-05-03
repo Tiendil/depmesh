@@ -4,7 +4,7 @@ from pathlib import Path
 
 from depmesh.discovery.artifacts import CaptureName
 from depmesh.discovery.predicates.glob import GlobPredicate, GlobPredicateConfig
-from depmesh.domain.entities import ArtifactId
+from depmesh.domain.entities import ArtifactId, ProjectRootPath
 
 
 class TestGlobPredicate:
@@ -21,9 +21,11 @@ class TestGlobPredicate:
     def test_match__supports_templates_and_captures(self, tmp_path: Path) -> None:
         predicate = GlobPredicate(GlobPredicateConfig(type="glob", pattern="@/src/{package}/{*module}.py"))
 
-        assert predicate.match(ArtifactId("@/src/core/api.py"), tmp_path, {"package": "core"}) == {"module": "api"}
+        assert predicate.match(ArtifactId("@/src/core/api.py"), ProjectRootPath(tmp_path), {"package": "core"}) == {
+            "module": "api"
+        }
 
     def test_match__returns_none_for_missing_artifact(self, tmp_path: Path) -> None:
         predicate = GlobPredicate(GlobPredicateConfig(type="glob", pattern="@/src/{*module}.py"))
 
-        assert predicate.match(ArtifactId("@/docs/a.md"), tmp_path) is None
+        assert predicate.match(ArtifactId("@/docs/a.md"), ProjectRootPath(tmp_path)) is None

@@ -5,7 +5,7 @@ from pathlib import Path
 from depmesh.core import warnings
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext
 from depmesh.discovery.sources.command import CommandSource, CommandSourceConfig
-from depmesh.domain.entities import ArtifactId, RelationId
+from depmesh.domain.entities import ArtifactId, ProjectRootPath, RelationId
 
 
 class TestCommandSource:
@@ -16,7 +16,9 @@ class TestCommandSource:
 
     def test_evaluate__returns_stdout_artifacts(self, tmp_path: Path) -> None:
         source = CommandSource(CommandSourceConfig(type="command", command="printf '@/tests/test_{module}.py\\n'"))
-        context = EvaluationContext(root=tmp_path, relation_id=RelationId("tests"), captures={"module": "a"})
+        context = EvaluationContext(
+            root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={"module": "a"}
+        )
 
         assert source.evaluate(context) == [ArtifactId("@/tests/test_a.py")]
 
@@ -28,7 +30,7 @@ class TestCommandSource:
                 command="printf '@/tests/test_a.py\\n'; printf 'diagnostic\\n' >&2; exit 7",
             )
         )
-        context = EvaluationContext(root=tmp_path, relation_id=RelationId("tests"), captures={})
+        context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={})
 
         assert source.evaluate(context) == [ArtifactId("@/tests/test_a.py")]
         assert warnings.read() == [

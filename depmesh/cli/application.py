@@ -70,7 +70,7 @@ def dependencies(
         dependencies: set[Dependency] = set()
 
         try:
-            input_artifacts = normalize_input_artifacts(project_root, artifacts, cwd=cwd)
+            input_artifacts = normalize_input_artifacts(project_root, artifacts or [], cwd=cwd)
         except discovery_errors.InvalidProjectPath as error:
             raise cli_errors.InvalidArguments(error.message) from error
 
