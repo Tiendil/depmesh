@@ -11,18 +11,27 @@ Use it to explore a codebase, find related files, inspect the impact of a possib
 Before changing a CLI module, ask `depmesh` for the specifications and tests connected to it:
 
 ```bash
-> depmesh dependencies --relation governed_by --relation tested_by ./depmesh/cli/app.py
+> depmesh -p llm dependencies --relation governed_by --relation tested_by ./depmesh/cli/app.py
 
-governed_by:
-  ./specs/architecture/entities.md
-  ./specs/architecture/errors.md
-  ./specs/architecture/modules_layout.md
-  ./specs/architecture/naming.md
-  ./specs/architecture/tests.md
-  ./specs/behavior/cli.md
+## governed_by
 
-tested_by:
-  ./depmesh/cli/tests/test_app.py
+Specifications that apply to the input.
+
+- @/specs/architecture/entities.md
+- @/specs/architecture/errors.md
+- @/specs/architecture/modules_layout.md
+- @/specs/architecture/naming.md
+- @/specs/architecture/static_analysis.md
+- @/specs/architecture/tests.md
+- @/specs/behavior/cli.md
+- @/specs/behavior/file_paths.md
+
+## tested_by
+
+Tests that verify the input.
+
+- @/depmesh/cli/tests/test_app.py
+
 ```
 
 ## Rationale
