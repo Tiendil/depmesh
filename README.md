@@ -22,7 +22,7 @@ governed_by:
   ./specs/behavior/cli.md
 
 tested_by:
-  ./depmesh/cli/tests/test_application.py
+  ./depmesh/cli/tests/test_app.py
 ```
 
 ## Rationale
