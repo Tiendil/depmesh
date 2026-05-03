@@ -12,9 +12,9 @@ class TestLLMRendered:
     def test_render_query__complete_data(self) -> None:
         result = QueryResult(
             dependencies=(
-                Dependency(relation="tests", dependency="./tests/test_b.py"),
-                Dependency(relation="specs", dependency="./specs/a.md"),
-                Dependency(relation="tests", dependency="./tests/test_a.py"),
+                Dependency(relation="tests", dependency="@/tests/test_b.py"),
+                Dependency(relation="specs", dependency="@/specs/a.md"),
+                Dependency(relation="tests", dependency="@/tests/test_a.py"),
             )
         )
         relations = (
@@ -31,11 +31,11 @@ class TestLLMRendered:
             relations=relations,
         ) == (
             "## specs\n\n"
-            "- ./specs/a.md\n\n"
+            "- @/specs/a.md\n\n"
             "## tests\n\n"
             "Tests related to the input artifacts.\n\n"
-            "- ./tests/test_a.py\n"
-            "- ./tests/test_b.py\n\n"
+            "- @/tests/test_a.py\n"
+            "- @/tests/test_b.py\n\n"
             "## warnings\n\n"
             "- first warning\n"
             "- second warning\n"
@@ -53,12 +53,12 @@ class TestLLMRendered:
             },
             config_path=tmp_path / "depmesh.toml",
         )
-        result = QueryResult(dependencies=(Dependency(relation="tests", dependency="./tests/test_a.py"),))
+        result = QueryResult(dependencies=(Dependency(relation="tests", dependency="@/tests/test_a.py"),))
 
         assert LLMRendered().render_query(result, [], relations=config.relations) == (
             "## tests\n\n"
             "Tests related to the input artifacts.\n\n"
-            "- ./tests/test_a.py\n"
+            "- @/tests/test_a.py\n"
         )
 
     def test_render_query__includes_reverse_relation_description_when_configured(self) -> None:
@@ -68,12 +68,12 @@ class TestLLMRendered:
                 description="Artifacts tested by the input artifacts.",
             ),
         )
-        result = QueryResult(dependencies=(Dependency(relation="tested_by", dependency="./src/a.py"),))
+        result = QueryResult(dependencies=(Dependency(relation="tested_by", dependency="@/src/a.py"),))
 
         assert LLMRendered().render_query(result, [], relations=relations) == (
             "## tested_by\n\n"
             "Artifacts tested by the input artifacts.\n\n"
-            "- ./src/a.py\n"
+            "- @/src/a.py\n"
         )
 
     def test_render_relations__orders_relations_and_descriptions(self) -> None:

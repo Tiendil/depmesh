@@ -161,7 +161,7 @@ Allowed values MUST be:
 
 Human output SHOULD use concise labels.
 
-Human output SHOULD prefer relative paths when the input and dependency are inside the project.
+Human output SHOULD prefer canonical root-anchored paths when the input and dependency are inside the project.
 
 Human output SHOULD avoid implementation metadata unless it is needed to understand the result.
 
@@ -289,7 +289,7 @@ When this option is repeated, output MUST include dependencies whose relation ma
 Example:
 
 ```bash
-depmesh dependencies -r imports -r tests ./src/do_smth.py
+depmesh dependencies -r imports -r tests @/src/do_smth.py
 ```
 
 If omitted, all configured relation ids MUST be included.
@@ -344,23 +344,23 @@ tests:
 Command:
 
 ```bash
-depmesh dependencies ./src/do_smth.py
+depmesh dependencies @/src/do_smth.py
 ```
 
 Example output:
 
 ```text
 imports:
-  ./src/another_module.py
-  ./src/some_module.py
+  @/src/another_module.py
+  @/src/some_module.py
 
 specs:
-  ./specs/architecture.md
-  ./specs/top_level_behavior.md
-  ./specs/types.md
+  @/specs/architecture.md
+  @/specs/top_level_behavior.md
+  @/specs/types.md
 
 tests:
-  ./src/tests/test_do_smth.py
+  @/src/tests/test_do_smth.py
 ```
 
 ### Example: multiple artifacts
@@ -368,20 +368,20 @@ tests:
 Command:
 
 ```bash
-depmesh dependencies ./src/do_smth.py ./src/another_module.py
+depmesh dependencies @/src/do_smth.py @/src/another_module.py
 ```
 
 Example output:
 
 ```text
 imports:
-  ./src/another_module.py
-  ./src/some_module.py
-  ./src/types.py
+  @/src/another_module.py
+  @/src/some_module.py
+  @/src/types.py
 
 tests:
-  ./src/tests/test_another_module.py
-  ./src/tests/test_do_smth.py
+  @/src/tests/test_another_module.py
+  @/src/tests/test_do_smth.py
 ```
 
 ### Example: relation filter
@@ -389,14 +389,14 @@ tests:
 Command:
 
 ```bash
-depmesh dependencies --relation tests ./src/do_smth.py
+depmesh dependencies --relation tests @/src/do_smth.py
 ```
 
 Example output:
 
 ```text
 tests:
-  ./src/tests/test_do_smth.py
+  @/src/tests/test_do_smth.py
 ```
 
 ### Example: reverse relation
@@ -404,15 +404,15 @@ tests:
 Command:
 
 ```bash
-depmesh dependencies --relation imported_by ./src/some_module.py
+depmesh dependencies --relation imported_by @/src/some_module.py
 ```
 
 Example output:
 
 ```text
 imported_by:
-  ./src/do_smth.py
-  ./src/feature.py
+  @/src/do_smth.py
+  @/src/feature.py
 ```
 
 ### Example: LLM output
@@ -420,7 +420,7 @@ imported_by:
 Command:
 
 ```bash
-depmesh --protocol llm dependencies ./src/do_smth.py
+depmesh --protocol llm dependencies @/src/do_smth.py
 ```
 
 Example output:
@@ -430,22 +430,22 @@ Example output:
 
 Files imported by the input artifacts.
 
-- ./src/another_module.py
-- ./src/some_module.py
+- @/src/another_module.py
+- @/src/some_module.py
 
 ## specs
 
 Specifications related to the input artifacts.
 
-- ./specs/architecture.md
-- ./specs/top_level_behavior.md
-- ./specs/types.md
+- @/specs/architecture.md
+- @/specs/top_level_behavior.md
+- @/specs/types.md
 
 ## tests
 
 Tests related to the input artifacts.
 
-- ./src/tests/test_do_smth.py
+- @/src/tests/test_do_smth.py
 ```
 
 ### Example: automation output
@@ -453,18 +453,18 @@ Tests related to the input artifacts.
 Command:
 
 ```bash
-depmesh --protocol automation dependencies ./src/do_smth.py
+depmesh --protocol automation dependencies @/src/do_smth.py
 ```
 
 Example output:
 
 ```jsonl
-{"type":"dependency","relation":"imports","dependency":"./src/another_module.py"}
-{"type":"dependency","relation":"imports","dependency":"./src/some_module.py"}
-{"type":"dependency","relation":"specs","dependency":"./specs/architecture.md"}
-{"type":"dependency","relation":"specs","dependency":"./specs/top_level_behavior.md"}
-{"type":"dependency","relation":"specs","dependency":"./specs/types.md"}
-{"type":"dependency","relation":"tests","dependency":"./src/tests/test_do_smth.py"}
+{"type":"dependency","relation":"imports","dependency":"@/src/another_module.py"}
+{"type":"dependency","relation":"imports","dependency":"@/src/some_module.py"}
+{"type":"dependency","relation":"specs","dependency":"@/specs/architecture.md"}
+{"type":"dependency","relation":"specs","dependency":"@/specs/top_level_behavior.md"}
+{"type":"dependency","relation":"specs","dependency":"@/specs/types.md"}
+{"type":"dependency","relation":"tests","dependency":"@/src/tests/test_do_smth.py"}
 ```
 
 ### Example: human output with warnings
@@ -472,15 +472,15 @@ Example output:
 Command:
 
 ```bash
-depmesh dependencies ./src/do_smth.py
+depmesh dependencies @/src/do_smth.py
 ```
 
 Example output:
 
 ```text
 imports:
-  ./src/another_module.py
-  ./src/some_module.py
+  @/src/another_module.py
+  @/src/some_module.py
 
 warnings:
   relation `imports`: skipped unresolved dependency `third_party_package`
@@ -491,7 +491,7 @@ warnings:
 Command:
 
 ```bash
-depmesh --protocol llm dependencies ./src/do_smth.py
+depmesh --protocol llm dependencies @/src/do_smth.py
 ```
 
 Example output:
@@ -501,8 +501,8 @@ Example output:
 
 Files imported by the input artifacts.
 
-- ./src/another_module.py
-- ./src/some_module.py
+- @/src/another_module.py
+- @/src/some_module.py
 
 ## warnings
 
@@ -514,14 +514,14 @@ Files imported by the input artifacts.
 Command:
 
 ```bash
-depmesh --protocol automation dependencies ./src/do_smth.py
+depmesh --protocol automation dependencies @/src/do_smth.py
 ```
 
 Example output:
 
 ```jsonl
-{"type":"dependency","relation":"imports","dependency":"./src/another_module.py"}
-{"type":"dependency","relation":"imports","dependency":"./src/some_module.py"}
+{"type":"dependency","relation":"imports","dependency":"@/src/another_module.py"}
+{"type":"dependency","relation":"imports","dependency":"@/src/some_module.py"}
 {"type":"warning","relation":"imports","message":"skipped unresolved dependency `third_party_package`"}
 ```
 

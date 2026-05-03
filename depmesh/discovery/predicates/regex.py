@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 from typing import Literal, NewType
 
-from depmesh.core.entities import BaseEntity
 from depmesh.discovery.artifacts import CaptureName, TemplateText
-from depmesh.domain.entities import ArtifactId
+from depmesh.discovery.predicates.base import ArtifactPredicateBase
+from depmesh.domain.entities import ArtifactId, ProjectRootPath
 
 RegexPattern = NewType("RegexPattern", str)
 
 
-class RegexPredicate(BaseEntity):
+class RegexPredicate(ArtifactPredicateBase):
     type: Literal["regex"]
     pattern: TemplateText
 
@@ -24,7 +23,12 @@ class RegexPredicate(BaseEntity):
         except re.error as error:
             raise ValueError(f"invalid regex predicate: {error}") from error
 
-    def match(self, artifact: ArtifactId, root: Path, captures: dict[str, str] | None = None) -> dict[str, str] | None:
+    def match(
+        self,
+        artifact: ArtifactId,
+        root: ProjectRootPath,
+        captures: dict[str, str] | None = None,
+    ) -> dict[str, str] | None:
         pattern = self.pattern.substitute(captures or {})
         match = re.compile(pattern).match(artifact)
         return match.groupdict() if match else None

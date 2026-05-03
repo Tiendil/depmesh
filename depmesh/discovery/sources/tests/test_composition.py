@@ -17,13 +17,13 @@ class TestUnionSource:
             {
                 "type": "union",
                 "items": [
-                    {"type": "list", "artifacts": ["./a.py"]},
-                    {"type": "list", "artifacts": ["./a.py", "./b.py"]},
+                    {"type": "list", "artifacts": ["@/a.py"]},
+                    {"type": "list", "artifacts": ["@/a.py", "@/b.py"]},
                 ],
             }
         )
 
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("./a.py"), ArtifactId("./b.py")]
+        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/a.py"), ArtifactId("@/b.py")]
 
 
 class TestIntersectionSource:
@@ -32,13 +32,13 @@ class TestIntersectionSource:
             {
                 "type": "intersection",
                 "items": [
-                    {"type": "list", "artifacts": ["./a.py", "./b.py"]},
-                    {"type": "list", "artifacts": ["./b.py", "./c.py"]},
+                    {"type": "list", "artifacts": ["@/a.py", "@/b.py"]},
+                    {"type": "list", "artifacts": ["@/b.py", "@/c.py"]},
                 ],
             }
         )
 
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("./b.py")]
+        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/b.py")]
 
 
 class TestDifferenceSource:
@@ -46,8 +46,8 @@ class TestDifferenceSource:
         source = DifferenceSource.model_validate(
             {
                 "type": "difference",
-                "include": {"type": "list", "artifacts": ["./{kind}/a.py"]},
-                "exclude": {"type": "list", "artifacts": ["./{kind}/{name}.py"]},
+                "include": {"type": "list", "artifacts": ["@/{kind}/a.py"]},
+                "exclude": {"type": "list", "artifacts": ["@/{kind}/{name}.py"]},
             }
         )
 
@@ -57,12 +57,12 @@ class TestDifferenceSource:
         source = DifferenceSource.model_validate(
             {
                 "type": "difference",
-                "include": {"type": "list", "artifacts": ["./a.py", "./b.py"]},
-                "exclude": {"type": "list", "artifacts": ["./b.py"]},
+                "include": {"type": "list", "artifacts": ["@/a.py", "@/b.py"]},
+                "exclude": {"type": "list", "artifacts": ["@/b.py"]},
             }
         )
 
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("./a.py")]
+        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/a.py")]
 
 
 class TestFilterSource:
@@ -70,9 +70,9 @@ class TestFilterSource:
         source = FilterSource.model_validate(
             {
                 "type": "filter",
-                "source": {"type": "list", "artifacts": ["./src/a.py", "./docs/a.md"]},
-                "predicate": {"type": "glob", "pattern": "./src/{*module}.py"},
+                "source": {"type": "list", "artifacts": ["@/src/a.py", "@/docs/a.md"]},
+                "predicate": {"type": "glob", "pattern": "@/src/{*module}.py"},
             }
         )
 
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("./src/a.py")]
+        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/src/a.py")]

@@ -9,7 +9,7 @@ from depmesh.domain.entities import ArtifactId, RelationId
 
 class TestListSource:
     def test_variables__extracts_template_variables(self) -> None:
-        source = ListSource(type="list", artifacts=("./tests/test_{module}.py",))
+        source = ListSource(type="list", artifacts=("@/tests/test_{module}.py",))
 
         assert source.variables() == {CaptureName("module")}
 
@@ -17,4 +17,4 @@ class TestListSource:
         source = ListSource(type="list", artifacts=("tests/test_{module}.py",))
         context = EvaluationContext(root=tmp_path, relation_id=RelationId("tests"), captures={"module": "a"})
 
-        assert source.evaluate(context) == [ArtifactId("./tests/test_a.py")]
+        assert source.evaluate(context) == [ArtifactId("@/tests/test_a.py")]

@@ -4,7 +4,7 @@
 
 It hides the project-specific discovery mechanism behind one interface. A relation may be backed by path templates, fixed lists, file searches, static-analysis commands, or other configured sources, but the command usage stays the same.
 
-An artifact is usually a project-relative path such as `./src/app.py`. Treat artifact ids as strings accepted by the current project's `depmesh.toml`.
+An artifact is usually a root-anchored project path such as `@/src/app.py`. Treat artifact ids as strings accepted by the current project's `depmesh.toml`.
 
 `depmesh` is useful only when the project has a proper `depmesh.toml` configuration. If configuration is missing or relation coverage looks incomplete, read `depmesh -p llm skill initialization` and `depmesh -p llm skill configuration`.
 
@@ -14,7 +14,7 @@ When `--config` is not provided, `depmesh` searches from the current working dir
 
 When `--config PATH` is provided, `depmesh` uses that file directly, and the directory containing it is the project root.
 
-The project root matters because relative artifact paths, glob patterns, file sources, and command sources are interpreted from that root. Run commands from inside the intended project, and prefer project-relative artifact paths such as `./src/app.py`.
+The project root matters because root-anchored artifact paths, glob patterns, file sources, and command sources are interpreted from that root. Run commands from inside the intended project, and prefer root-anchored artifact paths such as `@/src/app.py`.
 
 ## This Documentation
 
@@ -55,13 +55,13 @@ Tests that verify the artifact.
 Query dependencies for that file to see what other files may be affected and should be read first:
 
 ```bash
-depmesh -p llm dependencies ./src/app.py
+depmesh -p llm dependencies @/src/app.py
 ```
 
 If the relation list includes tests, specs, imports, or reverse imports, combine relation filters to focus the result:
 
 ```bash
-depmesh -p llm dependencies --relation tested_by --relation governed_by --relation imported_by ./src/app.py
+depmesh -p llm dependencies --relation tested_by --relation governed_by --relation imported_by @/src/app.py
 ```
 
 Example output:
@@ -69,15 +69,15 @@ Example output:
 ```text
 ## governed_by
 
-- ./specs/behavior/app.md
+- @/specs/behavior/app.md
 
 ## imported_by
 
-- ./src/main.py
+- @/src/main.py
 
 ## tested_by
 
-- ./tests/test_app.py
+- @/tests/test_app.py
 ```
 
 3. Add a new module.
@@ -86,7 +86,7 @@ Inspect relation names first, then query a nearby module with the same expected 
 
 ```bash
 depmesh -p llm relations
-depmesh -p llm dependencies --relation governed_by --relation tested_by ./src/existing_module.py
+depmesh -p llm dependencies --relation governed_by --relation tested_by @/src/existing_module.py
 ```
 
 Example output:
@@ -94,11 +94,11 @@ Example output:
 ```text
 ## governed_by
 
-- ./specs/architecture/modules.md
+- @/specs/architecture/modules.md
 
 ## tested_by
 
-- ./tests/test_existing_module.py
+- @/tests/test_existing_module.py
 ```
 
 4. Change a specification.
@@ -106,7 +106,7 @@ Example output:
 Use a reverse governance relation to find implementation files governed by it:
 
 ```bash
-depmesh -p llm dependencies --relation governs ./specs/behavior/config.md
+depmesh -p llm dependencies --relation governs @/specs/behavior/config.md
 ```
 
 Example output:
@@ -114,8 +114,8 @@ Example output:
 ```text
 ## governs
 
-- ./src/config.py
-- ./src/config_loader.py
+- @/src/config.py
+- @/src/config_loader.py
 ```
 
 5. Change shared code.
@@ -123,7 +123,7 @@ Example output:
 Combine reverse lookup relations to identify callers and tests:
 
 ```bash
-depmesh -p llm dependencies --relation imported_by --relation tested_by ./src/shared.py
+depmesh -p llm dependencies --relation imported_by --relation tested_by @/src/shared.py
 ```
 
 Example output:
@@ -131,12 +131,12 @@ Example output:
 ```text
 ## imported_by
 
-- ./src/app.py
-- ./src/service.py
+- @/src/app.py
+- @/src/service.py
 
 ## tested_by
 
-- ./tests/test_shared.py
+- @/tests/test_shared.py
 ```
 
 6. Edit several artifacts together.
@@ -144,7 +144,7 @@ Example output:
 Query them in one command to get a merged dependency set:
 
 ```bash
-depmesh -p llm dependencies ./src/app.py ./src/service.py
+depmesh -p llm dependencies @/src/app.py @/src/service.py
 ```
 
 Example output:
@@ -152,8 +152,8 @@ Example output:
 ```text
 ## tested_by
 
-- ./tests/test_app.py
-- ./tests/test_service.py
+- @/tests/test_app.py
+- @/tests/test_service.py
 ```
 
 Run separate queries when you need to know which requested artifact produced each dependency.
@@ -174,7 +174,7 @@ Use full command names in agent workflows and generated notes. Short forms are h
 Global options go before the subcommand:
 
 ```bash
-depmesh -p llm dependencies ./src/app.py
+depmesh -p llm dependencies @/src/app.py
 ```
 
 ## List Relations
@@ -210,19 +210,19 @@ Use relation ids from this output with `dependencies --relation`.
 Query all configured relations for one artifact:
 
 ```bash
-depmesh -p llm dependencies ./src/app.py
+depmesh -p llm dependencies @/src/app.py
 ```
 
 Human convenience alias:
 
 ```bash
-depmesh deps ./src/app.py
+depmesh deps @/src/app.py
 ```
 
 Query more than one artifact at once:
 
 ```bash
-depmesh -p llm dependencies ./src/app.py ./src/service.py
+depmesh -p llm dependencies @/src/app.py @/src/service.py
 ```
 
 The result merges dependencies for all requested artifacts. It does not show which requested artifact produced each dependency.
@@ -230,8 +230,8 @@ The result merges dependencies for all requested artifacts. It does not show whi
 Limit output to one or more relations:
 
 ```bash
-depmesh -p llm dependencies --relation tests ./src/app.py
-depmesh -p llm dependencies --relation imports --relation tests ./src/app.py
+depmesh -p llm dependencies --relation tests @/src/app.py
+depmesh -p llm dependencies --relation imports --relation tests @/src/app.py
 ```
 
 Example output:
@@ -241,14 +241,14 @@ Example output:
 
 Python files imported by the Python file.
 
-- ./src/config.py
-- ./src/service.py
+- @/src/config.py
+- @/src/service.py
 
 ## tests
 
 Tests that verify the artifact.
 
-- ./tests/test_app.py
+- @/tests/test_app.py
 ```
 
 ## Reverse Lookups
@@ -258,7 +258,7 @@ Relations are single-directional. Reverse lookups use a separate configured rela
 Example:
 
 ```bash
-depmesh -p llm dependencies --relation imported_by ./src/config.py
+depmesh -p llm dependencies --relation imported_by @/src/config.py
 ```
 
 If the reverse relation is not listed by `depmesh -p llm relations`, it is not available.

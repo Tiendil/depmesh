@@ -4,13 +4,13 @@ import subprocess
 from typing import Literal
 
 from depmesh.core import warnings
-from depmesh.core.entities import BaseEntity
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext, TemplateText
 from depmesh.discovery.paths import normalize_path
+from depmesh.discovery.sources.base import ArtifactSourceBase
 from depmesh.domain.entities import ArtifactId
 
 
-class CommandSource(BaseEntity):
+class CommandSource(ArtifactSourceBase):
     type: Literal["command"]
     command: TemplateText
 
@@ -36,7 +36,13 @@ class CommandSource(BaseEntity):
             warnings.add(f"relation `{context.relation_id}`: command exited with status {completed.returncode}: {command}")
 
         return [
-            ArtifactId(normalize_path(line.strip(), context.root, cwd=context.root))
+            ArtifactId(
+                normalize_path(
+                    line.strip(),
+                    context.root,
+                    cwd=context.root,
+                )
+            )
             for line in completed.stdout.splitlines()
             if line.strip()
         ]

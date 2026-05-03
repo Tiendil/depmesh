@@ -7,6 +7,7 @@ import pydantic
 from depmesh.discovery.artifacts import CaptureName
 from depmesh.discovery.predicates.all import AllPredicate
 from depmesh.discovery.predicates.any import AnyPredicate
+from depmesh.discovery.predicates.base import ArtifactPredicateBase
 from depmesh.discovery.predicates.glob import GlobPattern, GlobPredicate
 from depmesh.discovery.predicates.not_ import NotPredicate
 from depmesh.discovery.predicates.one_of import OneOfPredicate, OneOfPredicateValue
@@ -24,6 +25,7 @@ NotPredicate.model_rebuild(_types_namespace={"ArtifactPredicate": ArtifactPredic
 __all__ = [
     "AllPredicate",
     "AnyPredicate",
+    "ArtifactPredicateBase",
     "ArtifactPredicate",
     "CaptureName",
     "GlobPattern",

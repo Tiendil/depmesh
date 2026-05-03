@@ -1,23 +1,30 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from pathlib import Path
 
 from depmesh.discovery import errors
 from depmesh.discovery.entities import DependencyRule, QueryResult
+from depmesh.discovery.paths import normalize_path
 from depmesh.discovery.sources import EvaluationContext, ListSource
-from depmesh.domain.entities import ArtifactId, Dependency, Relation, RelationId
+from depmesh.domain.entities import ArtifactId, Dependency, ProjectRootPath, Relation, RelationId, UntrustedPath
 
 
 def query_dependencies(
-    root: Path,
+    root: ProjectRootPath,
     relations_by_id: Mapping[RelationId, Relation],
     rules: tuple[DependencyRule, ...],
     artifact: ArtifactId,
     *,
     relation_ids: set[RelationId],
-    cwd: Path | None = None,
+    cwd: UntrustedPath | None = None,
 ) -> QueryResult:
+    artifact = ArtifactId(
+        normalize_path(
+            str(artifact),
+            root,
+            cwd=cwd,
+        )
+    )
     dependencies: set[Dependency] = set()
 
     for rule in rules:
@@ -32,23 +39,28 @@ def query_dependencies(
         if relation is None:
             continue
 
-        for dependency in _evaluate_rule_dependencies(root, rule, captures, cwd=cwd):
+        for dependency in _evaluate_rule_dependencies(root, rule, captures):
             dependencies.add(Dependency(relation=relation.id, dependency=dependency))
 
     return QueryResult(dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency))))
 
 
 def normalize_input_artifacts(
-    root: Path,
+    root: ProjectRootPath,
     artifacts: list[ArtifactId],
     *,
-    cwd: Path | None = None,
+    cwd: UntrustedPath | None = None,
 ) -> list[ArtifactId]:
     input_source = ListSource(
         type="list",
         artifacts=tuple(str(artifact) for artifact in artifacts),
     )
-    input_context = EvaluationContext(root=root, relation_id=RelationId(""), captures={}, cwd=cwd)
+    input_context = EvaluationContext(
+        root=root,
+        relation_id=RelationId(""),
+        captures={},
+        cwd=cwd,
+    )
     return input_source.evaluate(input_context)
 
 
@@ -73,14 +85,12 @@ def selected_relation_ids(
 
 
 def _evaluate_rule_dependencies(
-    root: Path,
+    root: ProjectRootPath,
     rule: DependencyRule,
     captures: dict[str, str],
-    *,
-    cwd: Path | None,
 ) -> list[ArtifactId]:
     dependencies: set[ArtifactId] = set()
-    context = EvaluationContext(root=root, relation_id=rule.relation, captures=captures, cwd=cwd)
+    context = EvaluationContext(root=root, relation_id=rule.relation, captures=captures)
 
     dependencies.update(rule.output_source.evaluate(context))
 

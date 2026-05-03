@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
-from depmesh.core.entities import BaseEntity
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext
 from depmesh.discovery.predicates import ArtifactPredicate
+from depmesh.discovery.sources.base import ArtifactSourceBase
 from depmesh.domain.entities import ArtifactId
 
 if TYPE_CHECKING:
     from depmesh.discovery.sources import ArtifactSource
 
 
-class FilterSource(BaseEntity):
+class FilterSource(ArtifactSourceBase):
     type: Literal["filter"]
     source: ArtifactSource
     predicate: ArtifactPredicate

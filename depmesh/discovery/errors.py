@@ -16,3 +16,13 @@ class UnknownRelationFilter(Error):
             f"unknown relation `{relation_id}`",
             details={"relation": str(relation_id)},
         )
+
+
+class InvalidProjectPath(Error):
+    code = "invalid_project_path"
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"invalid project path `{value}`",
+            details={"path": value},
+        )

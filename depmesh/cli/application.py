@@ -15,8 +15,9 @@ from depmesh.core import errors as core_errors
 from depmesh.core import warnings
 from depmesh.discovery import errors as discovery_errors
 from depmesh.discovery.entities import QueryResult
+from depmesh.discovery.paths import resolve_project_root
 from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
-from depmesh.domain.entities import Dependency
+from depmesh.domain.entities import Dependency, UntrustedPath
 from depmesh.protocol import OutputProtocol, renderer
 from depmesh.protocol.renderers import Rendered
 from depmesh.skills.entities import SkillDocument
@@ -63,14 +64,19 @@ def dependencies(
 
     with command_context(context, default_protocol=OutputProtocol.human) as command:
         workspace = command.load_workspace()
-        root = Path(workspace.root)
-        cwd = Path.cwd()
+        project_root = resolve_project_root(UntrustedPath(Path(workspace.root)))
+        cwd = UntrustedPath(Path.cwd())
         relation_ids = selected_relation_ids(workspace.relations_by_id, relations)
         dependencies: set[Dependency] = set()
 
-        for artifact in normalize_input_artifacts(root, artifacts, cwd=cwd):
+        try:
+            input_artifacts = normalize_input_artifacts(project_root, artifacts, cwd=cwd)
+        except discovery_errors.InvalidProjectPath as error:
+            raise cli_errors.InvalidArguments(error.message) from error
+
+        for artifact in input_artifacts:
             result = query_dependencies(
-                root,
+                project_root,
                 workspace.relations_by_id,
                 workspace.rules,
                 artifact,

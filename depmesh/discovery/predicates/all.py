@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import pydantic
 
-from depmesh.core.entities import BaseEntity
 from depmesh.discovery.artifacts import CaptureName
-from depmesh.domain.entities import ArtifactId
+from depmesh.discovery.predicates.base import ArtifactPredicateBase
+from depmesh.domain.entities import ArtifactId, ProjectRootPath
 
 if TYPE_CHECKING:
     from depmesh.discovery.predicates import ArtifactPredicate
 
 
-class AllPredicate(BaseEntity):
+class AllPredicate(ArtifactPredicateBase):
     type: Literal["all"]
     items: tuple[ArtifactPredicate, ...] = pydantic.Field(min_length=1)
 
@@ -23,7 +22,12 @@ class AllPredicate(BaseEntity):
     def captures(self) -> set[CaptureName]:
         return set().union(*(item.captures() for item in self.items))
 
-    def match(self, artifact: ArtifactId, root: Path, captures: dict[str, str] | None = None) -> dict[str, str] | None:
+    def match(
+        self,
+        artifact: ArtifactId,
+        root: ProjectRootPath,
+        captures: dict[str, str] | None = None,
+    ) -> dict[str, str] | None:
         result: dict[str, str] = {}
 
         for item in self.items:

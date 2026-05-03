@@ -4,15 +4,15 @@ from typing import TYPE_CHECKING, Literal
 
 import pydantic
 
-from depmesh.core.entities import BaseEntity
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext
+from depmesh.discovery.sources.base import ArtifactSourceBase
 from depmesh.domain.entities import ArtifactId
 
 if TYPE_CHECKING:
     from depmesh.discovery.sources import ArtifactSource
 
 
-class UnionSource(BaseEntity):
+class UnionSource(ArtifactSourceBase):
     type: Literal["union"]
     items: tuple[ArtifactSource, ...] = pydantic.Field(min_length=1)
 

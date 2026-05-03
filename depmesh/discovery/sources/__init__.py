@@ -5,6 +5,7 @@ from typing import Annotated
 import pydantic
 
 from depmesh.discovery.artifacts import EvaluationContext, TemplateText
+from depmesh.discovery.sources.base import ArtifactSourceBase
 from depmesh.discovery.sources.command import CommandSource
 from depmesh.discovery.sources.difference import DifferenceSource
 from depmesh.discovery.sources.files import FilesSource
@@ -25,6 +26,7 @@ FilterSource.model_rebuild(_types_namespace={"ArtifactSource": ArtifactSource})
 
 __all__ = [
     "ArtifactSource",
+    "ArtifactSourceBase",
     "CommandSource",
     "DifferenceSource",
     "EvaluationContext",
