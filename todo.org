@@ -10,10 +10,6 @@
 
 * .ignore mechanic (like in pydantic config) to simplify traversing the codebase
 
-* should depmesh work with path only under the root of the project? probably yes.
-
-* should depmesh paths logic be in sync with donna's paths logic?
-
 * sync all files between each other, especially specs
 
 * `not` predicate is incompatible with matching, should fix somehow
