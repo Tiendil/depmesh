@@ -2,24 +2,23 @@ from __future__ import annotations
 
 import glob
 from pathlib import Path
-from typing import Literal
 
 from depmesh.core import warnings
-from depmesh.discovery.artifacts import CaptureName, EvaluationContext, TemplateText
+from depmesh.discovery.artifacts import EvaluationContext
 from depmesh.discovery.paths import normalize_existing_path, resolve_project_path
 from depmesh.discovery.sources.base import ArtifactSourceBase
+from depmesh.discovery.sources.entities import FilesSourceConfig
 from depmesh.domain.entities import ArtifactId, UntrustedPath
 
 
 class FilesSource(ArtifactSourceBase):
-    type: Literal["files"]
-    pattern: TemplateText | None = None
+    __slots__ = ("config",)
 
-    def variables(self) -> set[CaptureName]:
-        return set(self.pattern.variables) if self.pattern is not None else set()
+    def __init__(self, config: FilesSourceConfig) -> None:
+        self.config = config
 
     def evaluate(self, context: EvaluationContext) -> list[ArtifactId]:
-        if self.pattern is None:
+        if self.config.pattern is None:
             return [
                 ArtifactId(
                     normalize_existing_path(
@@ -31,7 +30,7 @@ class FilesSource(ArtifactSourceBase):
                 if path.is_file()
             ]
 
-        pattern = self.pattern.substitute(context.captures)
+        pattern = self.config.pattern.substitute(context.captures)
         resolved_pattern = resolve_project_path(pattern, context.root, allow_absolute=True)
 
         if resolved_pattern is None:
@@ -48,3 +47,6 @@ class FilesSource(ArtifactSourceBase):
             for match in sorted(glob.glob(str(resolved_pattern), recursive=True))
             if Path(match).is_file()
         ]
+
+
+__all__ = ["FilesSource", "FilesSourceConfig"]

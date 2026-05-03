@@ -1,24 +1,23 @@
 from __future__ import annotations
 
 import subprocess
-from typing import Literal
 
 from depmesh.core import warnings
-from depmesh.discovery.artifacts import CaptureName, EvaluationContext, TemplateText
+from depmesh.discovery.artifacts import EvaluationContext
 from depmesh.discovery.paths import normalize_path
 from depmesh.discovery.sources.base import ArtifactSourceBase
+from depmesh.discovery.sources.entities import CommandSourceConfig
 from depmesh.domain.entities import ArtifactId
 
 
 class CommandSource(ArtifactSourceBase):
-    type: Literal["command"]
-    command: TemplateText
+    __slots__ = ("config",)
 
-    def variables(self) -> set[CaptureName]:
-        return set(self.command.variables)
+    def __init__(self, config: CommandSourceConfig) -> None:
+        self.config = config
 
     def evaluate(self, context: EvaluationContext) -> list[ArtifactId]:
-        command = self.command.substitute(context.captures)
+        command = self.config.command.substitute(context.captures)
 
         completed = subprocess.run(  # noqa: S602
             command,
@@ -46,3 +45,6 @@ class CommandSource(ArtifactSourceBase):
             for line in completed.stdout.splitlines()
             if line.strip()
         ]
+
+
+__all__ = ["CommandSource", "CommandSourceConfig"]

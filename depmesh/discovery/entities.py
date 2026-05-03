@@ -3,24 +3,28 @@ from __future__ import annotations
 import pydantic
 
 from depmesh.core.entities import BaseEntity
-from depmesh.discovery.predicates import ArtifactPredicate
-from depmesh.discovery.sources import ArtifactSource
+from depmesh.discovery.predicates.base import ArtifactPredicateBase
+from depmesh.discovery.predicates.compiler import compile_predicate
+from depmesh.discovery.predicates.entities import ArtifactPredicateConfig
+from depmesh.discovery.sources.base import ArtifactSourceBase
+from depmesh.discovery.sources.compiler import compile_source
+from depmesh.discovery.sources.entities import ArtifactSourceConfig
 from depmesh.domain.entities import ArtifactId, Dependency, RelationId
 
 
-class DependencyRule(BaseEntity):
+class DependencyRuleConfig(BaseEntity):
     relation: RelationId
-    input_predicate: ArtifactPredicate = pydantic.Field(
+    input_predicate: ArtifactPredicateConfig = pydantic.Field(
         validation_alias=pydantic.AliasChoices("input", "input_predicate"),
         serialization_alias="input",
     )
-    output_source: ArtifactSource = pydantic.Field(
+    output_source: ArtifactSourceConfig = pydantic.Field(
         validation_alias=pydantic.AliasChoices("output", "output_source"),
         serialization_alias="output",
     )
 
     @pydantic.model_validator(mode="after")
-    def validate_templates(self) -> "DependencyRule":
+    def validate_templates(self) -> "DependencyRuleConfig":
         input_variables = self.input_predicate.variables()
         if input_variables:
             raise ValueError(f"input predicate references unknown capture `{sorted(input_variables)[0]}`")
@@ -35,6 +39,22 @@ class DependencyRule(BaseEntity):
             )
 
         return self
+
+
+class DependencyRule(BaseEntity):
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
+    relation: RelationId
+    input_predicate: ArtifactPredicateBase
+    output_source: ArtifactSourceBase
+
+
+def compile_dependency_rule(config: DependencyRuleConfig) -> DependencyRule:
+    return DependencyRule(
+        relation=config.relation,
+        input_predicate=compile_predicate(config.input_predicate),
+        output_source=compile_source(config.output_source),
+    )
 
 
 class QueryResult(BaseEntity):

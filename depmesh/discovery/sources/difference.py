@@ -1,22 +1,29 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-
-from depmesh.discovery.artifacts import CaptureName, EvaluationContext
+from depmesh.discovery.artifacts import EvaluationContext
 from depmesh.discovery.sources.base import ArtifactSourceBase
+from depmesh.discovery.sources.entities import DifferenceSourceConfig
 from depmesh.domain.entities import ArtifactId
-
-if TYPE_CHECKING:
-    from depmesh.discovery.sources import ArtifactSource
 
 
 class DifferenceSource(ArtifactSourceBase):
-    type: Literal["difference"]
-    include: ArtifactSource
-    exclude: ArtifactSource
+    __slots__ = ("config", "exclude", "include")
 
-    def variables(self) -> set[CaptureName]:
-        return self.include.variables() | self.exclude.variables()
+    def __init__(
+        self,
+        config: DifferenceSourceConfig,
+        *,
+        include: ArtifactSourceBase,
+        exclude: ArtifactSourceBase,
+    ) -> None:
+        self.config = config
+        self.include = include
+        self.exclude = exclude
 
     def evaluate(self, context: EvaluationContext) -> list[ArtifactId]:
-        return sorted(set(self.include.evaluate(context)) - set(self.exclude.evaluate(context)))
+        included = set(self.include.evaluate(context))
+        excluded = set(self.exclude.evaluate(context))
+        return sorted(included - excluded)
+
+
+__all__ = ["DifferenceSource", "DifferenceSourceConfig"]

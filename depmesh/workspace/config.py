@@ -6,6 +6,7 @@ from typing import Any
 import pydantic
 import tomli
 
+from depmesh.discovery.entities import compile_dependency_rule
 from depmesh.workspace import errors
 from depmesh.workspace.entities import Config, Workspace
 
@@ -39,7 +40,7 @@ def load_config(path: Path | None = None, *, cwd: Path | None = None) -> Workspa
     return Workspace(
         root=config_path.parent,
         relations=tuple(relation.to_relation() for relation in config.relations),
-        rules=config.rules,
+        rules=tuple(compile_dependency_rule(rule) for rule in config.rules),
     )
 
 

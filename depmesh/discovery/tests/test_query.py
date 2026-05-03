@@ -6,7 +6,7 @@ import pytest
 
 from depmesh.core import warnings
 from depmesh.discovery import errors
-from depmesh.discovery.entities import DependencyRule
+from depmesh.discovery.entities import DependencyRule, DependencyRuleConfig, compile_dependency_rule
 from depmesh.discovery.paths import resolve_project_root
 from depmesh.discovery.query import query_dependencies, selected_relation_ids
 from depmesh.domain.entities import ArtifactId, ProjectRootPath, Relation, RelationId, UntrustedPath
@@ -34,7 +34,7 @@ def make_relation_ids(*relations: Relation) -> set[RelationId]:
 
 
 def make_rules(*raw_rules: dict[str, object]) -> tuple[DependencyRule, ...]:
-    return tuple(DependencyRule.model_validate(rule) for rule in raw_rules)
+    return tuple(compile_dependency_rule(DependencyRuleConfig.model_validate(rule)) for rule in raw_rules)
 
 
 class TestQueryDependencies:
