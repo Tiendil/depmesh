@@ -8,12 +8,6 @@
 * package building and publishing
 
 
-* .ignore mechanic (like in pydantic config) to simplify traversing the codebase
-
 * sync all files between each other, especially specs
-
-* `not` predicate is incompatible with matching, should fix somehow
-
-* on the example of test rule, should we list as dependency not existed files?
 
 * separate skills subcommand (how to use tool) from specs (how to write other docs, for example) from workflows (donna). On the example of donna: we have docs how to use it, we have workflows supplied with donna and we have specs for those workflows (they describe how to create specific fsms)

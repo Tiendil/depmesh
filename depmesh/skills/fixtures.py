@@ -12,8 +12,4 @@ _FIXTURES: dict[SkillDocument, str] = {
 
 
 def load_skill_text(document: SkillDocument = SkillDocument.usage) -> str:
-    return (
-        importlib.resources.files(__package__)
-        .joinpath("fixtures", _FIXTURES[document])
-        .read_text(encoding="utf-8")
-    )
+    return importlib.resources.files(__package__).joinpath("fixtures", _FIXTURES[document]).read_text(encoding="utf-8")

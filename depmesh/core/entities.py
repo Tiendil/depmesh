@@ -17,4 +17,3 @@ class BaseEntity(pydantic.BaseModel):
 
     def replace(self, **changes: Any) -> Self:
         return self.model_copy(update=changes, deep=True)
-

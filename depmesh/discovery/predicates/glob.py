@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import re
 
+from depmesh.discovery.paths import normalize_path_pattern
 from depmesh.discovery.predicates.base import ArtifactPredicateBase
 from depmesh.discovery.predicates.entities import GlobPattern, GlobPredicateConfig, parse_glob_capture
-from depmesh.discovery.paths import normalize_path_pattern
 from depmesh.domain.entities import ArtifactId, ProjectRootPath
 
 

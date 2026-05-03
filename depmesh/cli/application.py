@@ -18,9 +18,8 @@ from depmesh.discovery.entities import QueryResult
 from depmesh.discovery.paths import resolve_project_root
 from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
 from depmesh.domain.entities import Dependency, UntrustedPath
-from depmesh.protocol import OutputProtocol, renderer
+from depmesh.protocol import OutputProtocol, SkillDocument, renderer
 from depmesh.protocol.renderers import Rendered
-from depmesh.skills.entities import SkillDocument
 from depmesh.workspace import errors as workspace_errors
 from depmesh.workspace.config import load_config
 from depmesh.workspace.entities import Workspace
@@ -70,7 +69,7 @@ def dependencies(
         dependencies: set[Dependency] = set()
 
         try:
-            input_artifacts = normalize_input_artifacts(project_root, artifacts, cwd=cwd)
+            input_artifacts = normalize_input_artifacts(project_root, artifacts or [], cwd=cwd)
         except discovery_errors.InvalidProjectPath as error:
             raise cli_errors.InvalidArguments(error.message) from error
 
@@ -85,7 +84,9 @@ def dependencies(
             )
             dependencies.update(result.dependencies)
 
-        result = QueryResult(dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency))))
+        result = QueryResult(
+            dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency)))
+        )
         command.write(
             command.renderer.render_query(
                 result,

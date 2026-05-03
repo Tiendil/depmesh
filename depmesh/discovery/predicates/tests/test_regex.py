@@ -4,7 +4,7 @@ from pathlib import Path
 
 from depmesh.discovery.artifacts import CaptureName
 from depmesh.discovery.predicates.regex import RegexPredicate, RegexPredicateConfig
-from depmesh.domain.entities import ArtifactId
+from depmesh.domain.entities import ArtifactId, ProjectRootPath
 
 
 class TestRegexPredicate:
@@ -23,9 +23,11 @@ class TestRegexPredicate:
             RegexPredicateConfig(type="regex", pattern=r"^@/src/{package}/(?P<module>[a-z]+)\.py$")
         )
 
-        assert predicate.match(ArtifactId("@/src/core/api.py"), tmp_path, {"package": "core"}) == {"module": "api"}
+        assert predicate.match(ArtifactId("@/src/core/api.py"), ProjectRootPath(tmp_path), {"package": "core"}) == {
+            "module": "api"
+        }
 
     def test_match__returns_none_for_missing_artifact(self, tmp_path: Path) -> None:
         predicate = RegexPredicate(RegexPredicateConfig(type="regex", pattern=r"^@/src/(?P<module>[a-z]+)\.py$"))
 
-        assert predicate.match(ArtifactId("@/docs/a.md"), tmp_path) is None
+        assert predicate.match(ArtifactId("@/docs/a.md"), ProjectRootPath(tmp_path)) is None

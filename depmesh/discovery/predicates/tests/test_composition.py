@@ -9,7 +9,7 @@ from depmesh.discovery.predicates import (
     NotPredicateConfig,
     compile_predicate,
 )
-from depmesh.domain.entities import ArtifactId
+from depmesh.domain.entities import ArtifactId, ProjectRootPath
 
 
 class TestAnyPredicate:
@@ -26,7 +26,7 @@ class TestAnyPredicate:
             )
         )
 
-        assert predicate.match(ArtifactId("@/lib/a.py"), tmp_path) == {"module": "a"}
+        assert predicate.match(ArtifactId("@/lib/a.py"), ProjectRootPath(tmp_path)) == {"module": "a"}
 
 
 class TestAllPredicate:
@@ -43,7 +43,7 @@ class TestAllPredicate:
             )
         )
 
-        assert predicate.match(ArtifactId("@/src/a.py"), tmp_path) == {"module": "a"}
+        assert predicate.match(ArtifactId("@/src/a.py"), ProjectRootPath(tmp_path)) == {"module": "a"}
 
 
 class TestNotPredicate:
@@ -61,4 +61,4 @@ class TestNotPredicate:
             )
         )
 
-        assert predicate.match(ArtifactId("@/src/included.py"), tmp_path) == {}
+        assert predicate.match(ArtifactId("@/src/included.py"), ProjectRootPath(tmp_path)) == {}

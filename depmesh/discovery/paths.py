@@ -14,15 +14,16 @@ def resolve_project_root(root: UntrustedPath) -> ProjectRootPath:
 
 def _resolve_inside_project(path: UntrustedPath, root: ProjectRootPath, *, original: str) -> ResolvedProjectPath:
     resolved = path.resolve()
+    root_path = Path(root)
 
-    if resolved == root or not resolved.is_relative_to(root):
+    if resolved == root_path or not resolved.is_relative_to(root_path):
         raise errors.InvalidProjectPath(original)
 
     return ResolvedProjectPath(resolved)
 
 
 def _canonical_from_resolved(resolved: ResolvedProjectPath, root: ProjectRootPath) -> ProjectPathId:
-    return ProjectPathId(PROJECT_ROOT_PREFIX + resolved.relative_to(root).as_posix())
+    return ProjectPathId(PROJECT_ROOT_PREFIX + resolved.relative_to(Path(root)).as_posix())
 
 
 def _normalize_root_anchored(value: str) -> str:

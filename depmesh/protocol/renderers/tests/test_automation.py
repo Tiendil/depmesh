@@ -3,24 +3,34 @@ from __future__ import annotations
 import json
 
 from depmesh.discovery.entities import QueryResult
-from depmesh.domain.entities import Dependency, Relation
+from depmesh.domain.entities import ArtifactId, Dependency, Relation, RelationDescription, RelationId
 from depmesh.protocol.renderers.automation import AutomationRendered, to_jsonl
+from depmesh.skills.entities import SkillDocument
+
+
+def dependency(relation: str, artifact: str) -> Dependency:
+    return Dependency(relation=RelationId(relation), dependency=ArtifactId(artifact))
+
+
+def relation(id_: str, description: str | None = None) -> Relation:
+    return Relation(
+        id=RelationId(id_),
+        description=RelationDescription(description) if description is not None else None,
+    )
 
 
 class TestToJsonl:
     def test_serializes_record_with_stable_options_and_newline(self) -> None:
-        assert to_jsonl({"type": "warning", "message": "привет"}) == (
-            '{"message": "привет", "type": "warning"}\n'
-        )
+        assert to_jsonl({"type": "warning", "message": "привет"}) == ('{"message": "привет", "type": "warning"}\n')
 
 
 class TestAutomationRendered:
     def test_render_query__complete_data(self) -> None:
         result = QueryResult(
             dependencies=(
-                Dependency(relation="specs", dependency="@/specs/a.md"),
-                Dependency(relation="tests", dependency="@/tests/test_a.py"),
-                Dependency(relation="tests", dependency="@/tests/test_b.py"),
+                dependency("specs", "@/specs/a.md"),
+                dependency("tests", "@/tests/test_a.py"),
+                dependency("tests", "@/tests/test_b.py"),
             )
         )
 
@@ -37,7 +47,7 @@ class TestAutomationRendered:
         )
 
     def test_render_query__returns_json_lines_records(self) -> None:
-        result = QueryResult(dependencies=(Dependency(relation="tests", dependency="@/tests/test_a.py"),))
+        result = QueryResult(dependencies=(dependency("tests", "@/tests/test_a.py"),))
 
         records = [
             json.loads(line)
@@ -56,7 +66,7 @@ class TestAutomationRendered:
         assert record["document"] == "usage"
 
     def test_render_skill__returns_selected_document(self) -> None:
-        record = json.loads(AutomationRendered().render_skill("initialization"))
+        record = json.loads(AutomationRendered().render_skill(SkillDocument.initialization))
 
         assert record["document"] == "initialization"
         assert record["text"].startswith("# `depmesh` Initialization\n")
@@ -67,8 +77,8 @@ class TestAutomationRendered:
             for line in AutomationRendered()
             .render_relations(
                 (
-                    Relation(id="tests", description="Tests related to input artifacts."),
-                    Relation(id="imports"),
+                    relation("tests", "Tests related to input artifacts."),
+                    relation("imports"),
                 )
             )
             .splitlines()

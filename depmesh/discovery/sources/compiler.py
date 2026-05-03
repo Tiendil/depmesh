@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import assert_never
 
+from depmesh.discovery.predicates.compiler import compile_predicate
 from depmesh.discovery.sources.base import ArtifactSourceBase
 from depmesh.discovery.sources.command import CommandSource
 from depmesh.discovery.sources.difference import DifferenceSource
@@ -11,7 +12,6 @@ from depmesh.discovery.sources.filter import FilterSource
 from depmesh.discovery.sources.intersection import IntersectionSource
 from depmesh.discovery.sources.list import ListSource
 from depmesh.discovery.sources.union import UnionSource
-from depmesh.discovery.predicates.compiler import compile_predicate
 
 
 def compile_source(config: ArtifactSourceConfig) -> ArtifactSourceBase:

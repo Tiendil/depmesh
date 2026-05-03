@@ -5,7 +5,7 @@ from pathlib import Path
 from depmesh.core import warnings
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext
 from depmesh.discovery.sources.files import FilesSource, FilesSourceConfig
-from depmesh.domain.entities import ArtifactId, RelationId
+from depmesh.domain.entities import ArtifactId, ProjectRootPath, RelationId
 
 
 def touch(path: Path) -> None:
@@ -15,7 +15,7 @@ def touch(path: Path) -> None:
 
 class TestFilesSource:
     def test_variables__extracts_template_variables(self) -> None:
-        source = FilesSourceConfig(type="files", pattern="@/tests/test_{module}.py")
+        source = FilesSourceConfig.model_validate({"type": "files", "pattern": "@/tests/test_{module}.py"})
 
         assert source.variables() == {CaptureName("module")}
 
@@ -23,22 +23,26 @@ class TestFilesSource:
         touch(tmp_path / "src/a.py")
         touch(tmp_path / "docs/a.md")
         source = FilesSource(FilesSourceConfig(type="files"))
-        context = EvaluationContext(root=tmp_path, relation_id=RelationId("all"), captures={})
+        context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("all"), captures={})
 
         assert source.evaluate(context) == [ArtifactId("@/docs/a.md"), ArtifactId("@/src/a.py")]
 
     def test_evaluate__returns_matching_files(self, tmp_path: Path) -> None:
         touch(tmp_path / "tests/test_a.py")
         touch(tmp_path / "tests/test_b.py")
-        source = FilesSource(FilesSourceConfig(type="files", pattern="@/tests/test_{module}.py"))
-        context = EvaluationContext(root=tmp_path, relation_id=RelationId("tests"), captures={"module": "a"})
+        source = FilesSource(
+            FilesSourceConfig.model_validate({"type": "files", "pattern": "@/tests/test_{module}.py"})
+        )
+        context = EvaluationContext(
+            root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={"module": "a"}
+        )
 
         assert source.evaluate(context) == [ArtifactId("@/tests/test_a.py")]
 
     def test_evaluate__invalid_pattern_adds_warning(self, tmp_path: Path) -> None:
         warnings.clear()
-        source = FilesSource(FilesSourceConfig(type="files", pattern="../tests/*.py"))
-        context = EvaluationContext(root=tmp_path, relation_id=RelationId("tests"), captures={})
+        source = FilesSource(FilesSourceConfig.model_validate({"type": "files", "pattern": "../tests/*.py"}))
+        context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={})
 
         assert source.evaluate(context) == []
         assert warnings.read() == ["relation `tests`: skipped invalid files source pattern `../tests/*.py`"]

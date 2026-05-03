@@ -55,9 +55,7 @@ class TestApp:
 
 
 class TestDependencies:
-    def test_empty_config_outputs_no_dependencies(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_empty_config_outputs_no_dependencies(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         config_path = tmp_path / "depmesh.toml"
         config_path.write_text("", encoding="utf-8")
         monkeypatch.chdir(tmp_path)
@@ -136,15 +134,9 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["--protocol", "llm", "dependencies", "./src/a.py"])
 
         assert result.exit_code == 0
-        assert result.output == (
-            "## tests\n\n"
-            "Tests related to the input artifacts.\n\n"
-            "- @/tests/test_a.py\n"
-        )
+        assert result.output == "## tests\n\nTests related to the input artifacts.\n\n- @/tests/test_a.py\n"
 
-    def test_automation_query_output_is_json_lines(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_automation_query_output_is_json_lines(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)
         monkeypatch.chdir(tmp_path)
 

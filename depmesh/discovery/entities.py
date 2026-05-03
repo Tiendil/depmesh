@@ -14,11 +14,11 @@ from depmesh.domain.entities import ArtifactId, Dependency, RelationId
 
 class DependencyRuleConfig(BaseEntity):
     relation: RelationId
-    input_predicate: ArtifactPredicateConfig = pydantic.Field(
+    input_predicate: ArtifactPredicateConfig = pydantic.Field(  # type: ignore[pydantic-alias]
         validation_alias=pydantic.AliasChoices("input", "input_predicate"),
         serialization_alias="input",
     )
-    output_source: ArtifactSourceConfig = pydantic.Field(
+    output_source: ArtifactSourceConfig = pydantic.Field(  # type: ignore[pydantic-alias]
         validation_alias=pydantic.AliasChoices("output", "output_source"),
         serialization_alias="output",
     )

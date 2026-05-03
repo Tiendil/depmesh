@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import subprocess
+import subprocess  # noqa: S404
 
 from depmesh.core import warnings
 from depmesh.discovery.artifacts import EvaluationContext
@@ -19,10 +19,10 @@ class CommandSource(ArtifactSourceBase):
     def evaluate(self, context: EvaluationContext) -> list[ArtifactId]:
         command = self.config.command.substitute(context.captures)
 
-        completed = subprocess.run(  # noqa: S602
+        completed = subprocess.run(
             command,
             cwd=context.root,
-            shell=True,
+            shell=True,  # noqa: S602
             text=True,
             capture_output=True,
             check=False,
@@ -32,7 +32,9 @@ class CommandSource(ArtifactSourceBase):
             warnings.add(f"relation `{context.relation_id}`: command stderr: {completed.stderr.strip()}")
 
         if completed.returncode != 0:
-            warnings.add(f"relation `{context.relation_id}`: command exited with status {completed.returncode}: {command}")
+            warnings.add(
+                f"relation `{context.relation_id}`: command exited with status {completed.returncode}: {command}"
+            )
 
         return [
             ArtifactId(
