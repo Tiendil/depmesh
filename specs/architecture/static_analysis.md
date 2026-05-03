@@ -2,7 +2,7 @@
 
 ## Goal of the document
 
-This document describes project expectations for autoformatting, linting, spelling checks, type checking, and the allowed ways to fix findings reported by these tools.
+This document describes project expectations for autoformatting, linting, spelling checks, type checking, module-boundary checks, and the allowed ways to fix findings reported by these tools.
 
 ## Scope
 
@@ -21,7 +21,7 @@ The following topics are out of scope:
 
 - `polishing` - a change whose purpose is to satisfy formatting, linting, spelling, type-checking, or test-quality requirements without changing intended behavior.
 - `autoformatter` - a tool that rewrites code mechanically according to configured formatting rules.
-- `semantic checker` - a tool that reports code-quality, spelling, security, or typing findings that usually require human judgment.
+- `semantic checker` - a tool that reports code-quality, spelling, security, typing, or module-boundary findings that usually require human judgment.
 - `suppression` - an inline or configuration-level instruction that disables a static analysis finding.
 
 ## General principles
@@ -44,7 +44,7 @@ When a finding cannot be fixed without changing behavior, changing architecture,
 
 ## Polishing loop
 
-Polishing SHOULD start with autoformatting before manual lint or type fixes.
+Polishing SHOULD start with module-boundary validation before autoformatting, manual lint, or type fixes.
 
 The normal autoformatting command is:
 
@@ -64,7 +64,14 @@ The normal semantic static analysis command is:
 ./bin/dev-check-semantics.sh
 ```
 
-After a manual fix for a static analysis finding, the next verification SHOULD restart from autoformatting or the formatting check. This keeps import cleanup, import ordering, and code formatting consistent after each fix.
+After a manual fix for a static analysis finding, the next verification SHOULD restart from module-boundary validation, then autoformatting or the formatting check. This keeps architectural dependency checks, import cleanup, import ordering, and code formatting consistent after each fix.
+
+Semantic checks SHOULD run tools in this conceptual order:
+
+1. validate module boundaries.
+2. check unused imports and unused variables.
+3. lint code.
+4. type-check code.
 
 Autoformatting SHOULD run tools in this conceptual order:
 
@@ -72,9 +79,9 @@ Autoformatting SHOULD run tools in this conceptual order:
 2. sort imports.
 3. format code.
 
-Semantic checks SHOULD run after autoformatting is clean.
-
 When spelling checks are part of the configured command set, spelling findings SHOULD be fixed before flake8 and mypy findings.
+
+Module-boundary checks SHOULD run before flake8 and mypy checks because module-boundary violations are usually more significant than local lint and typing findings.
 
 ## Autoformatter findings
 
@@ -127,6 +134,26 @@ The agent MUST NOT add or remove class attributes only to satisfy mypy unless th
 The agent MUST NOT add `type: ignore[import-untyped]` for missing third-party type information. The agent SHOULD ask the developer whether to install missing type stubs or handle the dependency another way.
 
 `type: ignore` comments MUST include an explicit error code when mypy supports one for the finding.
+
+## Module-boundary findings
+
+Module-boundary findings SHOULD be fixed by aligning imports with the module ownership and dependency direction specified by the architecture.
+
+Tach is the project tool for validating configured Python module boundaries.
+
+The normal Tach validation command is:
+
+```bash
+./bin/dev.sh uv run -- tach check
+```
+
+When Tach reports an invalid dependency, the agent SHOULD first move the dependency to a module that is already allowed by the architecture, invert the dependency through an existing boundary, or use an existing public API owned by the target module.
+
+The agent MUST NOT change Tach configuration only to allow an import unless the project architecture itself is intentionally being changed.
+
+The agent MUST NOT move modules or create new module boundaries during polishing unless the requested task explicitly includes architecture restructuring.
+
+When the correct dependency direction is unclear, the agent MUST ask the developer before changing imports or module boundaries.
 
 ## Verification
 

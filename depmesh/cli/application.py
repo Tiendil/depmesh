@@ -18,9 +18,8 @@ from depmesh.discovery.entities import QueryResult
 from depmesh.discovery.paths import resolve_project_root
 from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
 from depmesh.domain.entities import Dependency, UntrustedPath
-from depmesh.protocol import OutputProtocol, renderer
+from depmesh.protocol import OutputProtocol, SkillDocument, renderer
 from depmesh.protocol.renderers import Rendered
-from depmesh.skills.entities import SkillDocument
 from depmesh.workspace import errors as workspace_errors
 from depmesh.workspace.config import load_config
 from depmesh.workspace.entities import Workspace
