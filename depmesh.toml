@@ -6,7 +6,7 @@ version = 1
 
 [[relations]]
 id = "tested_by"
-description = "Tests that verify the input."
+description = "Tests that verify the artifact."
 
 [[relations]]
 id = "tests"
@@ -48,11 +48,11 @@ output = { type = "list", artifacts = ["./depmesh/{package_path}/{module}.py"] }
 
 [[relations]]
 id = "imports"
-description = "Python files imported by the input."
+description = "Python files imported by the artifact."
 
 [[relations]]
 id = "imported_by"
-description = "Python files that import the input."
+description = "Python files that import the artifact."
 
 # Tach provides direct Python imports for project modules.
 [[rules]]
@@ -78,7 +78,7 @@ output = {
 
 [[relations]]
 id = "governed_by"
-description = "Specifications that apply to the input."
+description = "Specifications that apply to the artifact."
 
 [[relations]]
 id = "governs"
@@ -206,25 +206,29 @@ output = { type = "union", items = [
   { type = "files", pattern = "./changes/*.md" },
 ] }
 
-# Configuration behavior governs the config file, helper scripts, and config/discovery code.
+# Configuration behavior governs the config file, helper scripts, config/discovery code,
+# and skill fixtures that document configuration behavior.
 [[rules]]
 relation = "governed_by"
 input = { type = "any", items = [
   { type = "one_of", artifacts = ["./depmesh.toml"] },
   { type = "glob", pattern = "./bin/depmesh/**" },
+  { type = "glob", pattern = "./depmesh/skills/fixtures/*.md" },
   { type = "glob", pattern = "./depmesh/workspace/**/*.py" },
   { type = "glob", pattern = "./depmesh/workspace/fixtures/*.toml" },
   { type = "glob", pattern = "./depmesh/discovery/**/*.py" },
 ] }
 output = { type = "list", artifacts = ["./specs/behavior/config.md"] }
 
-# The configuration spec governs the config file, helper scripts, and config/discovery code.
+# The configuration spec governs the config file, helper scripts, config/discovery code,
+# and skill fixtures that document configuration behavior.
 [[rules]]
 relation = "governs"
 input = { type = "one_of", artifacts = ["./specs/behavior/config.md"] }
 output = { type = "union", items = [
   { type = "list", artifacts = ["./depmesh.toml"] },
   { type = "files", pattern = "./bin/depmesh/**/*" },
+  { type = "files", pattern = "./depmesh/skills/fixtures/*.md" },
   { type = "files", pattern = "./depmesh/workspace/**/*.py" },
   { type = "files", pattern = "./depmesh/workspace/fixtures/*.toml" },
   { type = "files", pattern = "./depmesh/discovery/**/*.py" },
@@ -254,7 +258,7 @@ output = { type = "union", items = [
 
 [[relations]]
 id = "terms_defined_by"
-description = "Dictionaries that define terms used by the input."
+description = "Dictionaries that define terms used by the artifact."
 
 [[relations]]
 id = "defines_terms_for"

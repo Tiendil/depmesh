@@ -52,7 +52,9 @@ Fields:
 
 Relation ids must be unique and contain only lowercase ASCII letters, digits, and underscores.
 
-Descriptions should describe the artifacts returned by the relation and should make the queried artifact role clear when needed:
+Descriptions should describe the artifacts returned by the relation and should make the queried artifact role clear when needed.
+
+Use `artifact` as the default term for the queried relation source. When the returned dependencies must be called `artifacts`, choose a more specific source role instead, such as `specification`, `test`, `dictionary`, or `index`:
 
 ```toml
 [[relations]]
@@ -65,11 +67,11 @@ Relations are directional. Declare a second relation for reverse lookup:
 ```toml
 [[relations]]
 id = "imports"
-description = "Python files imported by the Python file."
+description = "Python files imported by the artifact."
 
 [[relations]]
 id = "imported_by"
-description = "Python files that import the Python file."
+description = "Python files that import the artifact."
 ```
 
 ## Rules

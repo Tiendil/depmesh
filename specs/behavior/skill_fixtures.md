@@ -83,6 +83,8 @@ It SHOULD include basic heuristics for filling configuration rules in a new proj
 
 It SHOULD guide readers to write relation descriptions that describe the returned artifacts and clarify the queried artifact role.
 
+It SHOULD describe `artifact` as the default term for the queried relation source, except when the returned dependencies are called artifacts and the queried source needs a more specific role.
+
 It SHOULD include examples such as:
 
 - governance relations between specifications and implementation artifacts.

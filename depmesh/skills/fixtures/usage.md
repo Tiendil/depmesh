@@ -196,7 +196,7 @@ Example output:
 ```text
 ## imports
 
-Python files imported by the Python file.
+Python files imported by the artifact.
 
 ## tests
 
@@ -239,7 +239,7 @@ Example output:
 ```text
 ## imports
 
-Python files imported by the Python file.
+Python files imported by the artifact.
 
 - @/src/config.py
 - @/src/service.py
