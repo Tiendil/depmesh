@@ -46,6 +46,7 @@ dependencies = [
 Homepage = "https://github.com/Tiendil/depmesh"
 Repository = "https://github.com/Tiendil/depmesh"
 Issues = "https://github.com/Tiendil/depmesh/issues"
+Changelog = "https://github.com/Tiendil/depmesh/blob/main/CHANGELOG.md"
 
 [project.scripts]
 depmesh = "depmesh.cli.application:main"
@@ -54,6 +55,7 @@ depmesh = "depmesh.cli.application:main"
 dev = [
     "autoflake==2.3.*",
     "black==25.12.*",
+    "changy==0.4.*",
     "codespell==2.4.*",
     "flake8==7.3.*",
     "flake8-absolute-import==1.0.*",
@@ -129,6 +131,7 @@ warn_untyped_fields = true
 [tool.hatch.build.targets.sdist]
 include = [
     "/depmesh",
+    "/CHANGELOG.md",
     "/LICENSE",
     "/README.md",
     "/pyproject.toml",

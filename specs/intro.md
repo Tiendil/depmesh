@@ -32,5 +32,6 @@ Detailed requirements for individual specifications are out of scope except for 
 - `./specs/behavior/config.md` — specification of the `depmesh.toml` configuration file behavior.
 - `./specs/behavior/file_paths.md` — specification of local project file path syntax, semantics, and resolution behavior.
 - `./specs/behavior/skill_fixtures.md` — specification of built-in skill documentation fixture behavior.
+- `./specs/documentation/changelog.md` — specification of changelog tooling, source files, version record structure, and entry format.
 - `./specs/documentation/readme.md` — specification of the root `README.md` content and purpose.
 - `./specs/meta/general.md` — general requirements for specification documents.
