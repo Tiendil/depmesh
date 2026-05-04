@@ -11,7 +11,7 @@ Use it to explore a codebase, find related files, inspect the impact of a possib
 Before changing a CLI module, ask `depmesh` for the specifications and tests connected to it:
 
 ```bash
-> depmesh -p llm dependencies --relation governed_by --relation tested_by ./depmesh/cli/application.py
+> depmesh -p llm dependencies -r governed_by -r tested_by ./depmesh/cli/application.py
 
 ## governed_by
 
