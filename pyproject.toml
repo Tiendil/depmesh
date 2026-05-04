@@ -1,22 +1,61 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "depmesh"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.12.5"
+description = "Unified, deterministic CLI for coding agents to discover relationships between project files and artifacts."
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.12,<4.0"
+license = "BSD-3-Clause"
+authors = [
+    { name = "Aliaksei Yaletski", email = "a.eletsky@gmail.com" },
+]
+keywords = [
+    "ai-agents",
+    "cli",
+    "code-analysis",
+    "codebase-intelligence",
+    "codebase-navigation",
+    "coding-agents",
+    "dependency-analysis",
+    "dependency-graph",
+    "impact-analysis",
+    "llm",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
 dependencies = [
     "pydantic~=2.13.3",
-    "pytest~=9.0.3",
-    "pytest-mock~=3.15.1",
-    "tach>=0.34.1",
     "tomli>=2.4.0",
     "typer~=0.25.1",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Tiendil/depmesh"
+Repository = "https://github.com/Tiendil/depmesh"
+Issues = "https://github.com/Tiendil/depmesh/issues"
+Changelog = "https://github.com/Tiendil/depmesh/blob/main/CHANGELOG.md"
+
+[project.scripts]
+depmesh = "depmesh.cli.application:main"
 
 [dependency-groups]
 dev = [
     "autoflake==2.3.*",
     "black==25.12.*",
+    "changy==0.4.*",
     "codespell==2.4.*",
     "flake8==7.3.*",
     "flake8-absolute-import==1.0.*",
@@ -30,10 +69,10 @@ dev = [
     "flake8-pytest==1.4.*",
     "isort==7.0.*",
     "mypy==1.19.*",
+    "pytest==9.0.*",
+    "pytest-mock==3.15.*",
+    "tach==0.34.*",
 ]
-
-[project.scripts]
-depmesh = "depmesh.cli.application:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
@@ -89,6 +128,14 @@ init_typed = true
 warn_required_dynamic_aliases = true
 warn_untyped_fields = true
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool.hatch.build.targets.sdist]
+include = [
+    "/depmesh",
+    "/CHANGELOG.md",
+    "/LICENSE",
+    "/README.md",
+    "/pyproject.toml",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["depmesh"]

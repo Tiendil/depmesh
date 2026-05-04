@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+from importlib import metadata
 from pathlib import Path
 
 import pytest
@@ -368,7 +369,7 @@ class TestVersion:
         result = CliRunner().invoke(app, ["version"])
 
         assert result.exit_code == 0
-        assert result.output == "0.1.0\n"
+        assert result.output == f"{metadata.version('depmesh')}\n"
 
     def test_global_options_are_accepted(self, tmp_path: Path) -> None:
         result = CliRunner().invoke(
@@ -377,7 +378,7 @@ class TestVersion:
         )
 
         assert result.exit_code == 0
-        assert result.output == "0.1.0\n"
+        assert result.output == f"{metadata.version('depmesh')}\n"
 
 
 class TestMain:
@@ -388,4 +389,4 @@ class TestMain:
             main()
 
         assert exit_info.value.code == 0
-        assert capsys.readouterr().out == "0.1.0\n"
+        assert capsys.readouterr().out == f"{metadata.version('depmesh')}\n"

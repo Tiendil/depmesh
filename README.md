@@ -1,10 +1,8 @@
 # depmesh
 
-Unified navigation for dependencies between files and other project artifacts.
-
 `depmesh` is a CLI tool that helps agents and developers investigate how project artifacts depend on each other.
 
-Use it to explore a codebase, find related files, inspect the impact of a possible change, locate tests or specifications, and follow project-specific relationships that are hard to remember manually.
+Use it to explore a codebase, find related files, inspect the impact of a possible change, locate tests or specifications, and follow project-specific relationships that are hard to remember or discover manually.
 
 `depmesh` gives one stable interface for navigating dependency relationships, while each project decides how dependencies are discovered exactly: path patterns, fixed lists, filesystem searches, static-analysis commands, or project-specific scripts.
 
@@ -13,25 +11,30 @@ Use it to explore a codebase, find related files, inspect the impact of a possib
 Before changing a CLI module, ask `depmesh` for the specifications and tests connected to it:
 
 ```bash
-depmesh dependencies --relation governed_by --relation tested_by ./depmesh/cli/application.py
+> depmesh -p llm dependencies --relation governed_by --relation tested_by ./depmesh/cli/app.py
+
+## governed_by
+
+Specifications that apply to the input.
+
+- @/specs/architecture/entities.md
+- @/specs/architecture/errors.md
+- @/specs/architecture/modules_layout.md
+- @/specs/architecture/naming.md
+- @/specs/architecture/static_analysis.md
+- @/specs/architecture/tests.md
+- @/specs/behavior/cli.md
+- @/specs/behavior/file_paths.md
+
+## tested_by
+
+Tests that verify the input.
+
+- @/depmesh/cli/tests/test_app.py
+
 ```
 
-Example output:
-
-```text
-governed_by:
-  ./specs/architecture/entities.md
-  ./specs/architecture/errors.md
-  ./specs/architecture/modules_layout.md
-  ./specs/architecture/naming.md
-  ./specs/architecture/tests.md
-  ./specs/behavior/cli.md
-
-tested_by:
-  ./depmesh/cli/tests/test_application.py
-```
-
-## What Is depmesh?
+## Rationale
 
 Coding agents often need to answer practical questions before editing:
 
@@ -51,10 +54,8 @@ For example, a project can define relations such as:
 
 ## Features
 
-`depmesh` has one single goal — **provide a consistent deterministic interface for discovering project dependencies.**
-
-- You decide which relations are useful and how they are discovered.
-- `depmesh` gives you and your agents a consistent interface to query them regardless of how they are extracted under the hood.
+- Unified interface for discovering project dependencies.
+- Configurable ways to detect dependencies behind the scenes: path patterns, fixed lists, calling CLI commands, or running project-specific scripts.
 
 ## Quick Usage
 
