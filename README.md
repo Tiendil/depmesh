@@ -11,11 +11,11 @@ Use it to explore a codebase, find related files, inspect the impact of a possib
 Before changing a CLI module, ask `depmesh` for the specifications and tests connected to it:
 
 ```bash
-> depmesh -p llm dependencies --relation governed_by --relation tested_by ./depmesh/cli/app.py
+> depmesh -p llm dependencies -r governed_by -r tested_by ./depmesh/cli/application.py
 
 ## governed_by
 
-Specifications that apply to the input.
+Specifications that apply to the artifact.
 
 - @/specs/architecture/entities.md
 - @/specs/architecture/errors.md
@@ -28,9 +28,9 @@ Specifications that apply to the input.
 
 ## tested_by
 
-Tests that verify the input.
+Tests that verify the artifact.
 
-- @/depmesh/cli/tests/test_app.py
+- @/depmesh/cli/tests/test_application.py
 
 ```
 
@@ -49,8 +49,8 @@ For example, a project can define relations such as:
 
 - `tested_by` — tests that verify an artifact.
 - `governed_by` — specifications that apply to an artifact.
-- `imports` — Python files imported by a Python file.
-- `imported_by` — Python files that import a Python file.
+- `imports` — Python files imported by an artifact.
+- `imported_by` — Python files that import an artifact.
 
 ## Features
 

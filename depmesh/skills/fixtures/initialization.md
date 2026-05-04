@@ -56,7 +56,9 @@ description = "Artifacts governed by the specification."
 
 Write each relation description as the set of artifacts returned for the queried artifact.
 
-Use project roles such as specification, test, Python file, source module, document, or artifact. Prefer `Artifacts governed by the specification.` over wording that hides the queried artifact role.
+Use `artifact` as the default term for the queried relation source. When the returned dependencies must be called `artifacts`, choose a more specific source role instead, such as specification, test, dictionary, index, source module, or document.
+
+Prefer `Artifacts governed by the specification.` over wording that calls both sides artifacts or hides the queried artifact role.
 
 Reverse relations should have independent descriptions:
 
@@ -122,11 +124,11 @@ Use `command` sources when a project-specific script or static analyzer can prin
 ```toml
 [[relations]]
 id = "imports"
-description = "Python files imported by the Python file."
+description = "Python files imported by the artifact."
 
 [[relations]]
 id = "imported_by"
-description = "Python files that import the Python file."
+description = "Python files that import the artifact."
 
 [[rules]]
 relation = "imports"

@@ -141,7 +141,11 @@ Descriptions SHOULD be written from the point of view of the query result, not f
 
 Descriptions SHOULD make the queried artifact role clear when the relation name alone does not.
 
-Descriptions SHOULD use domain-specific roles such as specification, test, Python file, source module, or artifact.
+Descriptions SHOULD use `artifact` as the default term for the queried relation source.
+
+When a description must call the produced dependencies `artifacts`, it SHOULD use a more specific term for the queried relation source instead of also calling the source an artifact.
+
+Descriptions SHOULD use domain-specific roles such as specification, test, source module, dictionary, index, or artifact.
 
 For example, this description is useful for a relation queried with a specification artifact:
 
