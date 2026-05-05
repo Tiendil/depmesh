@@ -1,10 +1,10 @@
 # depmesh
 
-`depmesh` is a CLI tool that helps agents and developers investigate how project artifacts depend on each other.
+`depmesh` is a CLI tool for making relationships between project files and artifacts an explicit part of your architecture.
 
-Use it to explore a codebase, find related files, inspect the impact of a possible change, locate tests or specifications, and follow project-specific relationships that are hard to remember or discover manually.
+Instead of leaving coding agents to infer context from filenames, source code, search results, or embeddings, define those relationships explicitly in `depmesh.toml`: tests that verify a module, specifications that govern it, artifacts affected by a document, import chains, or any project-specific relation that matters to development.
 
-`depmesh` gives one stable interface for navigating dependency relationships, while each project decides how dependencies are discovered exactly: path patterns, fixed lists, filesystem searches, static-analysis commands, or project-specific scripts.
+Agents and developers can then query those relations through a single stable interface to find related artifacts, inspect change impact, locate tests or specifications, and follow the project structure in a unified, deterministic way. So no dependency, no constraint, and no project-specific convention is forgotten or overlooked.
 
 ## Example
 
