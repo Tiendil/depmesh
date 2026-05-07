@@ -164,7 +164,20 @@ Use `llm` when invoking `depmesh` as a coding agent. It is the normal choice for
 
 Use `human` for compact terminal inspection by a person.
 
-Use `automation` only when another program consumes the command output directly.
+Use `automation` when an agent or another program needs automatic processing of `depmesh` output. Automation output is JSON Lines: each stdout line is one JSON object.
+
+Example automation command:
+
+```bash
+depmesh -p automation dependencies @/src/app.py
+```
+
+Example automation output:
+
+```jsonl
+{"type":"dependency","relation":"imports","dependency":"@/src/config.py"}
+{"type":"dependency","relation":"tests","dependency":"@/tests/test_app.py"}
+```
 
 Use full command names in agent workflows and generated notes. Short forms are human convenience aliases for interactive terminal use:
 
