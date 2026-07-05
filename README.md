@@ -153,11 +153,11 @@ description = "Tests that verify the artifact."
 
 [[rules]]
 relation = "tested_by"
-input = { type = "glob", pattern = "./src/{*module}.py" }
-output = { type = "files", pattern = "./tests/test_{module}.py" }
+input = { type = "glob", pattern = "./src/{**package_path}/{*module}.py" }
+output = { type = "files", pattern = "./src/{package_path}/tests/test_{module}.py" }
 ```
 
-This defines one relation named `tested_by`. The rule matches source files like `./src/app.py`, captures `app` as `module`, and looks for `./tests/test_app.py` as the dependency.
+This defines one relation named `tested_by`. The rule matches source files like `./src/cli/app.py`, captures `cli` as `package_path` and `app` as `module`, and looks for `./src/cli/tests/test_app.py` as the dependency.
 
 Run `depmesh skill configuration` for the agent-oriented configuration guide.
 
