@@ -251,6 +251,8 @@ Subcommands that do not load workspace configuration MAY ignore this option.
 
 `PATH` MAY be relative to the current working directory or absolute.
 
+For commands that read or create configuration, a leading `~` or `~user` in `PATH` MUST expand to the corresponding home directory before resolution.
+
 ## Dependencies Command
 
 The `dependencies` command MUST query dependencies for one or more artifacts.
@@ -665,10 +667,22 @@ The CLI SHOULD use these exit codes:
 
 - `0` — command completed successfully.
 - `1` — invalid command line arguments.
-- `2` — configuration could not be loaded or parsed.
+- `2` — configuration could not be discovered, resolved, loaded, parsed, validated, or created.
 - `3` — dependency query failed.
 
 Human and LLM error messages SHOULD be written to stderr.
+
+The CLI MUST render documented public `llm_tool_cli` errors using their native codes, messages, and structured fields.
+
+Shared configuration errors MUST exit with status `2`. Unmapped expected errors under the shared root MUST exit with status `3`.
+
+An unsuccessful upward configuration search MUST use the shared `config_not_found` diagnostic, including the search directory in `path` and an explanation in `reason`. An explicit missing file MUST use `config_unreadable` and MUST NOT fall back to discovery.
+
+Shared configuration diagnostics replace the previous project-specific mappings: invalid TOML uses `config_invalid_toml`, invalid UTF-8 uses `config_invalid_encoding`, and schema validation uses `config_validation_failed`. Discovery and explicit path resolution failures use `config_discovery_failed` and `config_path_resolution_failed`.
+
+Shared configuration error records MUST include `path` and `reason`. Validation details use `reason` instead of the previous `validation` field. File reading and creation failures retain their shared codes and use the shared message and reason fields.
+
+Failure to read the packaged starter template MUST use the project-owned `config_template_unreadable` code with `template` and `reason` fields, rather than reporting a configuration target write failure.
 
 For automation output, fatal errors SHOULD be written to stdout as an `error` record when possible and the process SHOULD still exit with a non-zero code.
 
@@ -677,7 +691,7 @@ If automation output cannot be initialized, fatal diagnostics MAY be written to 
 Example automation fatal error:
 
 ```jsonl
-{"type":"error","code":"config_not_found","message":"depmesh.toml was not found","path":"./depmesh.toml"}
+{"type":"error","code":"config_not_found","message":"/project: depmesh.toml was not found in this directory or its parents","path":"/project","reason":"depmesh.toml was not found in this directory or its parents"}
 ```
 
 ## Compatibility rules

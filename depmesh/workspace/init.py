@@ -3,6 +3,8 @@ from __future__ import annotations
 import importlib.resources
 from pathlib import Path
 
+from llm_tool_cli.config import create_config, resolve_config_path
+
 from depmesh.workspace import errors
 from depmesh.workspace.config import CONFIG_FILE_NAME
 
@@ -10,16 +12,7 @@ BASE_CONFIG_FIXTURE = "base_config.toml"
 
 
 def initialize_config(path: Path | None = None, *, cwd: Path | None = None) -> Path:
-    root = cwd or Path.cwd()
-    config_path = path or root / CONFIG_FILE_NAME
-
-    if not config_path.is_absolute():
-        config_path = root / config_path
-
-    config_path = config_path.resolve()
-
-    if config_path.exists():
-        raise errors.ConfigAlreadyExists(config_path)
+    config_path = resolve_config_path(path or Path(CONFIG_FILE_NAME), cwd or Path.cwd())
 
     try:
         config_text = (
@@ -27,8 +20,9 @@ def initialize_config(path: Path | None = None, *, cwd: Path | None = None) -> P
             .joinpath("fixtures", BASE_CONFIG_FIXTURE)
             .read_text(encoding="utf-8")
         )
-        config_path.write_text(config_text, encoding="utf-8")
-    except OSError as error:
-        raise errors.ConfigUnwritable(config_path, error) from error
+    except (OSError, UnicodeDecodeError) as error:
+        raise errors.ConfigTemplateUnreadable(BASE_CONFIG_FIXTURE, str(error)) from error
+
+    create_config(config_path, config_text)
 
     return config_path

@@ -48,6 +48,8 @@ The directory containing the discovered file MUST be the configuration root.
 
 When `--config PATH` is provided, `depmesh` MUST use that file as the configuration file and MUST NOT perform upward discovery.
 
+An explicit configuration path beginning with `~` or `~user` MUST expand the home directory before path resolution. If the home directory cannot be determined, configuration loading MUST fail.
+
 If `PATH` is relative, it MUST be resolved relative to the current working directory.
 
 When `--config PATH` is provided, the directory containing the resolved file MUST be the configuration root.

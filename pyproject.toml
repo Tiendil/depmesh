@@ -39,7 +39,6 @@ classifiers = [
 dependencies = [
     # Resolve the shared library from the local checkout until it is published.
     "llm-tool-cli>=0.1.0",
-    "pydantic~=2.13.3",
     "typer~=0.25.1",
 ]
 

@@ -8,10 +8,12 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from llm_tool_cli.config import errors as config_errors
+from llm_tool_cli.config import load_config, locate_config
+from llm_tool_cli.core import errors as shared_errors
 
 from depmesh.cli import errors as cli_errors
 from depmesh.cli.entities import ArtifactsArgument, ConfigOption, GlobalOptions, ProtocolOption, RelationOption
-from depmesh.core import errors as core_errors
 from depmesh.core import warnings
 from depmesh.discovery import errors as discovery_errors
 from depmesh.discovery.entities import QueryResult
@@ -20,9 +22,9 @@ from depmesh.discovery.query import normalize_input_artifacts, query_dependencie
 from depmesh.domain.entities import Dependency, UntrustedPath
 from depmesh.protocol import OutputProtocol, SkillDocument, renderer
 from depmesh.protocol.renderers import Rendered
+from depmesh.workspace import Config, Workspace, construct_workspace
 from depmesh.workspace import errors as workspace_errors
-from depmesh.workspace.config import load_config
-from depmesh.workspace.entities import Workspace
+from depmesh.workspace.config import CONFIG_FILE_NAME
 from depmesh.workspace.init import initialize_config
 
 EXIT_INVALID_ARGUMENTS = 1
@@ -135,12 +137,14 @@ class CommandContext:
         self.renderer: Rendered = renderer(self.protocol)
 
     def load_workspace(self) -> Workspace:
-        return load_config(self.global_options.config)
+        config_path = locate_config(CONFIG_FILE_NAME, path=self.global_options.config, cwd=Path.cwd())
+        config = load_config(config_path, Config)
+        return construct_workspace(config, root=config_path.parent)
 
     def write(self, text: str) -> None:
         sys.stdout.write(text)
 
-    def render_fatal(self, error: core_errors.Error) -> None:
+    def render_fatal(self, error: shared_errors.Error) -> None:
         rendered = self.renderer.render_error(error.as_record())
 
         if self.protocol is OutputProtocol.automation:
@@ -165,13 +169,13 @@ def command_context(
     except cli_errors.Error as error:
         command_context.render_fatal(error)
         raise typer.Exit(EXIT_INVALID_ARGUMENTS) from error
-    except workspace_errors.Error as error:
+    except (workspace_errors.Error, config_errors.Error) as error:
         command_context.render_fatal(error)
         raise typer.Exit(EXIT_CONFIG) from error
     except discovery_errors.Error as error:
         command_context.render_fatal(error)
         raise typer.Exit(EXIT_QUERY) from error
-    except core_errors.Error as error:
+    except shared_errors.Error as error:
         command_context.render_fatal(error)
         raise typer.Exit(EXIT_PROJECT_ERROR) from error
 

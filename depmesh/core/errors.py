@@ -1,23 +1,5 @@
-from __future__ import annotations
-
-from typing import Any
+from llm_tool_cli.core import errors as shared_errors
 
 
-class Error(Exception):
-    code = "error"
-
-    def __init__(
-        self,
-        message: str | None = None,
-        *,
-        code: str | None = None,
-        details: dict[str, Any] | None = None,
-    ) -> None:
-        self.message = message or self.__class__.__name__
-        self.details = details or {}
-        if code is not None:
-            self.code = code
-        super().__init__(self.message)
-
-    def as_record(self) -> dict[str, Any]:
-        return {"type": "error", "code": self.code, "message": self.message, **self.details}
+class Error(shared_errors.Error):
+    """Root for expected project errors."""

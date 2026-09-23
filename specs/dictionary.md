@@ -30,4 +30,5 @@ The following topics are out of scope:
 - `human protocol` — output protocol optimized for terminal users.
 - `llm protocol` — output protocol optimized for coding agents that invoke `depmesh` as a tool.
 - `automation protocol` — output protocol optimized for programs; output is serialized as JSON Lines.
+- `expected error` — a project-specific exception or a documented public exception from `llm_tool_cli` that inherits from its shared root error.
 - `warning` — a non-fatal problem discovered while processing a request.

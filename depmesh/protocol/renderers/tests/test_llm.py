@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from depmesh.discovery.entities import QueryResult
 from depmesh.domain.entities import ArtifactId, Dependency, Relation, RelationDescription, RelationId
 from depmesh.protocol.renderers.llm import LLMRendered
-from depmesh.workspace.config import parse_config
+from depmesh.workspace.entities import Config
 
 
 def dependency(relation: str, artifact: str) -> Dependency:
@@ -52,8 +50,8 @@ class TestLLMRendered:
             "- second warning\n"
         )
 
-    def test_render_query__includes_relation_description(self, tmp_path: Path) -> None:
-        config = parse_config(
+    def test_render_query__includes_relation_description(self) -> None:
+        config = Config.model_validate(
             {
                 "relations": [
                     {
@@ -62,7 +60,6 @@ class TestLLMRendered:
                     }
                 ]
             },
-            config_path=tmp_path / "depmesh.toml",
         )
         result = QueryResult(dependencies=(dependency("tests", "@/tests/test_a.py"),))
 

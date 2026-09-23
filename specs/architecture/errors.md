@@ -22,11 +22,15 @@ The following topics are out of scope:
 - `non-fatal problem` - a problem discovered while processing a command that does not prevent the command from producing useful output.
 - `error code` - a stable machine-readable identifier for a fatal error.
 - `module root error` - the `Error` exception class in a module's `errors` submodule; it is the root for fatal errors owned by that module.
-- `exception boundary` - a module boundary where low-level exceptions are converted into project-specific exceptions or warnings.
+- `exception boundary` - a module boundary where low-level exceptions are converted into expected errors or warnings.
 
 ## General principles
 
-Fatal errors MUST be represented with project-specific exceptions before they cross module boundaries.
+Expected fatal failures MUST be represented with expected errors before they cross module boundaries.
+
+Documented public errors from `llm_tool_cli` are part of the application error contract and MUST be allowed to cross module boundaries unchanged.
+
+Package ownership alone MUST NOT require wrapping an adopted shared error in a project-specific exception.
 
 Non-fatal problems MUST be represented as warning strings, not as exceptions, when processing can continue and produce useful output.
 
@@ -58,11 +62,13 @@ Test-only error classes MAY be defined in test modules when they are required to
 
 ## Error hierarchy
 
-The project MUST define a single project root exception type for all expected fatal project errors.
+The project MUST define a single project root exception type for all fatal errors defined by the project.
 
 The project root exception MUST be named `Error`.
 
-The project root exception MUST inherit from `Exception`.
+The project root exception MUST inherit from `llm_tool_cli.core.errors.Error`, which inherits from `Exception`.
+
+Boundaries that handle both project-specific and adopted shared errors MUST accept the shared root exception.
 
 The project root exception MUST NOT inherit from Pydantic model classes.
 
@@ -147,13 +153,13 @@ Examples of warning-producing situations include:
 
 Pydantic validation errors MUST NOT be exposed directly across high-level module boundaries for user-provided data.
 
-Modules that create Pydantic entities from external input MUST convert `pydantic.ValidationError` into project-specific errors or warning strings at the nearest exception boundary with useful context.
+Modules that create Pydantic entities from external input MUST convert `pydantic.ValidationError` into expected errors or warning strings at the nearest exception boundary with useful context. Shared configuration loading MAY own this conversion.
 
 Pydantic validation errors MAY be used directly inside tests for low-level entity validation.
 
 ## Exception boundaries
 
-Modules that call external systems MUST convert relevant low-level failures into project-specific errors or warning strings at the boundary where context is still available.
+Modules that call external systems MUST convert relevant low-level failures into expected errors or warning strings at the boundary where context is still available.
 
 External systems include:
 
@@ -163,13 +169,17 @@ External systems include:
 - regular expression compilation.
 - shell command execution.
 
-Unexpected programming errors MAY propagate during development, but code that handles expected user or environment failures MUST convert them into project-specific errors.
+Unexpected programming errors MAY propagate during development, but code that handles expected user or environment failures MUST convert them into expected errors.
+
+Adopting shared errors MUST NOT allow raw filesystem, parser, or validation exceptions to cross high-level boundaries unchanged. Unexpected exceptions MUST NOT be classified as expected merely because they originate in the shared library.
+
+Translation of an expected error SHOULD occur only when it adds application-specific meaning or implements recovery.
 
 When converting an exception, the original exception SHOULD be preserved as the cause when it helps debugging.
 
 ## CLI mapping
 
-The CLI MUST map fatal project errors to the exit code categories specified by the CLI behavior specification.
+The CLI MUST map project-specific and adopted shared errors to the exit code categories specified by the CLI behavior specification.
 
 The CLI module MUST own the mapping from exception classes to exit codes.
 
@@ -179,13 +189,15 @@ The CLI mapping MAY map specific module root error classes to specific exit code
 
 The CLI mapping MAY map specific concrete error classes to specific exit codes when a module root is too broad.
 
-The CLI mapping MUST define a default non-zero exit code for project exceptions that are not explicitly mapped.
+The CLI mapping MUST define a default non-zero exit code for exceptions under the shared root that are not explicitly mapped.
+
+Shared configuration errors MUST use the configuration exit category.
 
 The CLI SHOULD choose the most specific non-zero exit code that matches the failure.
 
 The CLI MUST NOT return a non-zero exit code only because warnings were produced.
 
-When a fatal error is rendered for the automation protocol, the `error` record MUST use the project error code.
+When a fatal error is rendered for the automation protocol, the `error` record MUST use the error's native code, message, and structured fields. Adopted shared errors MUST NOT be remapped to legacy project diagnostics.
 
 When a warning is rendered for the automation protocol, the `warning` record MUST include the warning string as the `message` field.
 

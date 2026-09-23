@@ -21,15 +21,15 @@ Detailed requirements for individual specifications are out of scope except for 
 ## Specification documents
 
 - `./specs/intro.md` — this file, contains a list of all specifications and their brief descriptions.
-- `./specs/dictionary.md` — dictionary of project-specific terms shared by multiple specifications.
+- `./specs/dictionary.md` — dictionary of project-specific terms shared by multiple specifications, including expected errors.
 - `./specs/architecture/entities.md` — specification of project entity and data structure architecture.
-- `./specs/architecture/errors.md` — specification of project error and diagnostic architecture.
+- `./specs/architecture/errors.md` — specification of project error and diagnostic architecture, including adopted shared library errors and exception boundaries.
 - `./specs/architecture/modules_layout.md` — specification of the project module structure.
 - `./specs/architecture/naming.md` — specification of project code naming conventions.
 - `./specs/architecture/static_analysis.md` — specification of static analysis, formatting, linting, spelling, and type-checking expectations.
-- `./specs/architecture/tests.md` — specification of project test architecture.
-- `./specs/behavior/cli.md` — specification of the `depmesh` command line interface.
-- `./specs/behavior/config.md` — specification of the `depmesh.toml` configuration file behavior.
+- `./specs/architecture/tests.md` — specification of project test architecture, including shared error propagation and CLI mapping checks.
+- `./specs/behavior/cli.md` — specification of the `depmesh` command line interface, including configuration path inputs, native shared error records, and exit categories.
+- `./specs/behavior/config.md` — specification of the `depmesh.toml` configuration file behavior, including discovery and home-relative explicit paths.
 - `./specs/behavior/file_paths.md` — specification of local project file path syntax, semantics, and resolution behavior.
 - `./specs/behavior/skill_fixtures.md` — specification of built-in skill documentation fixture behavior.
 - `./specs/documentation/changelog.md` — specification of changelog tooling, source files, version record structure, and entry format.
