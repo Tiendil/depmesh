@@ -69,7 +69,7 @@ class TestLoadConfig:
         assert workspace.root == project_config_path.parent
         assert workspace.relations == (Relation(id=RelationId("tests")),)
 
-    def test_rules_are_compiled_into_runtime_sources(self, tmp_path: Path) -> None:
+    def test_toml_1_1_rules_are_compiled_into_runtime_sources(self, tmp_path: Path) -> None:
         config_path = tmp_path / "depmesh.toml"
         write_config(
             config_path,
@@ -80,7 +80,10 @@ id = "tests"
 [[rules]]
 relation = "tests"
 input = { type = "glob", pattern = "@/src/{*module}.py" }
-output = { type = "list", artifacts = ["@/tests/test_{module}.py"] }
+output = {
+    type = "list",
+    artifacts = ["@/tests/test_{module}.py"],
+}
 """,
         )
 
