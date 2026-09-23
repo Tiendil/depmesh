@@ -17,6 +17,8 @@ ENV UV_PYTHON_DOWNLOADS=never
 ENV UV_LINK_MODE=copy
 ENV PATH="/home/depmesh/.venv/bin:${PATH}"
 
+# Preserve ../llm-tool-cli for the temporary local dependency during uv sync.
+COPY --from=llm-tool-cli --chown=$USER:$USER . /llm-tool-cli
 COPY --chown=$USER:$USER . /repository
 
 RUN uv sync --locked

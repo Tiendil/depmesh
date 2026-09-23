@@ -6,6 +6,11 @@ services:
     build:
       context: ./
       dockerfile: ./docker/Dockerfile
+      # Make the temporary sibling library source available while building.
+      additional_contexts:
+        llm-tool-cli: ../llm-tool-cli
 
     volumes:
       - ${PWD}:/repository
+      # Keep the editable library install connected to the local checkout.
+      - ../llm-tool-cli:/llm-tool-cli:ro

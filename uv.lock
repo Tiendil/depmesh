@@ -138,6 +138,7 @@ name = "depmesh"
 version = "0.1.2"
 source = { editable = "." }
 dependencies = [
+    { name = "llm-tool-cli" },
     { name = "pydantic" },
     { name = "tomli" },
     { name = "typer" },
@@ -168,6 +169,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "llm-tool-cli", editable = "../llm-tool-cli" },
     { name = "pydantic", specifier = "~=2.13.3" },
     { name = "tomli", specifier = ">=2.4.0" },
     { name = "typer", specifier = "~=0.25.1" },
@@ -444,6 +446,41 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/bc/cd/de45b239ea3bdf626f982a00c14bfcf2e12d261c510ba7db62c5969a27cd/librt-0.9.0-cp314-cp314t-win32.whl", hash = "sha256:a9c63e04d003bc0fb6a03b348018b9a3002f98268200e22cc80f146beac5dc40", size = 52453, upload-time = "2026-04-09T16:06:05.229Z" },
     { url = "https://files.pythonhosted.org/packages/7f/f9/bfb32ae428aa75c0c533915622176f0a17d6da7b72b5a3c6363685914f70/librt-0.9.0-cp314-cp314t-win_amd64.whl", hash = "sha256:f162af66a2ed3f7d1d161a82ca584efd15acd9c1cff190a373458c32f7d42118", size = 60044, upload-time = "2026-04-09T16:06:06.398Z" },
     { url = "https://files.pythonhosted.org/packages/aa/47/7d70414bcdbb3bc1f458a8d10558f00bbfdb24e5a11740fc8197e12c3255/librt-0.9.0-cp314-cp314t-win_arm64.whl", hash = "sha256:a4b25c6c25cac5d0d9d6d6da855195b254e0021e513e0249f0e3b444dc6e0e61", size = 50009, upload-time = "2026-04-09T16:06:07.995Z" },
+]
+
+[[package]]
+name = "llm-tool-cli"
+version = "0.1.0"
+# Temporary local dependency: uv resolves the shared library from the editable sibling checkout.
+source = { editable = "../llm-tool-cli" }
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "ast-grep-cli", specifier = "==0.44.*" },
+    { name = "autoflake", specifier = "==2.3.*" },
+    { name = "black", specifier = "==25.12.*" },
+    { name = "changy", specifier = "==0.4.*" },
+    { name = "codespell", specifier = "==2.4.*" },
+    { name = "depmesh", specifier = "==0.1.2" },
+    { name = "flake8", specifier = "==7.3.*" },
+    { name = "flake8-absolute-import", specifier = "==1.0.*" },
+    { name = "flake8-annotations-complexity", specifier = "==0.1.*" },
+    { name = "flake8-bandit", specifier = "==4.1.*" },
+    { name = "flake8-cognitive-complexity", specifier = "==0.1.*" },
+    { name = "flake8-docstrings", specifier = "==1.7.*" },
+    { name = "flake8-eradicate", specifier = "==1.5.*" },
+    { name = "flake8-functions", specifier = "==0.0.*" },
+    { name = "flake8-print", specifier = "==5.0.*" },
+    { name = "flake8-pyproject", specifier = "==1.2.*" },
+    { name = "flake8-pytest", specifier = "==1.4.*" },
+    { name = "isort", specifier = "==7.0.*" },
+    { name = "mypy", specifier = "==1.19.*" },
+    { name = "pydantic", specifier = "~=2.13.3" },
+    { name = "pytest", specifier = "==9.0.*" },
+    { name = "pytest-mock", specifier = "==3.15.*" },
+    { name = "tach", specifier = "==0.34.*" },
 ]
 
 [[package]]
