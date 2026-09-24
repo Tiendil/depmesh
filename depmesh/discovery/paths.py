@@ -2,140 +2,128 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from llm_tool_cli.core.errors import EnvironmentErrors
+from llm_tool_cli.core.result import Err, Ok, Result, unwrap_to_error
+
 from depmesh.discovery import errors
 from depmesh.domain.entities import PathInput, ProjectPathId, ProjectRootPath, ResolvedProjectPath, UntrustedPath
 
 PROJECT_ROOT_PREFIX = "@/"
 
 
-def resolve_project_root(root: UntrustedPath) -> ProjectRootPath:
-    return ProjectRootPath(root.resolve())
+def resolve_project_root(root: UntrustedPath) -> Result[ProjectRootPath, EnvironmentErrors]:
+    try:
+        return Ok(ProjectRootPath(root.resolve()))
+    except (OSError, RuntimeError) as error:
+        return Err([errors.PathResolutionFailed(path=str(root), reason=str(error)).with_cause(error)])
 
 
-def _resolve_inside_project(path: UntrustedPath, root: ProjectRootPath, *, original: str) -> ResolvedProjectPath:
-    resolved = path.resolve()
+def _resolve_inside_project(
+    path: UntrustedPath, root: ProjectRootPath, *, original: str
+) -> Result[ResolvedProjectPath, EnvironmentErrors]:
+    try:
+        resolved = path.resolve()
+    except (OSError, RuntimeError) as error:
+        return Err([errors.PathResolutionFailed(path=original, reason=str(error)).with_cause(error)])
     root_path = Path(root)
 
     if resolved == root_path or not resolved.is_relative_to(root_path):
-        raise errors.InvalidProjectPath(original)
+        return Err([errors.InvalidProjectPath(path=original)])
 
-    return ResolvedProjectPath(resolved)
+    return Ok(ResolvedProjectPath(resolved))
 
 
 def _canonical_from_resolved(resolved: ResolvedProjectPath, root: ProjectRootPath) -> ProjectPathId:
     return ProjectPathId(PROJECT_ROOT_PREFIX + resolved.relative_to(Path(root)).as_posix())
 
 
-def _normalize_root_anchored(value: str) -> str:
+def _normalize_root_anchored(value: str) -> Result[str, EnvironmentErrors]:
     if not value.startswith(PROJECT_ROOT_PREFIX):
-        raise errors.InvalidProjectPath(value)
+        return Err([errors.InvalidProjectPath(path=value)])
 
     raw = value.removeprefix(PROJECT_ROOT_PREFIX)
     parts: list[str] = []
 
     if not raw:
-        raise errors.InvalidProjectPath(value)
+        return Err([errors.InvalidProjectPath(path=value)])
 
     for part in raw.split("/"):
         if part == "":
-            raise errors.InvalidProjectPath(value)
+            return Err([errors.InvalidProjectPath(path=value)])
 
         if part == ".":
             continue
 
         if part == "..":
             if not parts:
-                raise errors.InvalidProjectPath(value)
+                return Err([errors.InvalidProjectPath(path=value)])
             parts.pop()
             continue
 
         parts.append(part)
 
     if not parts:
-        raise errors.InvalidProjectPath(value)
+        return Err([errors.InvalidProjectPath(path=value)])
 
-    return PROJECT_ROOT_PREFIX + "/".join(parts)
+    return Ok(PROJECT_ROOT_PREFIX + "/".join(parts))
 
 
-def _resolve_root_anchored_path(value: str, root: ProjectRootPath) -> ResolvedProjectPath:
-    normalized = _normalize_root_anchored(value)
+@unwrap_to_error
+def _resolve_root_anchored_path(value: str, root: ProjectRootPath) -> Result[ResolvedProjectPath, EnvironmentErrors]:
+    normalized = _normalize_root_anchored(value).unwrap()
     path = root.joinpath(*normalized.removeprefix(PROJECT_ROOT_PREFIX).split("/"))
     return _resolve_inside_project(UntrustedPath(path), root, original=value)
 
 
-def resolve_project_path(value: str, root: PathInput, *, allow_absolute: bool = True) -> ResolvedProjectPath | None:
-    project_root = ProjectRootPath(root.resolve())
+@unwrap_to_error
+def resolve_project_path(
+    value: str, root: PathInput, *, allow_absolute: bool = True
+) -> Result[ResolvedProjectPath | None, EnvironmentErrors]:
+    project_root = resolve_project_root(UntrustedPath(root)).unwrap()
 
     if value.startswith("@"):
         if not value.startswith(PROJECT_ROOT_PREFIX):
-            return None
-        try:
-            return _resolve_root_anchored_path(value, project_root)
-        except errors.InvalidProjectPath:
-            return None
+            return Ok(None)
+        resolved = _resolve_root_anchored_path(value, project_root)
+    else:
+        path = Path(value)
+        if path.is_absolute() and not allow_absolute:
+            return Ok(None)
+        resolved = _resolve_inside_project(
+            UntrustedPath(path if path.is_absolute() else project_root / path), project_root, original=value
+        )
 
-    path = Path(value)
-
-    if path.is_absolute():
-        if not allow_absolute:
-            return None
-        try:
-            return _resolve_inside_project(UntrustedPath(path), project_root, original=value)
-        except errors.InvalidProjectPath:
-            return None
-
-    try:
-        return _resolve_inside_project(UntrustedPath(project_root / path), project_root, original=value)
-    except errors.InvalidProjectPath:
-        return None
+    if resolved.is_err() and all(isinstance(error, errors.InvalidProjectPath) for error in resolved.unwrap_err()):
+        return Ok(None)
+    return resolved
 
 
-def normalize_path(value: str, root: PathInput, *, cwd: PathInput | None = None) -> ProjectPathId:
-    project_root = ProjectRootPath(root.resolve())
+@unwrap_to_error
+def normalize_path(
+    value: str, root: PathInput, *, cwd: PathInput | None = None
+) -> Result[ProjectPathId, EnvironmentErrors]:
+    project_root = resolve_project_root(UntrustedPath(root)).unwrap()
 
     if value.startswith("@"):
-        return ProjectPathId(_normalize_root_anchored(value))
+        return Ok(ProjectPathId(_normalize_root_anchored(value).unwrap()))
 
     path = Path(value)
-
-    if path.is_absolute():
-        candidate = path
-    else:
-        base = cwd or root
-        candidate = base / path
-
-    return _canonical_from_resolved(
-        _resolve_inside_project(UntrustedPath(candidate), project_root, original=value),
-        project_root,
-    )
+    candidate = path if path.is_absolute() else (cwd or root) / path
+    resolved = _resolve_inside_project(UntrustedPath(candidate), project_root, original=value).unwrap()
+    return Ok(_canonical_from_resolved(resolved, project_root))
 
 
-def normalize_path_pattern(value: str, root: PathInput, *, cwd: PathInput | None = None) -> str | None:
-    try:
-        project_root = ProjectRootPath(root.resolve())
-
-        if value.startswith("@"):
-            return _normalize_root_anchored(value)
-
-        path = Path(value)
-
-        if path.is_absolute():
-            candidate = path
-        else:
-            base = cwd or root
-            candidate = base / path
-
-        return _canonical_from_resolved(
-            _resolve_inside_project(UntrustedPath(candidate), project_root, original=value),
-            project_root,
-        )
-    except errors.InvalidProjectPath:
-        return None
+def normalize_path_pattern(
+    value: str, root: PathInput, *, cwd: PathInput | None = None
+) -> Result[str | None, EnvironmentErrors]:
+    result = normalize_path(value, root, cwd=cwd)
+    if result.is_err() and all(isinstance(error, errors.InvalidProjectPath) for error in result.unwrap_err()):
+        return Ok(None)
+    return result
 
 
-def normalize_existing_path(path: UntrustedPath, root: PathInput) -> ProjectPathId:
-    project_root = ProjectRootPath(root.resolve())
-    return _canonical_from_resolved(
-        _resolve_inside_project(path, project_root, original=str(path)),
-        project_root,
-    )
+@unwrap_to_error
+def normalize_existing_path(path: UntrustedPath, root: PathInput) -> Result[ProjectPathId, EnvironmentErrors]:
+    project_root = resolve_project_root(UntrustedPath(root)).unwrap()
+    resolved = _resolve_inside_project(path, project_root, original=str(path)).unwrap()
+    return Ok(_canonical_from_resolved(resolved, project_root))

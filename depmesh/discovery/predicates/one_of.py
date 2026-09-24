@@ -21,7 +21,7 @@ class OneOfPredicate(ArtifactPredicateBase):
         captures = captures or {}
 
         for expected in self.config.artifacts:
-            if artifact == ArtifactId(normalize_path(expected.substitute(captures), root)):
+            if artifact == ArtifactId(normalize_path(expected.substitute(captures), root).unwrap()):
                 return {}
 
         return None

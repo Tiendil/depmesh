@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 
+from llm_tool_cli.core.errors import EnvironmentErrors
+from llm_tool_cli.core.result import Result
+
 from depmesh.discovery.entities import QueryResult
 from depmesh.domain.entities import Relation
 from depmesh.protocol.renderers.base import Rendered
@@ -39,8 +42,10 @@ class AutomationRendered(Rendered):
 
         return "".join(lines)
 
-    def render_skill(self, document: SkillDocument = SkillDocument.usage) -> str:
-        return to_jsonl({"type": "skill", "document": document, "text": load_skill_text(document)})
+    def render_skill(self, document: SkillDocument = SkillDocument.usage) -> Result[str, EnvironmentErrors]:
+        return load_skill_text(document).map(
+            lambda text: to_jsonl({"type": "skill", "document": document, "text": text})
+        )
 
     def render_relations(self, relations: tuple[Relation, ...]) -> str:
         lines = []

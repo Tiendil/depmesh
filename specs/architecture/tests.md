@@ -186,15 +186,15 @@ Error tests SHOULD NOT test unchanged inheritance from project or module root er
 
 Error tests SHOULD NOT test behavior inherited unchanged from the shared base error class.
 
-Tests for exception boundaries SHOULD verify that expected low-level failures are converted into project-specific or adopted shared errors, or warning strings.
+Tests for exception boundaries SHOULD verify that expected low-level failures are converted into returned project-specific or shared environment errors, or warning strings.
 
-Tests for exception boundaries SHOULD verify that `pydantic.ValidationError` from external input is converted into project-specific or adopted shared errors, or warning strings.
+Tests for exception boundaries SHOULD verify that `pydantic.ValidationError` from external input is converted into returned project-specific or shared environment errors, or warning strings.
 
-Tests SHOULD verify that adopted shared errors propagate unchanged until the CLI boundary.
+Tests SHOULD verify that failed results preserve their environment-error values until the CLI boundary, including typed context and private causes. Tests SHOULD verify propagation through composed callbacks and distinguish no-match or warning outcomes from fatal failures.
 
 CLI tests SHOULD verify that fatal errors are mapped to the expected exit code category.
 
-CLI tests SHOULD verify that unmapped project and shared exceptions use the default non-zero exit code.
+CLI tests SHOULD verify that unmapped project and shared environment errors use the default non-zero exit code, that error lists retain order, and that technical exceptions are not rendered as expected failures.
 
 CLI tests for the automation protocol SHOULD verify that fatal errors are rendered as `error` records when possible.
 

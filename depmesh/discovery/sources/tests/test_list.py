@@ -19,4 +19,4 @@ class TestListSource:
             root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={"module": "a"}
         )
 
-        assert source.evaluate(context) == [ArtifactId("@/tests/test_a.py")]
+        assert source.evaluate(context).unwrap() == [ArtifactId("@/tests/test_a.py")]

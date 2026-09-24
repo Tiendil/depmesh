@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Annotated, NoReturn
 
 import typer
+from llm_tool_cli.core.entities import BaseEntity
 
 from depmesh.cli import errors as cli_errors
-from depmesh.core.entities import BaseEntity
 from depmesh.domain.entities import ArtifactId, RelationId
 from depmesh.protocol import OutputProtocol, renderer
 
@@ -17,7 +17,7 @@ class GlobalOptions(BaseEntity):
 
 
 def _exit_with_invalid_arguments(message: str) -> NoReturn:
-    rendered = renderer(OutputProtocol.human).render_error(cli_errors.InvalidArguments(message).as_record())
+    rendered = renderer(OutputProtocol.human).render_error(cli_errors.InvalidArguments(reason=message).as_record())
     typer.echo(rendered, err=True, nl=False)
     raise typer.Exit(1)
 

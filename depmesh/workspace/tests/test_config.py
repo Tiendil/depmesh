@@ -42,7 +42,7 @@ class TestConstructWorkspace:
             workspace.rules,
             ArtifactId("@/src/example.py"),
             relation_ids={RelationId("tests")},
-        )
+        ).unwrap()
 
         assert result.dependencies == (
             Dependency(relation=RelationId("tests"), dependency=ArtifactId("@/tests/test_example.py")),

@@ -672,9 +672,11 @@ The CLI SHOULD use these exit codes:
 
 Human and LLM error messages SHOULD be written to stderr.
 
-The CLI MUST render documented public `llm_tool_cli` errors using their native codes, messages, and structured fields.
+The CLI MUST render returned project and documented public `llm_tool_cli` environment errors using their native codes, formatted messages, and structured fields.
 
-Shared configuration errors MUST exit with status `2`. Unmapped expected errors under the shared root MUST exit with status `3`.
+Shared configuration errors MUST exit with status `2`. Unmapped environment errors MUST exit with status `3`.
+
+A failed result containing multiple environment errors MUST render every error in list order and use the first error's exit category. Technical exceptions MUST NOT be treated as expected failures.
 
 An unsuccessful upward configuration search MUST use the shared `config_not_found` diagnostic, including the search directory in `path` and an explanation in `reason`. An explicit missing file MUST use `config_unreadable` and MUST NOT fall back to discovery.
 

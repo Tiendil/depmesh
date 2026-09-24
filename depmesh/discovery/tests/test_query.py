@@ -18,7 +18,7 @@ def touch(path: Path) -> None:
 
 
 def project_root(path: Path) -> ProjectRootPath:
-    return resolve_project_root(UntrustedPath(path))
+    return resolve_project_root(UntrustedPath(path)).unwrap()
 
 
 def make_relation(relation_id: str) -> Relation:
@@ -38,6 +38,27 @@ def make_rules(*raw_rules: dict[str, object]) -> tuple[DependencyRule, ...]:
 
 
 class TestQueryDependencies:
+    @pytest.mark.parametrize("failure_in_predicate", [True, False])
+    def test_propagates_rule_failure(self, tmp_path: Path, failure_in_predicate: bool) -> None:
+        relations = (make_relation("tests"),)
+        rules = make_rules(
+            {
+                "relation": "tests",
+                "input": {"type": "one_of", "artifacts": ["../outside.py" if failure_in_predicate else "@/src/a.py"]},
+                "output": {"type": "list", "artifacts": ["@/a.py" if failure_in_predicate else "../outside.py"]},
+            }
+        )
+
+        result = query_dependencies(
+            project_root(tmp_path),
+            make_relation_index(*relations),
+            rules,
+            ArtifactId("@/src/a.py"),
+            relation_ids=make_relation_ids(*relations),
+        )
+
+        assert result.unwrap_err() == [errors.InvalidProjectPath(path="../outside.py")]
+
     def test_deduplicates_and_orders_dependencies_from_one_artifact(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")
         touch(tmp_path / "tests/test_a.py")
@@ -64,7 +85,7 @@ class TestQueryDependencies:
             ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
             cwd=UntrustedPath(tmp_path),
-        )
+        ).unwrap()
 
         assert result.grouped() == {"tests": ["@/tests/test_a.py", "@/tests/test_b.py"]}
 
@@ -92,7 +113,7 @@ class TestQueryDependencies:
             ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
             cwd=UntrustedPath(tmp_path),
-        )
+        ).unwrap()
 
         assert result.grouped() == {"specs": ["@/specs/a.md"]}
 
@@ -115,7 +136,7 @@ class TestQueryDependencies:
             ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
             cwd=UntrustedPath(tmp_path),
-        )
+        ).unwrap()
 
         assert result.grouped() == {"tests": ["@/tests/test_a.py"]}
 
@@ -138,7 +159,7 @@ class TestQueryDependencies:
             ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
             cwd=UntrustedPath(tmp_path),
-        )
+        ).unwrap()
 
         assert result.grouped() == {}
         assert warnings.read() == []
@@ -169,7 +190,7 @@ class TestQueryDependencies:
             ArtifactId("@/src/a.py"),
             relation_ids={RelationId("tests")},
             cwd=UntrustedPath(tmp_path),
-        )
+        ).unwrap()
 
         assert result.grouped() == {"tests": ["@/tests/test_a.py"]}
 
@@ -198,7 +219,7 @@ class TestQueryDependencies:
             ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
             cwd=UntrustedPath(tmp_path),
-        )
+        ).unwrap()
 
         assert result.grouped() == {
             "specs": ["@/specs/a.md"],
@@ -224,7 +245,7 @@ class TestQueryDependencies:
             ArtifactId("@/tests/test_a.py"),
             relation_ids={RelationId("tested_by")},
             cwd=UntrustedPath(tmp_path),
-        )
+        ).unwrap()
 
         assert result.grouped() == {"tested_by": ["@/src/a.py"]}
 
@@ -246,12 +267,12 @@ class TestQueryDependencies:
             ArtifactId("@/src/a.py"),
             relation_ids={RelationId("tests")},
             cwd=UntrustedPath(tmp_path),
-        )
+        ).unwrap()
 
         assert result.grouped() == {}
 
     def test_unknown_relation_filter(self, tmp_path: Path) -> None:
         relations = (make_relation("tests"),)
 
-        with pytest.raises(errors.UnknownRelationFilter):
-            selected_relation_ids(make_relation_index(*relations), [RelationId("missing")])
+        failures = selected_relation_ids(make_relation_index(*relations), [RelationId("missing")]).unwrap_err()
+        assert failures == [errors.UnknownRelationFilter(relation=RelationId("missing"))]

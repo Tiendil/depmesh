@@ -21,7 +21,7 @@ class GlobPredicate(ArtifactPredicateBase):
         captures: dict[str, str] | None = None,
     ) -> dict[str, str] | None:
         pattern = self.config.pattern.substitute(captures or {})
-        normalized_pattern = normalize_path_pattern(pattern, root)
+        normalized_pattern = normalize_path_pattern(pattern, root).unwrap()
         if normalized_pattern is None:
             return None
         match = _compile_glob(normalized_pattern).fullmatch(artifact)

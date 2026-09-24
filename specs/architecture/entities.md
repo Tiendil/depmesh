@@ -10,7 +10,7 @@ The scope of this specification is limited to architectural requirements for Pyt
 
 The following topics are out of scope:
 
-- exact class names.
+- exact names of project-specific entity classes.
 - exact constructor signatures.
 - serialization formats for CLI protocols.
 - dependency discovery algorithms.
@@ -48,7 +48,7 @@ Entities that can be used for de-duplication SHOULD be hashable when practical.
 
 The project accepts Pydantic v2 as the default dependency for entity modeling.
 
-The project SHOULD provide shared base entity infrastructure owned by the core module.
+The project MUST use the common `BaseEntity` from `llm_tool_cli.core.entities` directly, without a project-local implementation, wrapper, or compatibility re-export.
 
 Project entities SHOULD inherit from the shared base entity unless they have a specific reason to use Pydantic directly.
 
@@ -100,7 +100,7 @@ Semantic primitive types SHOULD be owned by the module that owns the correspondi
 
 ## Entity ownership
 
-Shared entity infrastructure MUST belong to the core module.
+Reusable entity infrastructure MUST belong to the shared library's core module.
 
 Shared domain entities MUST belong to the domain module.
 

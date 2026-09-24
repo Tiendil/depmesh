@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import NewType
 
-from depmesh.core.entities import BaseEntity
+from llm_tool_cli.core.entities import BaseEntity
 
 ArtifactId = NewType("ArtifactId", str)
 ProjectRootPath = NewType("ProjectRootPath", Path)

@@ -2,12 +2,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from depmesh.discovery.artifacts import CaptureName
 from depmesh.discovery.predicates.glob import GlobPredicate, GlobPredicateConfig
 from depmesh.domain.entities import ArtifactId, ProjectRootPath
 
 
 class TestGlobPredicate:
+    def test_match__invalid_substituted_capture_raises(self, tmp_path: Path) -> None:
+        predicate = GlobPredicate(GlobPredicateConfig(type="glob", pattern="@/{pattern}"))
+
+        with pytest.raises(ValueError):
+            predicate.match(ArtifactId("@/a.py"), ProjectRootPath(tmp_path), {"pattern": "{*invalid-name}"})
+
     def test_variables__extracts_template_variables(self) -> None:
         predicate = GlobPredicateConfig(type="glob", pattern="@/src/{package}/{*module}.py")
 

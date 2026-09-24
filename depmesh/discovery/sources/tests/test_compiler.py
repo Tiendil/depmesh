@@ -39,19 +39,19 @@ class TestCompileSource:
         source = compile_source(FilesSourceConfig.model_validate({"type": "files", "pattern": "@/*.py"}))
 
         assert isinstance(source, FilesSource)
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/a.py")]
+        assert source.evaluate(context(tmp_path)).unwrap() == [ArtifactId("@/a.py")]
 
     def test_command_source(self, tmp_path: Path) -> None:
         source = compile_source(CommandSourceConfig(type="command", command="printf '@/a.py\\n'"))
 
         assert isinstance(source, CommandSource)
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/a.py")]
+        assert source.evaluate(context(tmp_path)).unwrap() == [ArtifactId("@/a.py")]
 
     def test_list_source(self, tmp_path: Path) -> None:
         source = compile_source(ListSourceConfig.model_validate({"type": "list", "artifacts": ["@/a.py"]}))
 
         assert isinstance(source, ListSource)
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/a.py")]
+        assert source.evaluate(context(tmp_path)).unwrap() == [ArtifactId("@/a.py")]
 
     def test_union_source(self, tmp_path: Path) -> None:
         source = compile_source(
@@ -67,7 +67,7 @@ class TestCompileSource:
         )
 
         assert isinstance(source, UnionSource)
-        assert source.evaluate(context(tmp_path)) == [
+        assert source.evaluate(context(tmp_path)).unwrap() == [
             ArtifactId("@/a.py"),
             ArtifactId("@/b.py"),
         ]
@@ -86,7 +86,7 @@ class TestCompileSource:
         )
 
         assert isinstance(source, IntersectionSource)
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/b.py")]
+        assert source.evaluate(context(tmp_path)).unwrap() == [ArtifactId("@/b.py")]
 
     def test_difference_source(self, tmp_path: Path) -> None:
         source = compile_source(
@@ -100,7 +100,7 @@ class TestCompileSource:
         )
 
         assert isinstance(source, DifferenceSource)
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/a.py")]
+        assert source.evaluate(context(tmp_path)).unwrap() == [ArtifactId("@/a.py")]
 
     def test_filter_source(self, tmp_path: Path) -> None:
         source = compile_source(
@@ -114,4 +114,4 @@ class TestCompileSource:
         )
 
         assert isinstance(source, FilterSource)
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/src/a.py")]
+        assert source.evaluate(context(tmp_path)).unwrap() == [ArtifactId("@/src/a.py")]

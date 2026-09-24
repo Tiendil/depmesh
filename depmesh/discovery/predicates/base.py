@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from depmesh.core.entities import BaseEntity
+from llm_tool_cli.core.entities import BaseEntity
+
 from depmesh.discovery.artifacts import CaptureName
 from depmesh.domain.entities import ArtifactId, ProjectRootPath
 

@@ -8,13 +8,16 @@ from pathlib import Path
 import pytest
 from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.core import errors as shared_errors
+from llm_tool_cli.core.errors import EnvironmentErrors
+from llm_tool_cli.core.result import Err, Result, UnwrapErrError
 from typer.testing import CliRunner
 
 from depmesh.cli import errors as cli_errors
-from depmesh.cli.application import app, main
+from depmesh.cli.application import CommandContext, app, main
 from depmesh.core import errors as core_errors
 from depmesh.discovery import errors as discovery_errors
 from depmesh.domain.entities import RelationId
+from depmesh.workspace import Workspace
 from depmesh.workspace import errors as workspace_errors
 
 
@@ -55,44 +58,69 @@ output = { type = "list", artifacts = ["@/src/{module}.py"] }
     )
 
 
-class SharedFailure(shared_errors.Error):
-    code = "shared_failure"
+class SharedFailure(shared_errors.EnvironmentError):
+    code: str = "shared_failure"
+    context: str
 
 
-class ProjectFailure(core_errors.Error):
-    code = "project_failure"
+class ProjectFailure(core_errors.EnvironmentError):
+    code: str = "project_failure"
+    context: str
 
 
 class TestCommandContext:
+    @pytest.mark.parametrize("unwrap_in_helper", [False, True])
+    def test_multiple_errors_keep_order_and_first_category(
+        self, monkeypatch: pytest.MonkeyPatch, unwrap_in_helper: bool
+    ) -> None:
+        failures: EnvironmentErrors = [
+            config_errors.Unreadable(path=Path("/config.toml"), reason="denied"),
+            discovery_errors.UnknownRelationFilter(relation=RelationId("missing")),
+        ]
+
+        def fail_workspace(_self: CommandContext) -> Result[Workspace, EnvironmentErrors]:
+            result: Result[Workspace, EnvironmentErrors] = Err(failures)
+            if unwrap_in_helper:
+                result.unwrap()
+            return result
+
+        monkeypatch.setattr(CommandContext, "load_workspace", fail_workspace)
+
+        result = CliRunner().invoke(app, ["--protocol", "automation", "relations"])
+
+        assert result.exit_code == 2
+        assert [json.loads(line) for line in result.stdout.splitlines()] == [error.as_record() for error in failures]
+        assert result.stderr == ""
+
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
     @pytest.mark.parametrize(
         ("error", "exit_code"),
         [
-            (config_errors.DiscoveryFailed(Path("/config.toml"), "denied"), 2),
-            (config_errors.PathResolutionFailed(Path("/config.toml"), "denied"), 2),
-            (config_errors.Unreadable(Path("/config.toml"), "denied"), 2),
-            (config_errors.InvalidEncoding(Path("/config.toml"), "invalid UTF-8"), 2),
-            (config_errors.InvalidToml(Path("/config.toml"), "invalid TOML"), 2),
-            (config_errors.ValidationFailed(Path("/config.toml"), "invalid version"), 2),
-            (config_errors.AlreadyExists(Path("/config.toml"), "exists"), 2),
-            (config_errors.Unwritable(Path("/config.toml"), "denied"), 2),
-            (config_errors.NotFound(Path("/project"), "config.toml was not found"), 2),
-            (workspace_errors.ConfigTemplateUnreadable("base_config.toml", "denied"), 2),
-            (cli_errors.InvalidArguments("invalid argument"), 1),
-            (discovery_errors.UnknownRelationFilter(RelationId("missing")), 3),
-            (SharedFailure("shared failure", details={"context": "shared"}), 3),
-            (ProjectFailure("project failure", details={"context": "local"}), 3),
+            (config_errors.DiscoveryFailed(path=Path("/config.toml"), reason="denied"), 2),
+            (config_errors.PathResolutionFailed(path=Path("/config.toml"), reason="denied"), 2),
+            (config_errors.Unreadable(path=Path("/config.toml"), reason="denied"), 2),
+            (config_errors.InvalidEncoding(path=Path("/config.toml"), reason="invalid UTF-8"), 2),
+            (config_errors.InvalidToml(path=Path("/config.toml"), reason="invalid TOML"), 2),
+            (config_errors.ValidationFailed(path=Path("/config.toml"), reason="invalid version"), 2),
+            (config_errors.AlreadyExists(path=Path("/config.toml"), reason="exists"), 2),
+            (config_errors.Unwritable(path=Path("/config.toml"), reason="denied"), 2),
+            (config_errors.NotFound(path=Path("/project"), reason="config.toml was not found"), 2),
+            (workspace_errors.ConfigTemplateUnreadable(template="base_config.toml", reason="denied"), 2),
+            (cli_errors.InvalidArguments(reason="invalid argument"), 1),
+            (discovery_errors.UnknownRelationFilter(relation=RelationId("missing")), 3),
+            (SharedFailure(message="shared failure", context="shared"), 3),
+            (ProjectFailure(message="project failure", context="local"), 3),
         ],
     )
     def test_native_records_and_exit_categories(
-        self, monkeypatch: pytest.MonkeyPatch, protocol: str, error: shared_errors.Error, exit_code: int
+        self, monkeypatch: pytest.MonkeyPatch, protocol: str, error: shared_errors.EnvironmentError, exit_code: int
     ) -> None:
-        def fail_version(_distribution: str) -> str:
-            raise error
+        def fail_workspace(_self: CommandContext) -> Result[Workspace, EnvironmentErrors]:
+            return Err([error])
 
-        monkeypatch.setattr(metadata, "version", fail_version)
+        monkeypatch.setattr(CommandContext, "load_workspace", fail_workspace)
 
-        result = CliRunner().invoke(app, ["--protocol", protocol, "version"])
+        result = CliRunner().invoke(app, ["--protocol", protocol, "relations"])
 
         assert result.exit_code == exit_code
         if protocol == "automation":
@@ -100,10 +128,19 @@ class TestCommandContext:
             assert result.stderr == ""
         else:
             assert result.stdout == ""
-            assert error.message in result.stderr
+            assert error.format_message() in result.stderr
 
-    def test_unexpected_failure_is_not_rendered_as_expected(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        original = RuntimeError("unexpected failure")
+    @pytest.mark.parametrize(
+        "original",
+        [
+            RuntimeError("unexpected failure"),
+            shared_errors.InternalError("technical failure"),
+            UnwrapErrError("successful value"),
+        ],
+    )
+    def test_unexpected_failure_is_not_rendered_as_expected(
+        self, monkeypatch: pytest.MonkeyPatch, original: Exception
+    ) -> None:
 
         def fail_version(_distribution: str) -> str:
             raise original
@@ -118,13 +155,16 @@ class TestCommandContext:
 
 
 class TestApp:
-    def test_protocol_choices__match_cli_contract(self) -> None:
-        result = CliRunner().invoke(app, ["--protocol", "invalid", "dependencies", "./src/a.py"])
+    @pytest.mark.parametrize("protocol", ["invalid", "{protocol}", "{"])
+    def test_protocol_choices__match_cli_contract(self, protocol: str) -> None:
+        result = CliRunner().invoke(app, ["--protocol", protocol, "dependencies", "./src/a.py"])
 
         assert result.exit_code == 1
-        assert "human" in result.output
-        assert "llm" in result.output
-        assert "automation" in result.output
+        assert protocol in result.stderr
+        assert "human" in result.stderr
+        assert "llm" in result.stderr
+        assert "automation" in result.stderr
+        assert result.stdout == ""
 
 
 class TestDependencies:
@@ -194,16 +234,31 @@ class TestDependencies:
         assert result.exit_code == 0
         assert result.output == "tests:\n  @/tests/test_a.py\n"
 
-    def test_human_query_rejects_input_outside_project(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
+    @pytest.mark.parametrize("filename", ["outside.py", "{name}.py"])
+    def test_query_rejects_input_outside_project(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, protocol: str, filename: str
+    ) -> None:
         write_project(tmp_path)
-        outside = tmp_path.parent / "outside.py"
+        outside = tmp_path.parent / filename
         outside.write_text("", encoding="utf-8")
         monkeypatch.chdir(tmp_path)
 
-        result = CliRunner().invoke(app, ["dependencies", str(outside)])
+        result = CliRunner().invoke(app, ["--protocol", protocol, "dependencies", str(outside)])
 
         assert result.exit_code == 1
-        assert "invalid project path" in result.output
+        reason = f"invalid project path `{outside}`"
+        if protocol == "automation":
+            assert json.loads(result.stdout) == {
+                "type": "error",
+                "code": "invalid_arguments",
+                "message": reason,
+                "reason": reason,
+            }
+            assert result.stderr == ""
+        else:
+            assert reason in result.stderr
+            assert result.stdout == ""
 
     def test_human_query_output_merges_multiple_input_artifacts(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

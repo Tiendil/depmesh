@@ -2,7 +2,7 @@
 
 ## Goal of the document
 
-This document describes how project modules represent fatal errors and warnings, and how those values move from lower layers to the CLI.
+This document describes how project modules represent fatal errors and warnings, and how those values move from lower layers to the CLI, separating expected operational failures from internal exceptions.
 
 ## Scope
 
@@ -21,16 +21,20 @@ The following topics are out of scope:
 - `fatal error` - a problem that prevents the requested command from completing successfully.
 - `non-fatal problem` - a problem discovered while processing a command that does not prevent the command from producing useful output.
 - `error code` - a stable machine-readable identifier for a fatal error.
-- `module root error` - the `Error` exception class in a module's `errors` submodule; it is the root for fatal errors owned by that module.
-- `exception boundary` - a module boundary where low-level exceptions are converted into expected errors or warnings.
+- `module error category` - an environment-error model in a module's `errors` submodule that classifies expected failures owned by that module.
+- `exception boundary` - a module boundary where known low-level failures are converted into returned environment errors or warnings.
 
 ## General principles
 
-Expected fatal failures MUST be represented with expected errors before they cross module boundaries.
+Expected fatal failures MUST be represented as shared `EnvironmentError` values returned through `Result[T, EnvironmentErrors]` before they cross module boundaries.
 
-Documented public errors from `llm_tool_cli` are part of the application error contract and MUST be allowed to cross module boundaries unchanged.
+Project modules MUST use `Result`, `Ok`, `Err`, `EnvironmentError`, and `EnvironmentErrors` from `llm_tool_cli` directly. Project-local result implementations or compatibility re-exports MUST NOT duplicate them.
 
-Package ownership alone MUST NOT require wrapping an adopted shared error in a project-specific exception.
+Documented public environment errors from `llm_tool_cli` are part of the application error contract and MUST propagate as returned values without translation solely because of their package ownership.
+
+Operations with expected failures MUST return a result. Operations without expected failures SHOULD keep their ordinary return values. Successful absence, a predicate that does not match, and a warning with useful output MUST NOT become fatal errors merely to fit the result interface.
+
+Predicate matching and propagation of its evaluation exceptions are exempt from this specification's result-conversion requirements. Matching MUST return captures for a match or `None` for a non-match, and MAY raise evaluation failures. Composite predicates MUST propagate those failures without treating them as non-matches. Result-returning callers MUST recover error values from result-based helpers within their existing propagation scope; unrelated matching exceptions MAY propagate unchanged.
 
 Non-fatal problems MUST be represented as warning strings, not as exceptions, when processing can continue and produce useful output.
 
@@ -42,9 +46,9 @@ The CLI layer MUST be responsible for converting project errors and warnings int
 - stderr messages.
 - output protocol records.
 
-Project-specific exceptions MUST expose stable error codes.
+Environment errors MUST expose stable error codes.
 
-Error codes MUST use lowercase ASCII letters, ASCII digits, and `_`.
+Project-owned error codes MUST use lowercase ASCII letters, ASCII digits, and `_`. Adopted shared error codes MUST retain their native spelling.
 
 User-facing messages SHOULD be clear enough to diagnose the problem without exposing implementation stack details.
 
@@ -52,7 +56,7 @@ User-facing messages SHOULD be clear enough to diagnose the problem without expo
 
 Each module MAY define an `errors` submodule for errors owned by that module.
 
-Shared base error types MUST be owned by a common lower-level module that does not depend on CLI behavior.
+Shared base result and error types MUST be owned by a common lower-level module that does not depend on CLI behavior.
 
 Module-specific error types MUST be defined in the module that can add the most useful context.
 
@@ -60,54 +64,43 @@ Production errors MUST NOT be defined in test modules.
 
 Test-only error classes MAY be defined in test modules when they are required to verify error handling behavior.
 
-## Error hierarchy
+## Error models and internal exceptions
 
-The project MUST define a single project root exception type for all fatal errors defined by the project.
+Expected operational errors MUST be Pydantic models inheriting from the shared `EnvironmentError`, not exceptions.
 
-The project root exception MUST be named `Error`.
+Environment errors MUST carry a stable code and message, and MAY include corrective guidance and typed context fields owned by the concrete error.
 
-The project root exception MUST inherit from `llm_tool_cli.core.errors.Error`, which inherits from `Exception`.
+A module MAY define an environment-error classification model when callers need to distinguish that module's failures. Environment-error categories MUST NOT encode CLI exit codes.
 
-Boundaries that handle both project-specific and adopted shared errors MUST accept the shared root exception.
+Internal and technical exceptions defined by the project MUST inherit from the project's core `InternalError`, which inherits from the shared exception `InternalError`.
 
-The project root exception MUST NOT inherit from Pydantic model classes.
+Internal exceptions MUST NOT be converted into environment errors merely because they share a base class or originate in a dependency.
 
-The project root exception MUST be owned by the core module.
+Environment-error model definitions and internal exception definitions MUST remain distinct. Category roots MUST explicitly use `EnvironmentError` or `InternalError` names instead of an ambiguous `Error` root. Internal exceptions MUST NOT provide environment-error codes or diagnostic-record serialization.
 
-Each module that defines fatal errors SHOULD define one module root error class.
+## Result propagation
 
-The module root error class MUST be named `Error`.
+A successful result MUST contain the requested value. A failed result MUST contain a non-empty `EnvironmentErrors` in diagnostic order.
 
-All fatal errors owned by that module MUST inherit from the module root error class.
+The project MUST preserve returned error values when propagation does not add application-specific meaning or implement recovery.
 
-A module root error class MUST inherit from the project root exception or from a parent module's root error class.
+Fallible callbacks and interchangeable components MUST expose result-aware interfaces so expected errors can reach their callers.
 
-A module SHOULD NOT define multiple root error classes.
+Framework callbacks that require ordinary return values or framework control-flow exceptions MAY adapt results at that framework boundary.
 
-Modules outside the CLI module MUST NOT know about CLI exit codes.
+Pydantic validators MAY raise validation exceptions required by Pydantic internally; the external-input boundary MUST convert the resulting validation failure into a returned environment error.
 
-Module root error classes SHOULD be abstract classification classes and SHOULD NOT be raised directly when a more specific concrete error is available.
+The shared propagation decorator MAY translate its own result-unwrapping exception into a failed result within the decorated call. The CLI command boundary MAY recover environment errors from that same propagation exception for rendering and exit-code selection. Result unwrapping for propagation MUST stay inside one of these scopes; deferred iterators and callbacks MUST NOT let the unwrapping exception escape it.
 
-Intermediate abstract error classes MAY exist under a module root when a module needs a narrower ownership boundary.
+An unguarded unwrap of a failed result outside a propagation scope is an internal error, not an expected operational failure.
 
-The hierarchy SHOULD keep module-specific root errors under the single project root exception.
+## Error data
 
-Concrete error class names MAY differ, but project and module root error classes MUST be named `Error`.
+Environment-error context MUST use typed fields that can be rendered deterministically.
 
-## Exception data
+Error records MUST preserve native codes, formatted messages, and structured context. Callers MUST NOT parse message text to determine the error category.
 
-Project-specific exceptions SHOULD carry:
-
-- an error code.
-- a human-readable message.
-- optional structured details.
-- an optional original cause.
-
-Structured details MUST contain values that can be rendered deterministically.
-
-Structured details SHOULD use strings, numbers, booleans, `None`, lists, and dictionaries when they need to be serialized by the CLI.
-
-Exceptions MUST NOT require callers to parse their message text to understand the error category.
+Known low-level exceptions SHOULD be retained as private causes when useful for debugging. Causes MUST NOT become serialized diagnostic fields.
 
 ## Warnings
 
@@ -153,13 +146,13 @@ Examples of warning-producing situations include:
 
 Pydantic validation errors MUST NOT be exposed directly across high-level module boundaries for user-provided data.
 
-Modules that create Pydantic entities from external input MUST convert `pydantic.ValidationError` into expected errors or warning strings at the nearest exception boundary with useful context. Shared configuration loading MAY own this conversion.
+Modules that create Pydantic entities from external input MUST convert `pydantic.ValidationError` into returned environment errors or warning strings at the nearest exception boundary with useful context. Shared configuration loading MAY own this conversion.
 
 Pydantic validation errors MAY be used directly inside tests for low-level entity validation.
 
 ## Exception boundaries
 
-Modules that call external systems MUST convert relevant low-level failures into expected errors or warning strings at the boundary where context is still available.
+Modules that call external systems MUST convert relevant low-level failures into returned environment errors or warning strings at the boundary where context is still available.
 
 External systems include:
 
@@ -169,27 +162,31 @@ External systems include:
 - regular expression compilation.
 - shell command execution.
 
-Unexpected programming errors MAY propagate during development, but code that handles expected user or environment failures MUST convert them into expected errors.
+Unexpected programming errors MUST remain exceptions. Code that handles expected user or environment failures MUST convert only the relevant known failures into returned environment errors.
 
-Adopting shared errors MUST NOT allow raw filesystem, parser, or validation exceptions to cross high-level boundaries unchanged. Unexpected exceptions MUST NOT be classified as expected merely because they originate in the shared library.
+Raw filesystem, parser, or validation exceptions representing expected failures MUST NOT cross high-level boundaries unchanged. Blanket exception-to-result conversion MUST NOT hide programming errors.
 
 Translation of an expected error SHOULD occur only when it adds application-specific meaning or implements recovery.
 
-When converting an exception, the original exception SHOULD be preserved as the cause when it helps debugging.
+When converting an exception, the original exception SHOULD be preserved as the environment error's cause when it helps debugging.
 
 ## CLI mapping
 
-The CLI MUST map project-specific and adopted shared errors to the exit code categories specified by the CLI behavior specification.
+The CLI MUST explicitly handle failed results and map their environment errors to the exit code categories specified by the CLI behavior specification.
 
-The CLI module MUST own the mapping from exception classes to exit codes.
+Failure rendering and exit-code selection MUST be centralized at the CLI command boundary.
+
+The CLI module MUST own the mapping from environment-error categories to exit codes.
 
 The CLI mapping SHOULD be defined in the CLI module.
 
-The CLI mapping MAY map specific module root error classes to specific exit codes.
+The CLI mapping MAY map specific module error categories to specific exit codes.
 
-The CLI mapping MAY map specific concrete error classes to specific exit codes when a module root is too broad.
+The CLI mapping MAY map specific concrete environment errors to specific exit codes when a category is too broad.
 
-The CLI mapping MUST define a default non-zero exit code for exceptions under the shared root that are not explicitly mapped.
+The CLI mapping MUST define a default non-zero exit code for environment errors that are not explicitly mapped.
+
+The CLI MUST render every error in a failed result in list order. The first error MUST determine the exit category. Technical exceptions MUST NOT be rendered as expected environment errors.
 
 Shared configuration errors MUST use the configuration exit category.
 

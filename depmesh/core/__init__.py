@@ -1,4 +1,3 @@
-from depmesh.core.entities import BaseEntity
-from depmesh.core.errors import Error
+from depmesh.core.errors import InternalError
 
-__all__ = ["BaseEntity", "Error"]
+__all__ = ["InternalError"]

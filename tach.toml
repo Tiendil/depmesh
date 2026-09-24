@@ -58,7 +58,7 @@ layer = "discovery"
 
 [[modules]]
 path = "depmesh.domain"
-depends_on = ["depmesh.core"]
+depends_on = []
 layer = "domain"
 
 [[modules]]

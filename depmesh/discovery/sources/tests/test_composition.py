@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+from depmesh.discovery import errors
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext
 from depmesh.discovery.sources import (
     DifferenceSourceConfig,
@@ -10,6 +13,7 @@ from depmesh.discovery.sources import (
     UnionSourceConfig,
     compile_source,
 )
+from depmesh.discovery.sources.entities import ArtifactSourceConfig
 from depmesh.domain.entities import ArtifactId, ProjectRootPath, RelationId
 
 
@@ -18,6 +22,25 @@ def context(root: Path) -> EvaluationContext:
 
 
 class TestUnionSource:
+    @pytest.mark.parametrize("source_type", ["union", "intersection", "difference", "filter"])
+    def test_evaluate__propagates_child_failure(self, tmp_path: Path, source_type: str) -> None:
+        invalid = {"type": "list", "artifacts": ["../outside.py"]}
+        valid = {"type": "list", "artifacts": ["@/a.py"]}
+        config: ArtifactSourceConfig
+        if source_type == "union":
+            config = UnionSourceConfig.model_validate({"type": source_type, "items": [valid, invalid]})
+        elif source_type == "intersection":
+            config = IntersectionSourceConfig.model_validate({"type": source_type, "items": [valid, invalid]})
+        elif source_type == "difference":
+            config = DifferenceSourceConfig.model_validate({"type": source_type, "include": valid, "exclude": invalid})
+        else:
+            config = FilterSourceConfig.model_validate(
+                {"type": source_type, "source": invalid, "predicate": {"type": "glob", "pattern": "@/**"}}
+            )
+        source = compile_source(config)
+
+        assert source.evaluate(context(tmp_path)).unwrap_err() == [errors.InvalidProjectPath(path="../outside.py")]
+
     def test_evaluate__deduplicates_child_artifacts(self, tmp_path: Path) -> None:
         source = compile_source(
             UnionSourceConfig.model_validate(
@@ -31,7 +54,7 @@ class TestUnionSource:
             )
         )
 
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/a.py"), ArtifactId("@/b.py")]
+        assert source.evaluate(context(tmp_path)).unwrap() == [ArtifactId("@/a.py"), ArtifactId("@/b.py")]
 
 
 class TestIntersectionSource:
@@ -48,7 +71,7 @@ class TestIntersectionSource:
             )
         )
 
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/b.py")]
+        assert source.evaluate(context(tmp_path)).unwrap() == [ArtifactId("@/b.py")]
 
 
 class TestDifferenceSource:
@@ -74,10 +97,23 @@ class TestDifferenceSource:
             )
         )
 
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/a.py")]
+        assert source.evaluate(context(tmp_path)).unwrap() == [ArtifactId("@/a.py")]
 
 
 class TestFilterSource:
+    def test_evaluate__propagates_predicate_path_failure(self, tmp_path: Path) -> None:
+        source = compile_source(
+            FilterSourceConfig.model_validate(
+                {
+                    "type": "filter",
+                    "source": {"type": "list", "artifacts": ["@/a.py"]},
+                    "predicate": {"type": "one_of", "artifacts": ["../outside.py"]},
+                }
+            )
+        )
+
+        assert source.evaluate(context(tmp_path)).unwrap_err() == [errors.InvalidProjectPath(path="../outside.py")]
+
     def test_evaluate__keeps_matching_artifacts(self, tmp_path: Path) -> None:
         source = compile_source(
             FilterSourceConfig.model_validate(
@@ -89,4 +125,4 @@ class TestFilterSource:
             )
         )
 
-        assert source.evaluate(context(tmp_path)) == [ArtifactId("@/src/a.py")]
+        assert source.evaluate(context(tmp_path)).unwrap() == [ArtifactId("@/src/a.py")]

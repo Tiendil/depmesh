@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from llm_tool_cli.core.errors import EnvironmentErrors
+from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
+
 from depmesh.discovery.artifacts import EvaluationContext
 from depmesh.discovery.predicates.base import ArtifactPredicateBase
 from depmesh.discovery.sources.base import ArtifactSourceBase
@@ -20,12 +23,15 @@ class FilterSource(ArtifactSourceBase):
         self.source = source
         self.predicate = predicate
 
-    def evaluate(self, context: EvaluationContext) -> list[ArtifactId]:
-        return [
-            artifact
-            for artifact in self.source.evaluate(context)
-            if self.predicate.match(artifact, context.root, context.captures) is not None
-        ]
+    @unwrap_to_error
+    def evaluate(self, context: EvaluationContext) -> Result[list[ArtifactId], EnvironmentErrors]:
+        return Ok(
+            [
+                artifact
+                for artifact in self.source.evaluate(context).unwrap()
+                if self.predicate.match(artifact, context.root, context.captures) is not None
+            ]
+        )
 
 
 __all__ = ["FilterSource", "FilterSourceConfig"]

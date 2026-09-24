@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from llm_tool_cli.core.errors import EnvironmentErrors
+from llm_tool_cli.core.result import Err, Ok, Result, unwrap_to_error
+
 from depmesh.discovery import errors
 from depmesh.discovery.artifacts import EvaluationContext
 from depmesh.discovery.entities import DependencyRule, QueryResult
@@ -9,6 +12,7 @@ from depmesh.discovery.paths import normalize_path
 from depmesh.domain.entities import ArtifactId, Dependency, ProjectRootPath, Relation, RelationId, UntrustedPath
 
 
+@unwrap_to_error
 def query_dependencies(
     root: ProjectRootPath,
     relations_by_id: Mapping[RelationId, Relation],
@@ -17,13 +21,13 @@ def query_dependencies(
     *,
     relation_ids: set[RelationId],
     cwd: UntrustedPath | None = None,
-) -> QueryResult:
+) -> Result[QueryResult, EnvironmentErrors]:
     artifact = ArtifactId(
         normalize_path(
             str(artifact),
             root,
             cwd=cwd,
-        )
+        ).unwrap()
     )
     dependencies: set[Dependency] = set()
 
@@ -39,38 +43,41 @@ def query_dependencies(
         if relation is None:
             continue
 
-        for dependency in _evaluate_rule_dependencies(root, rule, captures):
+        for dependency in _evaluate_rule_dependencies(root, rule, captures).unwrap():
             dependencies.add(Dependency(relation=relation.id, dependency=dependency))
 
-    return QueryResult(dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency))))
+    return Ok(QueryResult(dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency)))))
 
 
+@unwrap_to_error
 def normalize_input_artifacts(
     root: ProjectRootPath,
     artifacts: list[ArtifactId],
     *,
     cwd: UntrustedPath | None = None,
-) -> list[ArtifactId]:
-    return sorted(
-        {
-            ArtifactId(
-                normalize_path(
-                    str(artifact),
-                    root,
-                    cwd=cwd,
+) -> Result[list[ArtifactId], EnvironmentErrors]:
+    return Ok(
+        sorted(
+            {
+                ArtifactId(
+                    normalize_path(
+                        str(artifact),
+                        root,
+                        cwd=cwd,
+                    ).unwrap()
                 )
-            )
-            for artifact in artifacts
-        }
+                for artifact in artifacts
+            }
+        )
     )
 
 
 def selected_relation_ids(
     relations_by_id: Mapping[RelationId, Relation],
     relation_filters: list[RelationId] | None,
-) -> set[RelationId]:
+) -> Result[set[RelationId], EnvironmentErrors]:
     if not relation_filters:
-        return set(relations_by_id)
+        return Ok(set(relations_by_id))
 
     selected: set[RelationId] = set()
 
@@ -80,19 +87,20 @@ def selected_relation_ids(
             selected.add(relation.id)
             continue
 
-        raise errors.UnknownRelationFilter(relation_filter)
+        return Err([errors.UnknownRelationFilter(relation=relation_filter)])
 
-    return selected
+    return Ok(selected)
 
 
+@unwrap_to_error
 def _evaluate_rule_dependencies(
     root: ProjectRootPath,
     rule: DependencyRule,
     captures: dict[str, str],
-) -> list[ArtifactId]:
+) -> Result[list[ArtifactId], EnvironmentErrors]:
     dependencies: set[ArtifactId] = set()
     context = EvaluationContext(root=root, relation_id=rule.relation, captures=captures)
 
-    dependencies.update(rule.output_source.evaluate(context))
+    dependencies.update(rule.output_source.evaluate(context).unwrap())
 
-    return sorted(dependencies)
+    return Ok(sorted(dependencies))

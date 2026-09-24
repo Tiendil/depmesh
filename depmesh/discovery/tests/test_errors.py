@@ -6,7 +6,7 @@ from depmesh.domain.entities import RelationId
 
 class TestUnknownRelationFilter:
     def test_as_record__uses_stable_code_and_relation_detail(self) -> None:
-        error = errors.UnknownRelationFilter(RelationId("missing"))
+        error = errors.UnknownRelationFilter(relation=RelationId("missing"))
 
         assert error.as_record() == {
             "type": "error",
@@ -18,7 +18,7 @@ class TestUnknownRelationFilter:
 
 class TestInvalidProjectPath:
     def test_as_record__uses_stable_code_and_path_detail(self) -> None:
-        error = errors.InvalidProjectPath("../outside.py")
+        error = errors.InvalidProjectPath(path="../outside.py")
 
         assert error.as_record() == {
             "type": "error",

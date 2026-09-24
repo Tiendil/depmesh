@@ -22,10 +22,15 @@ class RenderedForTests(Rendered):
 
 class TestRendered:
     def test_render_skill__returns_text_instructions(self) -> None:
-        assert RenderedForTests().render_skill().startswith("# `depmesh` Usage\n")
+        assert RenderedForTests().render_skill().unwrap().startswith("# `depmesh` Usage\n")
 
     def test_render_skill__returns_selected_document(self) -> None:
-        assert RenderedForTests().render_skill(SkillDocument.configuration).startswith("# `depmesh` Configuration\n")
+        assert (
+            RenderedForTests()
+            .render_skill(SkillDocument.configuration)
+            .unwrap()
+            .startswith("# `depmesh` Configuration\n")
+        )
 
     def test_render_error__returns_message_text(self) -> None:
         assert RenderedForTests().render_error({"type": "error", "message": "failed"}) == "failed\n"

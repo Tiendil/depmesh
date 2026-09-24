@@ -5,12 +5,14 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from importlib import metadata
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.config import load_config, locate_config
 from llm_tool_cli.core import errors as shared_errors
+from llm_tool_cli.core.errors import EnvironmentErrors
+from llm_tool_cli.core.result import Ok, Result, UnwrapError, unwrap_to_error
 
 from depmesh.cli import errors as cli_errors
 from depmesh.cli.entities import ArtifactsArgument, ConfigOption, GlobalOptions, ProtocolOption, RelationOption
@@ -64,16 +66,26 @@ def dependencies(
     relations = relation or []
 
     with command_context(context, default_protocol=OutputProtocol.human) as command:
-        workspace = command.load_workspace()
-        project_root = resolve_project_root(UntrustedPath(Path(workspace.root)))
+        workspace = command.load_workspace().unwrap()
+        project_root = resolve_project_root(UntrustedPath(Path(workspace.root))).unwrap()
         cwd = UntrustedPath(Path.cwd())
-        relation_ids = selected_relation_ids(workspace.relations_by_id, relations)
+        relation_ids = selected_relation_ids(workspace.relations_by_id, relations).unwrap()
         dependencies: set[Dependency] = set()
 
-        try:
-            input_artifacts = normalize_input_artifacts(project_root, artifacts or [], cwd=cwd)
-        except discovery_errors.InvalidProjectPath as error:
-            raise cli_errors.InvalidArguments(error.message) from error
+        input_artifacts = (
+            normalize_input_artifacts(project_root, artifacts or [], cwd=cwd)
+            .map_err(
+                lambda failures: [
+                    (
+                        cli_errors.InvalidArguments(reason=error.format_message())
+                        if isinstance(error, discovery_errors.InvalidProjectPath)
+                        else error
+                    )
+                    for error in failures
+                ]
+            )
+            .unwrap()
+        )
 
         for artifact in input_artifacts:
             result = query_dependencies(
@@ -83,7 +95,7 @@ def dependencies(
                 artifact,
                 relation_ids=relation_ids,
                 cwd=cwd,
-            )
+            ).unwrap()
             dependencies.update(result.dependencies)
 
         result = QueryResult(
@@ -102,7 +114,7 @@ def dependencies(
 @app.command("rels")
 def relations(context: typer.Context) -> None:
     with command_context(context, default_protocol=OutputProtocol.human) as command:
-        workspace = command.load_workspace()
+        workspace = command.load_workspace().unwrap()
         command.write(command.renderer.render_relations(workspace.relations))
 
 
@@ -112,13 +124,13 @@ def skill(
     document: Annotated[SkillDocument, typer.Argument()] = SkillDocument.usage,
 ) -> None:
     with command_context(context, default_protocol=OutputProtocol.llm) as command:
-        command.write(command.renderer.render_skill(document))
+        command.write(command.renderer.render_skill(document).unwrap())
 
 
 @app.command("init")
 def init(context: typer.Context) -> None:
     with command_context(context, default_protocol=OutputProtocol.human) as command:
-        config_path = initialize_config(command.global_options.config)
+        config_path = initialize_config(command.global_options.config).unwrap()
         command.write(f"created {config_path}\n")
 
 
@@ -136,15 +148,16 @@ class CommandContext:
         self.protocol = self.global_options.protocol or default_protocol
         self.renderer: Rendered = renderer(self.protocol)
 
-    def load_workspace(self) -> Workspace:
-        config_path = locate_config(CONFIG_FILE_NAME, path=self.global_options.config, cwd=Path.cwd())
-        config = load_config(config_path, Config)
-        return construct_workspace(config, root=config_path.parent)
+    @unwrap_to_error
+    def load_workspace(self) -> Result[Workspace, EnvironmentErrors]:
+        config_path = locate_config(CONFIG_FILE_NAME, path=self.global_options.config, cwd=Path.cwd()).unwrap()
+        config = load_config(config_path, Config).unwrap()
+        return Ok(construct_workspace(config, root=config_path.parent))
 
     def write(self, text: str) -> None:
         sys.stdout.write(text)
 
-    def render_fatal(self, error: shared_errors.Error) -> None:
+    def render_fatal(self, error: shared_errors.EnvironmentError) -> None:
         rendered = self.renderer.render_error(error.as_record())
 
         if self.protocol is OutputProtocol.automation:
@@ -164,20 +177,19 @@ def command_context(
 
     try:
         yield command_context
-        raise typer.Exit(0)
-
-    except cli_errors.Error as error:
-        command_context.render_fatal(error)
-        raise typer.Exit(EXIT_INVALID_ARGUMENTS) from error
-    except (workspace_errors.Error, config_errors.Error) as error:
-        command_context.render_fatal(error)
-        raise typer.Exit(EXIT_CONFIG) from error
-    except discovery_errors.Error as error:
-        command_context.render_fatal(error)
-        raise typer.Exit(EXIT_QUERY) from error
-    except shared_errors.Error as error:
-        command_context.render_fatal(error)
-        raise typer.Exit(EXIT_PROJECT_ERROR) from error
+    except UnwrapError as error:
+        failures = cast(EnvironmentErrors, error.details["error"])
+        for failure in failures:
+            command_context.render_fatal(failure)
+        first = failures[0]
+        if isinstance(first, cli_errors.EnvironmentError):
+            exit_code = EXIT_INVALID_ARGUMENTS
+        elif isinstance(first, (workspace_errors.EnvironmentError, config_errors.EnvironmentError)):
+            exit_code = EXIT_CONFIG
+        else:
+            exit_code = EXIT_PROJECT_ERROR
+        raise typer.Exit(exit_code) from error
+    raise typer.Exit(0)
 
 
 def _global_options(context: typer.Context) -> GlobalOptions:

@@ -5,8 +5,8 @@ from functools import cached_property
 from typing import Literal
 
 import pydantic
+from llm_tool_cli.core.entities import BaseEntity
 
-from depmesh.core.entities import BaseEntity
 from depmesh.discovery.entities import DependencyRule, DependencyRuleConfig
 from depmesh.domain.entities import (
     Relation,

@@ -25,7 +25,6 @@ The following topics are out of scope:
 
 - `./depmesh/` — root module of the project, contains all code related to the `depmesh` tool.
 - `./depmesh/core/` — module responsible for the core functionality not related to domain logic. Contains:
-  - shared entity base classes.
   - shared error base classes.
   - shared warning storage.
   - domain-independent utilities.
@@ -65,14 +64,14 @@ Some submodules have specific names that reflect their responsibilities and MUST
 List of specific submodules:
 
 - `utils` — submodule responsible for utility functions that are not related to the domain logic.
-- `errors` — submodule responsible for defining custom exception types.
+- `errors` — submodule responsible for defining environment-error models and internal exception types.
 - `domain` — submodule responsible for domain-specific logic related to the module's responsibilities.
 - `entities` — submodule responsible for defining types and entities related to the module's responsibilities.
 - `tests` — submodule containing module tests.
 
 The `errors`, `entities`, and `tests` submodules MUST follow the corresponding architecture specifications when they are present.
 
-The shared `entities` submodule in `./depmesh/core/` MUST define the common Pydantic entity base used by higher-level modules.
+The common Pydantic entity base used by higher-level modules MUST be owned by `llm_tool_cli.core.entities`.
 
 ### Test submodules
 
