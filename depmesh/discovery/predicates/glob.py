@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from llm_tool_cli.paths import ProjectRootPath
+from llm_tool_cli.paths import PathInput, ProjectRootPath
 
 from depmesh.discovery.paths import normalize_path_pattern
 from depmesh.discovery.predicates.base import ArtifactPredicateBase
@@ -23,7 +23,7 @@ class GlobPredicate(ArtifactPredicateBase):
         captures: dict[str, str] | None = None,
     ) -> dict[str, str] | None:
         pattern = self.config.pattern.substitute(captures or {})
-        normalized_pattern = normalize_path_pattern(pattern, root).unwrap()
+        normalized_pattern = normalize_path_pattern(pattern, PathInput(root)).unwrap()
         if normalized_pattern is None:
             return None
         match = _compile_glob(normalized_pattern).fullmatch(artifact)

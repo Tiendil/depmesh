@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from llm_tool_cli.paths import UntrustedPath
+from llm_tool_cli.paths import PathInput
 from llm_tool_cli.paths.errors import PathResolutionFailed
 
 from depmesh.discovery.paths import normalize_path_pattern
@@ -11,15 +11,15 @@ from depmesh.discovery.paths import normalize_path_pattern
 
 class TestNormalizePathPattern:
     def test_root_anchored_pattern_preserves_glob_captures(self, tmp_path: Path) -> None:
-        assert normalize_path_pattern("@/./src/{**package}/{*module}.py", UntrustedPath(tmp_path)).unwrap() == (
+        assert normalize_path_pattern("@/./src/{**package}/{*module}.py", PathInput(tmp_path)).unwrap() == (
             "@/src/{**package}/{*module}.py"
         )
 
     def test_invalid_root_anchored_pattern_does_not_match(self, tmp_path: Path) -> None:
-        assert normalize_path_pattern("@/../*.py", UntrustedPath(tmp_path)).unwrap() is None
+        assert normalize_path_pattern("@/../*.py", PathInput(tmp_path)).unwrap() is None
 
     def test_empty_pattern_with_nested_base_does_not_match(self, tmp_path: Path) -> None:
-        result = normalize_path_pattern("", UntrustedPath(tmp_path), cwd=UntrustedPath(tmp_path / "nested"))
+        result = normalize_path_pattern("", PathInput(tmp_path), cwd=PathInput(tmp_path / "nested"))
 
         assert result.unwrap() is None
 
@@ -34,7 +34,7 @@ class TestNormalizePathPattern:
 
         monkeypatch.setattr(Path, "resolve", fail_resolution)
 
-        failure = normalize_path_pattern("src/*.py", UntrustedPath(tmp_path)).unwrap_err()[0]
+        failure = normalize_path_pattern("src/*.py", PathInput(tmp_path)).unwrap_err()[0]
 
         assert isinstance(failure, PathResolutionFailed)
         assert failure.path == str(tmp_path / "src" / "*.py")
