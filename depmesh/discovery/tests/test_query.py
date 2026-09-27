@@ -9,7 +9,7 @@ from llm_tool_cli.paths.errors import InvalidProjectPath
 from depmesh.core import warnings
 from depmesh.discovery import errors
 from depmesh.discovery.entities import DependencyRule, DependencyRuleConfig, compile_dependency_rule
-from depmesh.discovery.query import query_dependencies, selected_relation_ids
+from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
 from depmesh.domain.entities import ArtifactId, Relation, RelationId
 
 
@@ -36,6 +36,23 @@ def make_relation_ids(*relations: Relation) -> set[RelationId]:
 
 def make_rules(*raw_rules: dict[str, object]) -> tuple[DependencyRule, ...]:
     return tuple(compile_dependency_rule(DependencyRuleConfig.model_validate(rule)) for rule in raw_rules)
+
+
+class TestNormalizeInputArtifacts:
+    @pytest.mark.parametrize("base", [None, "nested"])
+    def test_rejects_empty_path_with_shared_diagnostic(self, tmp_path: Path, base: str | None) -> None:
+        cwd = None if base is None else UntrustedPath(tmp_path / base)
+
+        result = normalize_input_artifacts(project_root(tmp_path), [ArtifactId("")], cwd=cwd)
+
+        assert result.unwrap_err() == [InvalidProjectPath(path="")]
+
+    def test_dot_identifies_explicit_non_root_base(self, tmp_path: Path) -> None:
+        result = normalize_input_artifacts(
+            project_root(tmp_path), [ArtifactId(".")], cwd=UntrustedPath(tmp_path / "nested")
+        )
+
+        assert result.unwrap() == [ArtifactId("@/nested")]
 
 
 class TestQueryDependencies:

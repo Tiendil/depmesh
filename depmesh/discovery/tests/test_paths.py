@@ -18,6 +18,11 @@ class TestNormalizePathPattern:
     def test_invalid_root_anchored_pattern_does_not_match(self, tmp_path: Path) -> None:
         assert normalize_path_pattern("@/../*.py", UntrustedPath(tmp_path)).unwrap() is None
 
+    def test_empty_pattern_with_nested_base_does_not_match(self, tmp_path: Path) -> None:
+        result = normalize_path_pattern("", UntrustedPath(tmp_path), cwd=UntrustedPath(tmp_path / "nested"))
+
+        assert result.unwrap() is None
+
     def test_resolution_failure_is_not_recovered(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         original = PermissionError("permission denied")
         resolve = Path.resolve
