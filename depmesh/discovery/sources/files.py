@@ -4,11 +4,12 @@ import glob
 from pathlib import Path
 
 from llm_tool_cli.core.result import Err, Ok, Result, unwrap_to_error
+from llm_tool_cli.paths import project_path_id_from_filesystem
 
 from depmesh.core import warnings
 from depmesh.discovery import errors
 from depmesh.discovery.artifacts import EvaluationContext
-from depmesh.discovery.paths import normalize_existing_path, resolve_project_path
+from depmesh.discovery.paths import resolve_project_path
 from depmesh.discovery.sources.base import ArtifactSourceBase
 from depmesh.discovery.sources.entities import FilesSourceConfig
 from depmesh.domain.entities import ArtifactId, UntrustedPath
@@ -27,7 +28,7 @@ class FilesSource(ArtifactSourceBase):
                 return Ok(
                     [
                         ArtifactId(
-                            normalize_existing_path(
+                            project_path_id_from_filesystem(
                                 UntrustedPath(path),
                                 context.root,
                             ).unwrap()
@@ -47,7 +48,7 @@ class FilesSource(ArtifactSourceBase):
             return Ok(
                 [
                     ArtifactId(
-                        normalize_existing_path(
+                        project_path_id_from_filesystem(
                             UntrustedPath(Path(match)),
                             context.root,
                         ).unwrap()

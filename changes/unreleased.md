@@ -1,6 +1,7 @@
 
 ### Migration
 
+- Replace `depmesh.discovery.paths.normalize_existing_path` with `llm_tool_cli.paths.project_path_id_from_filesystem` in Python integrations.
 - Import `ProjectRootPath` and `resolve_project_root` from `llm_tool_cli.paths`, and project-path `PathResolutionFailed` from `llm_tool_cli.paths.errors` instead of local modules.
 - Python integrations must use `Result[T]` instead of `Result[T, EnvironmentErrors]`; the shared result always carries `EnvironmentErrors` on failure.
 - Consumers of configuration diagnostics must accept native `llm-tool-cli` error codes and `path`/`reason` fields. Invalid TOML, UTF-8, and schema data now use `config_invalid_toml`, `config_invalid_encoding`, and `config_validation_failed`; validation details moved from `validation` to `reason`. Configuration failures still exit with status `2`.
@@ -8,6 +9,7 @@
 
 ### Changes
 
+- Share filesystem-to-identifier conversion through `llm-tool-cli`, preserving file discovery results and resolution diagnostics.
 - Convert resolved filesystem paths to canonical identifiers through `llm-tool-cli` directly, preserving public path results and diagnostics.
 - Resolve root-anchored identifiers through `llm-tool-cli` directly, preserving invalid-candidate recovery and filesystem failure diagnostics.
 - Use shared filesystem containment and resolved-path types directly, preserving invalid-path recovery and resolution-failure propagation; containment diagnostics now use the filesystem candidate path.

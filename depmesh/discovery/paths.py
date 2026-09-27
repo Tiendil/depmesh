@@ -14,7 +14,7 @@ from llm_tool_cli.paths import (
 )
 from llm_tool_cli.paths.errors import InvalidProjectPath
 
-from depmesh.domain.entities import PathInput, UntrustedPath
+from depmesh.domain.entities import PathInput
 
 PROJECT_ROOT_PREFIX = "@/"
 
@@ -58,10 +58,3 @@ def normalize_path_pattern(value: str, root: PathInput, *, cwd: PathInput | None
     if result.is_err(InvalidProjectPath):
         return Ok(None)
     return result
-
-
-@unwrap_to_error
-def normalize_existing_path(path: UntrustedPath, root: PathInput) -> Result[ProjectPathId]:
-    project_root = resolve_project_root(root).unwrap()
-    resolved = resolve_inside_project(path, project_root).unwrap()
-    return Ok(project_path_id_from_resolved(resolved, project_root))

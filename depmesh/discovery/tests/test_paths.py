@@ -6,7 +6,6 @@ import pytest
 from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
 
 from depmesh.discovery.paths import (
-    normalize_existing_path,
     normalize_path,
     normalize_path_pattern,
     resolve_project_path,
@@ -152,28 +151,3 @@ class TestNormalizePathPattern:
         assert isinstance(failure, PathResolutionFailed)
         assert failure.path == str(tmp_path / "src" / "*.py")
         assert failure.cause is original
-
-
-class TestNormalizeExistingPath:
-    def test_propagates_root_resolution_failure(self, tmp_path: Path) -> None:
-        root = tmp_path / "loop"
-        root.symlink_to(root)
-
-        failure = normalize_existing_path(UntrustedPath(tmp_path / "src/a.py"), UntrustedPath(root)).unwrap_err()[0]
-
-        assert isinstance(failure, PathResolutionFailed)
-        assert failure.path == str(root)
-        assert isinstance(failure.cause, (OSError, RuntimeError))
-
-    def test_path_inside_root(self, tmp_path: Path) -> None:
-        path = tmp_path / "src" / "a.py"
-        path.parent.mkdir()
-        path.write_text("", encoding="utf-8")
-
-        assert normalize_existing_path(UntrustedPath(path), UntrustedPath(tmp_path)).unwrap() == "@/src/a.py"
-
-    def test_path_outside_root(self, tmp_path: Path) -> None:
-        path = tmp_path.parent / "outside.py"
-
-        failures = normalize_existing_path(UntrustedPath(path), UntrustedPath(tmp_path)).unwrap_err()
-        assert failures == [InvalidProjectPath(path=str(path))]

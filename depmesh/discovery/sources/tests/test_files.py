@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 from llm_tool_cli.paths import ProjectRootPath
+from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
+from pytest_mock import MockerFixture
 
 from depmesh.core import warnings
 from depmesh.discovery import errors
@@ -19,6 +21,46 @@ def touch(path: Path) -> None:
 
 
 class TestFilesSource:
+    @pytest.mark.parametrize("pattern", [None, "@/*.py"])
+    def test_evaluate__rejects_symlink_outside_project(self, tmp_path: Path, pattern: str | None) -> None:
+        project = tmp_path / "project"
+        project.mkdir()
+        outside = tmp_path / "outside.py"
+        touch(outside)
+        link = project / "link.py"
+        link.symlink_to(outside)
+        source = FilesSource(FilesSourceConfig.model_validate({"type": "files", "pattern": pattern}))
+        context = EvaluationContext(root=ProjectRootPath(project), relation_id=RelationId("all"), captures={})
+
+        assert source.evaluate(context).unwrap_err() == [InvalidProjectPath(path=str(link))]
+
+    @pytest.mark.parametrize("pattern", [None, "@/*.py"])
+    def test_evaluate__preserves_path_resolution_failure(
+        self, tmp_path: Path, mocker: MockerFixture, pattern: str | None
+    ) -> None:
+        path = tmp_path / "file.py"
+        touch(path)
+        cause = PermissionError("permission denied")
+        resolve = Path.resolve
+
+        def fail_target(candidate: Path) -> Path:
+            if candidate == path:
+                raise cause
+            return resolve(candidate)
+
+        mocker.patch.object(Path, "resolve", autospec=True, side_effect=fail_target)
+        source = FilesSource(FilesSourceConfig.model_validate({"type": "files", "pattern": pattern}))
+        context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("all"), captures={})
+
+        failures = source.evaluate(context).unwrap_err()
+
+        assert len(failures) == 1
+        failure = failures[0]
+        assert isinstance(failure, PathResolutionFailed)
+        assert failure.code == "path_resolution_failed"
+        assert failure.path == str(path)
+        assert failure.cause == cause
+
     def test_evaluate__filesystem_failure_returns_error(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         original = PermissionError("permission denied")
 
