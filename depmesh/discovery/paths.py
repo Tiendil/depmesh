@@ -4,10 +4,8 @@ from pathlib import Path
 
 from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
 from llm_tool_cli.paths import (
-    ProjectPathId,
     ResolvedProjectPath,
-    normalize_project_path_id,
-    project_path_id_from_resolved,
+    normalize_path,
     resolve_inside_project,
     resolve_project_root,
     resolve_root_anchored_path,
@@ -38,19 +36,6 @@ def resolve_project_path(
     if resolved.is_err(InvalidProjectPath):
         return Ok(None)
     return resolved
-
-
-@unwrap_to_error
-def normalize_path(value: str, root: PathInput, *, cwd: PathInput | None = None) -> Result[ProjectPathId]:
-    project_root = resolve_project_root(root).unwrap()
-
-    if value.startswith("@"):
-        return normalize_project_path_id(value)
-
-    path = Path(value)
-    candidate = path if path.is_absolute() else (cwd or root) / path
-    resolved = resolve_inside_project(candidate, project_root).unwrap()
-    return Ok(project_path_id_from_resolved(resolved, project_root))
 
 
 def normalize_path_pattern(value: str, root: PathInput, *, cwd: PathInput | None = None) -> Result[str | None]:

@@ -3,11 +3,11 @@ from __future__ import annotations
 import subprocess  # noqa: S404
 
 from llm_tool_cli.core.result import Err, Ok, Result, unwrap_to_error
+from llm_tool_cli.paths import normalize_path
 
 from depmesh.core import warnings
 from depmesh.discovery import errors
 from depmesh.discovery.artifacts import EvaluationContext
-from depmesh.discovery.paths import normalize_path
 from depmesh.discovery.sources.base import ArtifactSourceBase
 from depmesh.discovery.sources.entities import CommandSourceConfig
 from depmesh.domain.entities import ArtifactId

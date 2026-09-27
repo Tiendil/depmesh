@@ -173,6 +173,85 @@ class TestApp:
 
 
 class TestDependencies:
+    def test_home_relative_input(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        write_project(tmp_path)
+        monkeypatch.setenv("HOME", str(tmp_path))
+
+        result = CliRunner().invoke(
+            app,
+            ["--config", str(tmp_path / "depmesh.toml"), "-p", "automation", "dependencies", "~/src/a.py"],
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.stdout) == {
+            "type": "dependency",
+            "relation": "tests",
+            "dependency": "@/tests/test_a.py",
+        }
+
+    @pytest.mark.parametrize(
+        ("predicate", "source"),
+        [
+            (
+                '{ type = "one_of", artifacts = ["~/src/a.py"] }',
+                '{ type = "list", artifacts = ["@/tests/test_a.py"] }',
+            ),
+            ('{ type = "glob", pattern = "~/src/*.py" }', '{ type = "list", artifacts = ["@/tests/test_a.py"] }'),
+            (
+                '{ type = "one_of", artifacts = ["@/src/a.py"] }',
+                '{ type = "list", artifacts = ["~/tests/test_a.py"] }',
+            ),
+            (
+                '{ type = "one_of", artifacts = ["@/src/a.py"] }',
+                '{ type = "command", command = "printf \'~/tests/test_a.py\'" }',
+            ),
+        ],
+    )
+    def test_home_relative_rule_paths(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, predicate: str, source: str
+    ) -> None:
+        config_path = tmp_path / "depmesh.toml"
+        config_path.write_text(
+            f'[[relations]]\nid = "tests"\n[[rules]]\nrelation = "tests"\ninput = {predicate}\noutput = {source}\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("HOME", str(tmp_path))
+
+        result = CliRunner().invoke(
+            app, ["--config", str(config_path), "-p", "automation", "dependencies", "@/src/a.py"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.stdout) == {
+            "type": "dependency",
+            "relation": "tests",
+            "dependency": "@/tests/test_a.py",
+        }
+
+    def test_home_expansion_failure_uses_shared_diagnostic(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        write_project(tmp_path)
+        expanduser = Path.expanduser
+
+        def expand(path: Path) -> Path:
+            if str(path).startswith("~"):
+                raise RuntimeError("unknown home")
+            return expanduser(path)
+
+        mocker.patch.object(Path, "expanduser", expand)
+
+        result = CliRunner().invoke(
+            app,
+            ["--config", str(tmp_path / "depmesh.toml"), "-p", "automation", "dependencies", "~/src/a.py"],
+        )
+
+        assert result.exit_code == 3
+        record = json.loads(result.stdout)
+        assert record["code"] == "path_resolution_failed"
+        assert record["path"] == "~/src/a.py"
+        assert record["reason"] == "unknown home"
+        assert "cause" not in record
+        assert not result.stderr
+
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
     def test_target_resolution_failure_uses_shared_diagnostic(self, tmp_path: Path, protocol: str) -> None:
         write_project(tmp_path)

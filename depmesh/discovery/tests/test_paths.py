@@ -3,10 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
+from llm_tool_cli.paths.errors import PathResolutionFailed
 
 from depmesh.discovery.paths import (
-    normalize_path,
     normalize_path_pattern,
     resolve_project_path,
 )
@@ -81,49 +80,6 @@ class TestResolveProjectPath:
         assert isinstance(failure, PathResolutionFailed)
         assert failure.path == str(tmp_path / "src" / "a.py")
         assert failure.cause is original
-
-
-class TestNormalizePath:
-    def test_propagates_root_resolution_failure(self, tmp_path: Path) -> None:
-        root = tmp_path / "loop"
-        root.symlink_to(root)
-
-        failure = normalize_path("@/src/a.py", UntrustedPath(root)).unwrap_err()[0]
-
-        assert isinstance(failure, PathResolutionFailed)
-        assert failure.path == str(root)
-        assert isinstance(failure.cause, (OSError, RuntimeError))
-
-    def test_root_anchored_path_inside_root(self, tmp_path: Path) -> None:
-        assert normalize_path("@/src/a.py", UntrustedPath(tmp_path)).unwrap() == "@/src/a.py"
-
-    def test_classical_relative_path_inside_root(self, tmp_path: Path) -> None:
-        assert normalize_path("./src/a.py", UntrustedPath(tmp_path)).unwrap() == "@/src/a.py"
-
-    def test_root_anchored_path_with_dotdot(self, tmp_path: Path) -> None:
-        assert normalize_path("@/src/../README.md", UntrustedPath(tmp_path)).unwrap() == "@/README.md"
-
-    def test_root_anchored_normalization_preserves_symlink_identifier(self, tmp_path: Path) -> None:
-        (tmp_path / "outside").symlink_to(tmp_path.parent, target_is_directory=True)
-
-        assert normalize_path("@/outside/a.py", UntrustedPath(tmp_path)).unwrap() == "@/outside/a.py"
-
-    def test_invalid_root_anchored_path_returns_shared_error(self, tmp_path: Path) -> None:
-        assert normalize_path("@/../outside.py", UntrustedPath(tmp_path)).unwrap_err() == [
-            InvalidProjectPath(path="@/../outside.py")
-        ]
-
-    def test_path_relative_to_cwd(self, tmp_path: Path) -> None:
-        cwd = tmp_path / "src"
-        cwd.mkdir()
-
-        assert normalize_path("a.py", UntrustedPath(tmp_path), cwd=UntrustedPath(cwd)).unwrap() == "@/src/a.py"
-
-    def test_path_outside_root(self, tmp_path: Path) -> None:
-        path = tmp_path.parent / "outside.py"
-
-        failures = normalize_path(str(path), UntrustedPath(tmp_path)).unwrap_err()
-        assert failures == [InvalidProjectPath(path=str(path))]
 
 
 class TestNormalizePathPattern:

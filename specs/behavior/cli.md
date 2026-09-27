@@ -272,6 +272,10 @@ The `dependencies` command MUST accept:
 
 `ARTIFACT...` MUST accept one or more artifact identifiers.
 
+Filesystem artifact inputs MUST expand home markers before normalization and project-root containment checks.
+Root-anchored inputs MUST preserve literal home-marker segments.
+An inability to expand a home marker MUST report `path_resolution_failed` and exit with status `3`.
+
 The CLI MUST preserve the user-provided artifact spelling in output where that helps identify the original request.
 
 The CLI MAY also include normalized or resolved artifact identifiers when useful.

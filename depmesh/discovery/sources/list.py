@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
+from llm_tool_cli.paths import normalize_path
 
 from depmesh.discovery.artifacts import EvaluationContext
-from depmesh.discovery.paths import normalize_path
 from depmesh.discovery.sources.base import ArtifactSourceBase
 from depmesh.discovery.sources.entities import ListSourceConfig
 from depmesh.domain.entities import ArtifactId
