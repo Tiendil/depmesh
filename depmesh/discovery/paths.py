@@ -5,9 +5,9 @@ from pathlib import Path
 from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
 from llm_tool_cli.paths import (
     ProjectPathId,
-    ProjectRootPath,
     ResolvedProjectPath,
     normalize_project_path_id,
+    project_path_id_from_resolved,
     resolve_inside_project,
     resolve_project_root,
     resolve_root_anchored_path,
@@ -17,10 +17,6 @@ from llm_tool_cli.paths.errors import InvalidProjectPath
 from depmesh.domain.entities import PathInput, UntrustedPath
 
 PROJECT_ROOT_PREFIX = "@/"
-
-
-def _canonical_from_resolved(resolved: ResolvedProjectPath, root: ProjectRootPath) -> ProjectPathId:
-    return ProjectPathId(PROJECT_ROOT_PREFIX + resolved.relative_to(Path(root)).as_posix())
 
 
 @unwrap_to_error
@@ -54,7 +50,7 @@ def normalize_path(value: str, root: PathInput, *, cwd: PathInput | None = None)
     path = Path(value)
     candidate = path if path.is_absolute() else (cwd or root) / path
     resolved = resolve_inside_project(candidate, project_root).unwrap()
-    return Ok(_canonical_from_resolved(resolved, project_root))
+    return Ok(project_path_id_from_resolved(resolved, project_root))
 
 
 def normalize_path_pattern(value: str, root: PathInput, *, cwd: PathInput | None = None) -> Result[str | None]:
@@ -68,4 +64,4 @@ def normalize_path_pattern(value: str, root: PathInput, *, cwd: PathInput | None
 def normalize_existing_path(path: UntrustedPath, root: PathInput) -> Result[ProjectPathId]:
     project_root = resolve_project_root(root).unwrap()
     resolved = resolve_inside_project(path, project_root).unwrap()
-    return Ok(_canonical_from_resolved(resolved, project_root))
+    return Ok(project_path_id_from_resolved(resolved, project_root))

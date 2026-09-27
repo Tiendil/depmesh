@@ -8,6 +8,7 @@
 
 ### Changes
 
+- Convert resolved filesystem paths to canonical identifiers through `llm-tool-cli` directly, preserving public path results and diagnostics.
 - Resolve root-anchored identifiers through `llm-tool-cli` directly, preserving invalid-candidate recovery and filesystem failure diagnostics.
 - Use shared filesystem containment and resolved-path types directly, preserving invalid-path recovery and resolution-failure propagation; containment diagnostics now use the filesystem candidate path.
 - Use shared filesystem project-root resolution and resolution errors directly, preserving diagnostic records, private causes, and CLI exit categories.
