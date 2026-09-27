@@ -1,6 +1,7 @@
 
 ### Migration
 
+- Import `Protocol` from `llm_tool_cli.protocol` instead of `depmesh.protocol.OutputProtocol`, and import `to_jsonl` from the shared protocol package. Automation JSON now uses compact separators without optional whitespace; record fields and meanings are unchanged.
 - Use `.` instead of an empty project-path input to refer to a directory base below the project root; empty inputs now report `invalid_project_path`.
 - Import `UntrustedPath` directly from `llm_tool_cli.paths` instead of `depmesh.domain.entities`.
 - Import `normalize_path` directly from `llm_tool_cli.paths` in Python integrations. Query inputs, list sources, command output, one-of predicates, glob predicates, and file-source patterns now expand filesystem home markers; use `@/~/...` for a literal project directory named `~`.
@@ -13,6 +14,7 @@
 
 ### Changes
 
+- Use shared output modes, compact Unicode JSON Lines serialization, and direct text writing while preserving native records, command defaults, warning behavior, and exit policies.
 - Reject empty project-path inputs through the shared normalizer instead of interpreting them as an explicit directory base; invalid glob patterns retain no-match handling.
 - Use the shared `UntrustedPath` semantic type for filesystem inputs, preserving runtime path behavior.
 - Use the shared project-path resolver directly for file-source patterns, preserving warning-and-skip handling of invalid patterns and propagating resolution failures.

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 import typer
+from llm_tool_cli.protocol import Protocol
 
 from depmesh.cli.entities import (
     GlobalOptions,
@@ -14,7 +15,6 @@ from depmesh.cli.entities import (
     _validate_artifacts,
 )
 from depmesh.domain.entities import ArtifactId, RelationId
-from depmesh.protocol import OutputProtocol
 
 
 class TestGlobalOptions:
@@ -25,9 +25,9 @@ class TestGlobalOptions:
         assert options.config is None
 
     def test_values(self) -> None:
-        options = GlobalOptions(protocol=OutputProtocol.automation, config=Path("./depmesh.toml"))
+        options = GlobalOptions(protocol=Protocol.automation, config=Path("./depmesh.toml"))
 
-        assert options.protocol is OutputProtocol.automation
+        assert options.protocol is Protocol.automation
         assert options.config == Path("./depmesh.toml")
 
 
@@ -58,7 +58,7 @@ class TestParseConfig:
 
 class TestParseProtocol:
     def test_success(self) -> None:
-        assert _parse_protocol("automation") is OutputProtocol.automation
+        assert _parse_protocol("automation") is Protocol.automation
 
     def test_unsupported_value(self) -> None:
         with pytest.raises(typer.Exit):

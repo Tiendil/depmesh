@@ -95,7 +95,7 @@ The root command MUST NOT perform a dependency query directly.
 
 ## Output behavior
 
-All output MUST use UTF-8.
+The CLI MUST use text writing provided by `llm_tool_cli.protocol`.
 
 Output MUST NOT contain:
 
@@ -129,13 +129,13 @@ Relation list output MUST order relations alphabetically by relation id.
 
 ## Output protocols
 
-The CLI MUST support three output protocols:
+The CLI MUST support the output modes defined by `llm_tool_cli.protocol`.
+
+Depmesh interprets these modes as follows:
 
 - `human` — default protocol for terminal users.
 - `llm` — text protocol optimized for coding agents that invoke `depmesh` as a tool.
 - `automation` — protocol optimized for programs; output is serialized as JSON Lines.
-
-`human` and `llm` MUST be separate protocols.
 
 Human output SHOULD be compact and easy to scan.
 
@@ -150,12 +150,6 @@ For commands that support multiple output protocols, the output protocol MUST be
 ```bash
 --protocol PROTOCOL
 ```
-
-Allowed values MUST be:
-
-- `human`
-- `llm`
-- `automation`
 
 ### Human output
 
@@ -181,9 +175,7 @@ LLM output MUST NOT display a relation description, placeholder, or blank descri
 
 ### Automation output
 
-Automation output MUST be serialized as JSON Lines.
-
-Automation output MUST write one JSON object per line.
+Automation JSON Lines serialization MUST be provided by `llm_tool_cli.protocol`.
 
 Automation output MUST use stable field names.
 
@@ -233,11 +225,7 @@ For `depmesh skill`, the default protocol MUST be `llm`.
 
 Subcommands that do not render protocol-specific output MAY ignore this option.
 
-Allowed values MUST be:
-
-- `human`
-- `llm`
-- `automation`
+Allowed values MUST be the shared output modes described under [Output protocols](#output-protocols).
 
 ### `--config PATH`
 
@@ -562,11 +550,7 @@ When no document argument is provided, `depmesh skill` MUST behave like `depmesh
 
 Unknown document argument values MUST fail with an invalid-arguments exit.
 
-For `depmesh skill`, `PROTOCOL` MAY be:
-
-- `llm`.
-- `human`.
-- `automation`.
+The `skill` command MUST support all shared output modes described under [Output protocols](#output-protocols).
 
 The `llm` protocol MUST be the canonical protocol for `depmesh skill`.
 

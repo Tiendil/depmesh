@@ -5,20 +5,21 @@ from typing import Annotated, NoReturn
 
 import typer
 from llm_tool_cli.core.entities import BaseEntity
+from llm_tool_cli.protocol import Protocol, write_output
 
 from depmesh.cli import errors as cli_errors
 from depmesh.domain.entities import ArtifactId, RelationId
-from depmesh.protocol import OutputProtocol, renderer
+from depmesh.protocol import renderer
 
 
 class GlobalOptions(BaseEntity):
-    protocol: OutputProtocol | None = None
+    protocol: Protocol | None = None
     config: Path | None = None
 
 
 def _exit_with_invalid_arguments(message: str) -> NoReturn:
-    rendered = renderer(OutputProtocol.human).render_error(cli_errors.InvalidArguments(reason=message).as_record())
-    typer.echo(rendered, err=True, nl=False)
+    rendered = renderer(Protocol.human).render_error(cli_errors.InvalidArguments(reason=message).as_record())
+    write_output(rendered, error=True)
     raise typer.Exit(1)
 
 
@@ -36,11 +37,11 @@ def _parse_config(value: str) -> Path:
     return Path(value)
 
 
-def _parse_protocol(value: str) -> OutputProtocol:
+def _parse_protocol(value: str) -> Protocol:
     try:
-        return OutputProtocol(value)
+        return Protocol(value)
     except ValueError:
-        choices = ", ".join(protocol.value for protocol in OutputProtocol)
+        choices = ", ".join(protocol.value for protocol in Protocol)
         _exit_with_invalid_arguments(f"invalid protocol `{value}`; expected one of: {choices}")
 
 
@@ -66,7 +67,7 @@ ConfigOption = Annotated[
 ]
 
 ProtocolOption = Annotated[
-    OutputProtocol | None,
+    Protocol | None,
     typer.Option(
         "-p",
         "--protocol",

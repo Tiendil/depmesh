@@ -4,7 +4,7 @@ import json
 
 from depmesh.discovery.entities import QueryResult
 from depmesh.domain.entities import ArtifactId, Dependency, Relation, RelationDescription, RelationId
-from depmesh.protocol.renderers.automation import AutomationRendered, to_jsonl
+from depmesh.protocol.renderers.automation import AutomationRendered
 from depmesh.skills.entities import SkillDocument
 
 
@@ -17,11 +17,6 @@ def relation(id_: str, description: str | None = None) -> Relation:
         id=RelationId(id_),
         description=RelationDescription(description) if description is not None else None,
     )
-
-
-class TestToJsonl:
-    def test_serializes_record_with_stable_options_and_newline(self) -> None:
-        assert to_jsonl({"type": "warning", "message": "привет"}) == ('{"message": "привет", "type": "warning"}\n')
 
 
 class TestAutomationRendered:
@@ -39,11 +34,11 @@ class TestAutomationRendered:
             ["first warning", "second warning"],
             relations=(),
         ) == (
-            '{"dependency": "@/specs/a.md", "relation": "specs", "type": "dependency"}\n'
-            '{"dependency": "@/tests/test_a.py", "relation": "tests", "type": "dependency"}\n'
-            '{"dependency": "@/tests/test_b.py", "relation": "tests", "type": "dependency"}\n'
-            '{"message": "first warning", "type": "warning"}\n'
-            '{"message": "second warning", "type": "warning"}\n'
+            '{"dependency":"@/specs/a.md","relation":"specs","type":"dependency"}\n'
+            '{"dependency":"@/tests/test_a.py","relation":"tests","type":"dependency"}\n'
+            '{"dependency":"@/tests/test_b.py","relation":"tests","type":"dependency"}\n'
+            '{"message":"first warning","type":"warning"}\n'
+            '{"message":"second warning","type":"warning"}\n'
         )
 
     def test_render_query__returns_json_lines_records(self) -> None:

@@ -1,18 +1,13 @@
 from __future__ import annotations
 
-import json
-
 from llm_tool_cli.core.result import Result
+from llm_tool_cli.protocol import to_jsonl
 
 from depmesh.discovery.entities import QueryResult
 from depmesh.domain.entities import Relation
 from depmesh.protocol.renderers.base import Rendered
 from depmesh.skills.entities import SkillDocument
 from depmesh.skills.fixtures import load_skill_text
-
-
-def to_jsonl(record: dict[str, object]) -> str:
-    return json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n"
 
 
 class AutomationRendered(Rendered):
