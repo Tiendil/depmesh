@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import re
 
-from llm_tool_cli.paths import PathInput, ProjectRootPath
+from llm_tool_cli.paths import ProjectRootPath, normalize_path
+from llm_tool_cli.paths.errors import InvalidProjectPath
 
-from depmesh.discovery.paths import normalize_path_pattern
 from depmesh.discovery.predicates.base import ArtifactPredicateBase
 from depmesh.discovery.predicates.entities import GlobPattern, GlobPredicateConfig, parse_glob_capture
 from depmesh.domain.entities import ArtifactId
@@ -23,10 +23,10 @@ class GlobPredicate(ArtifactPredicateBase):
         captures: dict[str, str] | None = None,
     ) -> dict[str, str] | None:
         pattern = self.config.pattern.substitute(captures or {})
-        normalized_pattern = normalize_path_pattern(pattern, PathInput(root)).unwrap()
-        if normalized_pattern is None:
+        result = normalize_path(pattern, root)
+        if result.is_err(InvalidProjectPath):
             return None
-        match = _compile_glob(normalized_pattern).fullmatch(artifact)
+        match = _compile_glob(result.unwrap()).fullmatch(artifact)
         return {name: value or "" for name, value in match.groupdict().items()} if match else None
 
 
