@@ -6,9 +6,9 @@ from functools import cached_property
 from typing import NewType
 
 import pydantic
-from llm_tool_cli.paths import ProjectRootPath
+from llm_tool_cli.paths import ProjectRootPath, UntrustedPath
 
-from depmesh.domain.entities import RelationId, UntrustedPath
+from depmesh.domain.entities import RelationId
 
 CaptureName = NewType("CaptureName", str)
 

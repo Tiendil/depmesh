@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from llm_tool_cli.paths import UntrustedPath
 from llm_tool_cli.paths.errors import PathResolutionFailed
 
 from depmesh.discovery.paths import normalize_path_pattern
-from depmesh.domain.entities import UntrustedPath
 
 
 class TestNormalizePathPattern:

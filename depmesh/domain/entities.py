@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import NewType
 
 from llm_tool_cli.core.entities import BaseEntity
-from llm_tool_cli.paths import ProjectRootPath
+from llm_tool_cli.paths import ProjectRootPath, UntrustedPath
 
 ArtifactId = NewType("ArtifactId", str)
 RelationDescription = NewType("RelationDescription", str)
 RelationId = NewType("RelationId", str)
-UntrustedPath = NewType("UntrustedPath", Path)
 PathInput = UntrustedPath | ProjectRootPath
 
 

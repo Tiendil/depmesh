@@ -4,7 +4,7 @@ import glob
 from pathlib import Path
 
 from llm_tool_cli.core.result import Err, Ok, Result, unwrap_to_error
-from llm_tool_cli.paths import project_path_id_from_filesystem, resolve_project_path
+from llm_tool_cli.paths import UntrustedPath, project_path_id_from_filesystem, resolve_project_path
 from llm_tool_cli.paths.errors import InvalidProjectPath
 
 from depmesh.core import warnings
@@ -12,7 +12,7 @@ from depmesh.discovery import errors
 from depmesh.discovery.artifacts import EvaluationContext
 from depmesh.discovery.sources.base import ArtifactSourceBase
 from depmesh.discovery.sources.entities import FilesSourceConfig
-from depmesh.domain.entities import ArtifactId, UntrustedPath
+from depmesh.domain.entities import ArtifactId
 
 
 class FilesSource(ArtifactSourceBase):
