@@ -1,7 +1,8 @@
 
 ### Migration
 
-- Import `normalize_path` directly from `llm_tool_cli.paths` in Python integrations. Query inputs, list sources, command output, one-of predicates, and glob predicates now expand filesystem home markers; use `@/~/...` for a literal project directory named `~`. File-source pattern resolution keeps its existing literal behavior.
+- Import `normalize_path` directly from `llm_tool_cli.paths` in Python integrations. Query inputs, list sources, command output, one-of predicates, glob predicates, and file-source patterns now expand filesystem home markers; use `@/~/...` for a literal project directory named `~`.
+- Import `resolve_project_path` from `llm_tool_cli.paths` instead of `depmesh.discovery.paths`; invalid paths now return `InvalidProjectPath` errors rather than `Ok(None)`. Home-expansion failures return `PathResolutionFailed` errors.
 - Replace `depmesh.discovery.paths.normalize_existing_path` with `llm_tool_cli.paths.project_path_id_from_filesystem` in Python integrations.
 - Import `ProjectRootPath` and `resolve_project_root` from `llm_tool_cli.paths`, and project-path `PathResolutionFailed` from `llm_tool_cli.paths.errors` instead of local modules.
 - Python integrations must use `Result[T]` instead of `Result[T, EnvironmentErrors]`; the shared result always carries `EnvironmentErrors` on failure.
@@ -10,6 +11,7 @@
 
 ### Changes
 
+- Use the shared project-path resolver directly for file-source patterns, preserving warning-and-skip handling of invalid patterns and propagating resolution failures.
 - Use shared mixed path normalization directly, with home expansion and `path_resolution_failed` diagnostics when expansion fails. Relative roots without an explicit base now produce absolute filesystem candidate paths in containment diagnostics.
 - Share filesystem-to-identifier conversion through `llm-tool-cli`, preserving file discovery results and resolution diagnostics.
 - Convert resolved filesystem paths to canonical identifiers through `llm-tool-cli` directly, preserving public path results and diagnostics.

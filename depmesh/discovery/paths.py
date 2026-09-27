@@ -1,41 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
-from llm_tool_cli.paths import (
-    ResolvedProjectPath,
-    normalize_path,
-    resolve_inside_project,
-    resolve_project_root,
-    resolve_root_anchored_path,
-)
+from llm_tool_cli.core.result import Ok, Result
+from llm_tool_cli.paths import normalize_path
 from llm_tool_cli.paths.errors import InvalidProjectPath
 
 from depmesh.domain.entities import PathInput
-
-PROJECT_ROOT_PREFIX = "@/"
-
-
-@unwrap_to_error
-def resolve_project_path(
-    value: str, root: PathInput, *, allow_absolute: bool = True
-) -> Result[ResolvedProjectPath | None]:
-    project_root = resolve_project_root(root).unwrap()
-
-    if value.startswith("@"):
-        if not value.startswith(PROJECT_ROOT_PREFIX):
-            return Ok(None)
-        resolved = resolve_root_anchored_path(value, project_root)
-    else:
-        path = Path(value)
-        if path.is_absolute() and not allow_absolute:
-            return Ok(None)
-        resolved = resolve_inside_project(path if path.is_absolute() else project_root / path, project_root)
-
-    if resolved.is_err(InvalidProjectPath):
-        return Ok(None)
-    return resolved
 
 
 def normalize_path_pattern(value: str, root: PathInput, *, cwd: PathInput | None = None) -> Result[str | None]:
