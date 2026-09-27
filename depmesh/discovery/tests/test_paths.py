@@ -54,8 +54,9 @@ class TestResolveProjectPath:
         assert resolve_project_path(str(tmp_path), UntrustedPath(tmp_path)).unwrap() is None
         assert resolve_project_path(".", UntrustedPath(tmp_path)).unwrap() is None
 
-    def test_invalid_root_anchored_path_is_not_resolved(self, tmp_path: Path) -> None:
-        assert resolve_project_path("@/../outside.py", UntrustedPath(tmp_path)).unwrap() is None
+    @pytest.mark.parametrize("value", ["@/../outside.py", "@/.", "@file", "@/a//b", "@/a/"])
+    def test_invalid_root_anchored_path_is_not_resolved(self, tmp_path: Path, value: str) -> None:
+        assert resolve_project_path(value, UntrustedPath(tmp_path)).unwrap() is None
 
     def test_root_anchored_symlink_outside_project_is_not_resolved(self, tmp_path: Path) -> None:
         (tmp_path / "outside").symlink_to(tmp_path.parent, target_is_directory=True)
