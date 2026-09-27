@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import NewType
 
 from llm_tool_cli.core.entities import BaseEntity
+from llm_tool_cli.paths import ProjectRootPath
 
 ArtifactId = NewType("ArtifactId", str)
-ProjectRootPath = NewType("ProjectRootPath", Path)
 RelationDescription = NewType("RelationDescription", str)
 RelationId = NewType("RelationId", str)
 ResolvedProjectPath = NewType("ResolvedProjectPath", Path)

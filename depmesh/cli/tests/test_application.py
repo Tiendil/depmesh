@@ -10,7 +10,9 @@ from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.core import errors as shared_errors
 from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Err, Result, UnwrapErrError
-from llm_tool_cli.paths.errors import InvalidProjectPath
+from llm_tool_cli.paths import resolve_project_root
+from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
+from pytest_mock import MockerFixture
 from typer.testing import CliRunner
 
 from depmesh.cli import errors as cli_errors
@@ -110,6 +112,7 @@ class TestCommandContext:
             (cli_errors.InvalidArguments(reason="invalid argument"), 1),
             (discovery_errors.UnknownRelationFilter(relation=RelationId("missing")), 3),
             (InvalidProjectPath(path="@/../outside.py"), 3),
+            (PathResolutionFailed(path="/project", reason="denied"), 3),
             (SharedFailure(message="shared failure", context="shared"), 3),
             (ProjectFailure(message="project failure", context="local"), 3),
         ],
@@ -170,6 +173,29 @@ class TestApp:
 
 
 class TestDependencies:
+    @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
+    def test_root_resolution_failure_uses_shared_diagnostic(
+        self, tmp_path: Path, mocker: MockerFixture, protocol: str
+    ) -> None:
+        write_project(tmp_path)
+        root = tmp_path / "loop"
+        root.symlink_to(root)
+        failure = resolve_project_root(root)
+        mocker.patch("depmesh.cli.application.resolve_project_root", return_value=failure)
+
+        result = CliRunner().invoke(
+            app, ["--config", str(tmp_path / "depmesh.toml"), "-p", protocol, "dependencies", "@/src/a.py"]
+        )
+
+        assert result.exit_code == 3
+        error = failure.unwrap_err()[0]
+        if protocol == "automation":
+            assert json.loads(result.stdout) == error.as_record()
+            assert not result.stderr
+        else:
+            assert not result.stdout
+            assert error.format_message() in result.stderr
+
     @pytest.mark.parametrize("explicit", [False, True])
     def test_config_symlink_selects_expected_root(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, explicit: bool

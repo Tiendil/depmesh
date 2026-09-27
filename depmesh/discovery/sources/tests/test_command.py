@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from llm_tool_cli.paths import ProjectRootPath
 from llm_tool_cli.paths.errors import InvalidProjectPath
 
 from depmesh.core import warnings
 from depmesh.discovery import errors
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext
 from depmesh.discovery.sources.command import CommandSource, CommandSourceConfig
-from depmesh.domain.entities import ArtifactId, ProjectRootPath, RelationId
+from depmesh.domain.entities import ArtifactId, RelationId
 
 
 class TestCommandSource:

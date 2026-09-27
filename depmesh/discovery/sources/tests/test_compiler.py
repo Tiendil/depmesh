@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from llm_tool_cli.paths import ProjectRootPath
+
 from depmesh.discovery.artifacts import EvaluationContext
 from depmesh.discovery.sources import compile_source
 from depmesh.discovery.sources.command import CommandSource
@@ -20,7 +22,7 @@ from depmesh.discovery.sources.filter import FilterSource
 from depmesh.discovery.sources.intersection import IntersectionSource
 from depmesh.discovery.sources.list import ListSource
 from depmesh.discovery.sources.union import UnionSource
-from depmesh.domain.entities import ArtifactId, ProjectRootPath, RelationId
+from depmesh.domain.entities import ArtifactId, RelationId
 
 
 def context(root: Path) -> EvaluationContext:

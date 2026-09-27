@@ -3,12 +3,13 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from llm_tool_cli.core.result import Err, Ok, Result, unwrap_to_error
+from llm_tool_cli.paths import ProjectRootPath
 
 from depmesh.discovery import errors
 from depmesh.discovery.artifacts import EvaluationContext
 from depmesh.discovery.entities import DependencyRule, QueryResult
 from depmesh.discovery.paths import normalize_path
-from depmesh.domain.entities import ArtifactId, Dependency, ProjectRootPath, Relation, RelationId, UntrustedPath
+from depmesh.domain.entities import ArtifactId, Dependency, Relation, RelationId, UntrustedPath
 
 
 @unwrap_to_error

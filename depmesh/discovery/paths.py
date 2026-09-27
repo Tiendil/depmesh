@@ -3,20 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from llm_tool_cli.core.result import Err, Ok, Result, unwrap_to_error
-from llm_tool_cli.paths import ProjectPathId, normalize_project_path_id
-from llm_tool_cli.paths.errors import InvalidProjectPath
+from llm_tool_cli.paths import ProjectPathId, ProjectRootPath, normalize_project_path_id, resolve_project_root
+from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
 
-from depmesh.discovery import errors
-from depmesh.domain.entities import PathInput, ProjectRootPath, ResolvedProjectPath, UntrustedPath
+from depmesh.domain.entities import PathInput, ResolvedProjectPath, UntrustedPath
 
 PROJECT_ROOT_PREFIX = "@/"
-
-
-def resolve_project_root(root: UntrustedPath) -> Result[ProjectRootPath]:
-    try:
-        return Ok(ProjectRootPath(root.resolve()))
-    except (OSError, RuntimeError) as error:
-        return Err([errors.PathResolutionFailed(path=str(root), reason=str(error)).with_cause(error)])
 
 
 def _resolve_inside_project(
@@ -25,7 +17,7 @@ def _resolve_inside_project(
     try:
         resolved = path.resolve()
     except (OSError, RuntimeError) as error:
-        return Err([errors.PathResolutionFailed(path=original, reason=str(error)).with_cause(error)])
+        return Err([PathResolutionFailed(path=original, reason=str(error)).with_cause(error)])
     root_path = Path(root)
 
     if resolved == root_path or not resolved.is_relative_to(root_path):
@@ -49,7 +41,7 @@ def _resolve_root_anchored_path(value: str, root: ProjectRootPath) -> Result[Res
 def resolve_project_path(
     value: str, root: PathInput, *, allow_absolute: bool = True
 ) -> Result[ResolvedProjectPath | None]:
-    project_root = resolve_project_root(UntrustedPath(root)).unwrap()
+    project_root = resolve_project_root(root).unwrap()
 
     if value.startswith("@"):
         if not value.startswith(PROJECT_ROOT_PREFIX):
@@ -70,7 +62,7 @@ def resolve_project_path(
 
 @unwrap_to_error
 def normalize_path(value: str, root: PathInput, *, cwd: PathInput | None = None) -> Result[ProjectPathId]:
-    project_root = resolve_project_root(UntrustedPath(root)).unwrap()
+    project_root = resolve_project_root(root).unwrap()
 
     if value.startswith("@"):
         return normalize_project_path_id(value)
@@ -90,6 +82,6 @@ def normalize_path_pattern(value: str, root: PathInput, *, cwd: PathInput | None
 
 @unwrap_to_error
 def normalize_existing_path(path: UntrustedPath, root: PathInput) -> Result[ProjectPathId]:
-    project_root = resolve_project_root(UntrustedPath(root)).unwrap()
+    project_root = resolve_project_root(root).unwrap()
     resolved = _resolve_inside_project(path, project_root, original=str(path)).unwrap()
     return Ok(_canonical_from_resolved(resolved, project_root))

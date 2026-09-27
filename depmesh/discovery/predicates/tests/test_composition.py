@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from llm_tool_cli.core.result import UnwrapError
+from llm_tool_cli.paths import ProjectRootPath
 from llm_tool_cli.paths.errors import InvalidProjectPath
 
 from depmesh.discovery.artifacts import CaptureName
@@ -13,7 +14,7 @@ from depmesh.discovery.predicates import (
     NotPredicateConfig,
     compile_predicate,
 )
-from depmesh.domain.entities import ArtifactId, ProjectRootPath
+from depmesh.domain.entities import ArtifactId
 
 
 class TestAnyPredicate:

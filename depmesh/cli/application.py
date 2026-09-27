@@ -13,13 +13,13 @@ from llm_tool_cli.config import load_config, locate_config
 from llm_tool_cli.core import errors as shared_errors
 from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Ok, Result, UnwrapError, unwrap_to_error
+from llm_tool_cli.paths import resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
 
 from depmesh.cli import errors as cli_errors
 from depmesh.cli.entities import ArtifactsArgument, ConfigOption, GlobalOptions, ProtocolOption, RelationOption
 from depmesh.core import warnings
 from depmesh.discovery.entities import QueryResult
-from depmesh.discovery.paths import resolve_project_root
 from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
 from depmesh.domain.entities import Dependency, UntrustedPath
 from depmesh.protocol import OutputProtocol, SkillDocument, renderer

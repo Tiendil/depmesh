@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from llm_tool_cli.paths import ProjectRootPath
 from llm_tool_cli.paths.errors import InvalidProjectPath
 
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext
@@ -14,7 +15,7 @@ from depmesh.discovery.sources import (
     compile_source,
 )
 from depmesh.discovery.sources.entities import ArtifactSourceConfig
-from depmesh.domain.entities import ArtifactId, ProjectRootPath, RelationId
+from depmesh.domain.entities import ArtifactId, RelationId
 
 
 def context(root: Path) -> EvaluationContext:

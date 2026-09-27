@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from llm_tool_cli.core.entities import BaseEntity
+from llm_tool_cli.paths import ProjectRootPath
 
 from depmesh.discovery.artifacts import CaptureName
-from depmesh.domain.entities import ArtifactId, ProjectRootPath
+from depmesh.domain.entities import ArtifactId
 
 
 class ArtifactPredicateConfigBase(BaseEntity):

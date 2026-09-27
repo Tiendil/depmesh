@@ -3,39 +3,28 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from llm_tool_cli.paths.errors import InvalidProjectPath
+from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
 
-from depmesh.discovery import errors
 from depmesh.discovery.paths import (
     normalize_existing_path,
     normalize_path,
     normalize_path_pattern,
     resolve_project_path,
-    resolve_project_root,
 )
 from depmesh.domain.entities import UntrustedPath
 
 
-class TestResolveProjectRoot:
-    def test_resolves_root_path(self, tmp_path: Path) -> None:
-        assert resolve_project_root(UntrustedPath(tmp_path / ".")).unwrap() == tmp_path.resolve()
-
-    def test_resolution_failure_preserves_cause(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        original = PermissionError("permission denied")
-
-        def fail_resolution(_path: Path) -> Path:
-            raise original
-
-        monkeypatch.setattr(Path, "resolve", fail_resolution)
-
-        failure = resolve_project_root(UntrustedPath(tmp_path)).unwrap_err()[0]
-
-        assert isinstance(failure, errors.PathResolutionFailed)
-        assert failure.path == str(tmp_path)
-        assert failure.cause is original
-
-
 class TestResolveProjectPath:
+    def test_root_resolution_failure_is_not_recovered(self, tmp_path: Path) -> None:
+        root = tmp_path / "loop"
+        root.symlink_to(root)
+
+        failure = resolve_project_path("@/src/a.py", UntrustedPath(root)).unwrap_err()[0]
+
+        assert isinstance(failure, PathResolutionFailed)
+        assert failure.path == str(root)
+        assert isinstance(failure.cause, (OSError, RuntimeError))
+
     def test_root_anchored_path(self, tmp_path: Path) -> None:
         assert (
             resolve_project_path("@/src/a.py", UntrustedPath(tmp_path)).unwrap()
@@ -89,12 +78,22 @@ class TestResolveProjectPath:
 
         failure = resolve_project_path(value, UntrustedPath(tmp_path)).unwrap_err()[0]
 
-        assert isinstance(failure, errors.PathResolutionFailed)
+        assert isinstance(failure, PathResolutionFailed)
         assert failure.path == value
         assert failure.cause is original
 
 
 class TestNormalizePath:
+    def test_propagates_root_resolution_failure(self, tmp_path: Path) -> None:
+        root = tmp_path / "loop"
+        root.symlink_to(root)
+
+        failure = normalize_path("@/src/a.py", UntrustedPath(root)).unwrap_err()[0]
+
+        assert isinstance(failure, PathResolutionFailed)
+        assert failure.path == str(root)
+        assert isinstance(failure.cause, (OSError, RuntimeError))
+
     def test_root_anchored_path_inside_root(self, tmp_path: Path) -> None:
         assert normalize_path("@/src/a.py", UntrustedPath(tmp_path)).unwrap() == "@/src/a.py"
 
@@ -149,12 +148,22 @@ class TestNormalizePathPattern:
 
         failure = normalize_path_pattern("src/*.py", UntrustedPath(tmp_path)).unwrap_err()[0]
 
-        assert isinstance(failure, errors.PathResolutionFailed)
+        assert isinstance(failure, PathResolutionFailed)
         assert failure.path == "src/*.py"
         assert failure.cause is original
 
 
 class TestNormalizeExistingPath:
+    def test_propagates_root_resolution_failure(self, tmp_path: Path) -> None:
+        root = tmp_path / "loop"
+        root.symlink_to(root)
+
+        failure = normalize_existing_path(UntrustedPath(tmp_path / "src/a.py"), UntrustedPath(root)).unwrap_err()[0]
+
+        assert isinstance(failure, PathResolutionFailed)
+        assert failure.path == str(root)
+        assert isinstance(failure.cause, (OSError, RuntimeError))
+
     def test_path_inside_root(self, tmp_path: Path) -> None:
         path = tmp_path / "src" / "a.py"
         path.parent.mkdir()

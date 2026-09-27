@@ -4,12 +4,13 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from llm_tool_cli.paths import ProjectRootPath
 
 from depmesh.core import warnings
 from depmesh.discovery import errors
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext
 from depmesh.discovery.sources.files import FilesSource, FilesSourceConfig
-from depmesh.domain.entities import ArtifactId, ProjectRootPath, RelationId
+from depmesh.domain.entities import ArtifactId, RelationId
 
 
 def touch(path: Path) -> None:

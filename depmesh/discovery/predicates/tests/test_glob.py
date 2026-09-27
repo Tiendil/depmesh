@@ -3,10 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from llm_tool_cli.paths import ProjectRootPath
 
 from depmesh.discovery.artifacts import CaptureName
 from depmesh.discovery.predicates.glob import GlobPredicate, GlobPredicateConfig
-from depmesh.domain.entities import ArtifactId, ProjectRootPath
+from depmesh.domain.entities import ArtifactId
 
 
 class TestGlobPredicate:

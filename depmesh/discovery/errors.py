@@ -14,13 +14,6 @@ class UnknownRelationFilter(EnvironmentError):
     relation: RelationId
 
 
-class PathResolutionFailed(EnvironmentError):
-    code: str = "path_resolution_failed"
-    message: str = "could not resolve project path `{error.path}`: {error.reason}"
-    path: str
-    reason: str
-
-
 class CommandFailed(EnvironmentError):
     code: str = "command_failed"
     message: str = "relation `{error.relation}`: could not execute command `{error.command}`: {error.reason}"

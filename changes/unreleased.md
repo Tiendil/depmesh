@@ -1,12 +1,14 @@
 
 ### Migration
 
+- Import `ProjectRootPath` and `resolve_project_root` from `llm_tool_cli.paths`, and project-path `PathResolutionFailed` from `llm_tool_cli.paths.errors` instead of local modules.
 - Python integrations must use `Result[T]` instead of `Result[T, EnvironmentErrors]`; the shared result always carries `EnvironmentErrors` on failure.
 - Consumers of configuration diagnostics must accept native `llm-tool-cli` error codes and `path`/`reason` fields. Invalid TOML, UTF-8, and schema data now use `config_invalid_toml`, `config_invalid_encoding`, and `config_validation_failed`; validation details moved from `validation` to `reason`. Configuration failures still exit with status `2`.
 - Missing discovered configuration now uses the shared `config_not_found` message and `reason` field, with the search directory in `path`.
 
 ### Changes
 
+- Use shared filesystem project-root resolution and resolution errors directly, preserving diagnostic records, private causes, and CLI exit categories.
 - Use shared lexical `@/` path normalization, canonical identifier types, and invalid-path errors directly from `llm-tool-cli`, preserving filesystem resolution and CLI diagnostics.
 - Use shared result error matching for invalid-path recovery while preserving filesystem failure propagation.
 - Adopt the shared result interface with one type parameter across discovery, configuration, CLI, and rendering code.

@@ -3,14 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from llm_tool_cli.paths import ProjectRootPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
 
 from depmesh.core import warnings
 from depmesh.discovery import errors
 from depmesh.discovery.entities import DependencyRule, DependencyRuleConfig, compile_dependency_rule
-from depmesh.discovery.paths import resolve_project_root
 from depmesh.discovery.query import query_dependencies, selected_relation_ids
-from depmesh.domain.entities import ArtifactId, ProjectRootPath, Relation, RelationId, UntrustedPath
+from depmesh.domain.entities import ArtifactId, Relation, RelationId, UntrustedPath
 
 
 def touch(path: Path) -> None:

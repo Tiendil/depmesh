@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from llm_tool_cli.paths import ProjectRootPath
+
 from depmesh.discovery.query import query_dependencies
-from depmesh.domain.entities import ArtifactId, Dependency, ProjectRootPath, Relation, RelationDescription, RelationId
+from depmesh.domain.entities import ArtifactId, Dependency, Relation, RelationDescription, RelationId
 from depmesh.workspace import Config, construct_workspace
 
 

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from llm_tool_cli.paths import ProjectRootPath
+
 from depmesh.discovery.predicates import compile_predicate
 from depmesh.discovery.predicates.all import AllPredicate
 from depmesh.discovery.predicates.any import AnyPredicate
@@ -17,7 +19,7 @@ from depmesh.discovery.predicates.glob import GlobPredicate
 from depmesh.discovery.predicates.not_ import NotPredicate
 from depmesh.discovery.predicates.one_of import OneOfPredicate
 from depmesh.discovery.predicates.regex import RegexPredicate
-from depmesh.domain.entities import ArtifactId, ProjectRootPath
+from depmesh.domain.entities import ArtifactId
 
 
 class TestCompilePredicate:

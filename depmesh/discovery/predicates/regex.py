@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import re
 
+from llm_tool_cli.paths import ProjectRootPath
+
 from depmesh.discovery.predicates.base import ArtifactPredicateBase
 from depmesh.discovery.predicates.entities import RegexPattern, RegexPredicateConfig
-from depmesh.domain.entities import ArtifactId, ProjectRootPath
+from depmesh.domain.entities import ArtifactId
 
 
 class RegexPredicate(ArtifactPredicateBase):
