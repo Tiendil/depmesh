@@ -9,7 +9,6 @@ from llm_tool_cli.paths import ProjectRootPath
 ArtifactId = NewType("ArtifactId", str)
 RelationDescription = NewType("RelationDescription", str)
 RelationId = NewType("RelationId", str)
-ResolvedProjectPath = NewType("ResolvedProjectPath", Path)
 UntrustedPath = NewType("UntrustedPath", Path)
 PathInput = UntrustedPath | ProjectRootPath
 

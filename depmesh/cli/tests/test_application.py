@@ -174,6 +174,29 @@ class TestApp:
 
 class TestDependencies:
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
+    def test_target_resolution_failure_uses_shared_diagnostic(self, tmp_path: Path, protocol: str) -> None:
+        write_project(tmp_path)
+        link = tmp_path / "loop"
+        link.symlink_to(link)
+        target = link / "a.py"
+
+        result = CliRunner().invoke(
+            app, ["--config", str(tmp_path / "depmesh.toml"), "-p", protocol, "dependencies", str(target)]
+        )
+
+        assert result.exit_code == 3
+        if protocol == "automation":
+            diagnostic = json.loads(result.stdout)
+            assert diagnostic["code"] == "path_resolution_failed"
+            assert diagnostic["path"] == str(target)
+            assert diagnostic["reason"]
+            assert "cause" not in diagnostic
+            assert not result.stderr
+        else:
+            assert not result.stdout
+            assert str(target) in result.stderr
+
+    @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
     def test_root_resolution_failure_uses_shared_diagnostic(
         self, tmp_path: Path, mocker: MockerFixture, protocol: str
     ) -> None:

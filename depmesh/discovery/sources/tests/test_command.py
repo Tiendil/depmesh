@@ -29,7 +29,7 @@ class TestCommandSource:
         source = CommandSource(CommandSourceConfig(type="command", command="printf '../outside.py'"))
         context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={})
 
-        assert source.evaluate(context).unwrap_err() == [InvalidProjectPath(path="../outside.py")]
+        assert source.evaluate(context).unwrap_err() == [InvalidProjectPath(path=str(tmp_path / "../outside.py"))]
 
     def test_variables__extracts_template_variables(self) -> None:
         source = CommandSourceConfig(type="command", command="printf '@/tests/test_{module}.py\\n'")

@@ -58,7 +58,7 @@ class TestQueryDependencies:
             relation_ids=make_relation_ids(*relations),
         )
 
-        assert result.unwrap_err() == [InvalidProjectPath(path="../outside.py")]
+        assert result.unwrap_err() == [InvalidProjectPath(path=str(tmp_path / "../outside.py"))]
 
     def test_deduplicates_and_orders_dependencies_from_one_artifact(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")

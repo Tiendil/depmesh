@@ -8,6 +8,7 @@
 
 ### Changes
 
+- Use shared filesystem containment and resolved-path types directly, preserving invalid-path recovery and resolution-failure propagation; containment diagnostics now use the filesystem candidate path.
 - Use shared filesystem project-root resolution and resolution errors directly, preserving diagnostic records, private causes, and CLI exit categories.
 - Use shared lexical `@/` path normalization, canonical identifier types, and invalid-path errors directly from `llm-tool-cli`, preserving filesystem resolution and CLI diagnostics.
 - Use shared result error matching for invalid-path recovery while preserving filesystem failure propagation.

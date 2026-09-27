@@ -79,7 +79,7 @@ class TestResolveProjectPath:
         failure = resolve_project_path(value, UntrustedPath(tmp_path)).unwrap_err()[0]
 
         assert isinstance(failure, PathResolutionFailed)
-        assert failure.path == value
+        assert failure.path == str(tmp_path / "src" / "a.py")
         assert failure.cause is original
 
 
@@ -149,7 +149,7 @@ class TestNormalizePathPattern:
         failure = normalize_path_pattern("src/*.py", UntrustedPath(tmp_path)).unwrap_err()[0]
 
         assert isinstance(failure, PathResolutionFailed)
-        assert failure.path == "src/*.py"
+        assert failure.path == str(tmp_path / "src" / "*.py")
         assert failure.cause is original
 
 

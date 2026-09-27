@@ -2,28 +2,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from llm_tool_cli.core.result import Err, Ok, Result, unwrap_to_error
-from llm_tool_cli.paths import ProjectPathId, ProjectRootPath, normalize_project_path_id, resolve_project_root
-from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
+from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
+from llm_tool_cli.paths import (
+    ProjectPathId,
+    ProjectRootPath,
+    ResolvedProjectPath,
+    normalize_project_path_id,
+    resolve_inside_project,
+    resolve_project_root,
+)
+from llm_tool_cli.paths.errors import InvalidProjectPath
 
-from depmesh.domain.entities import PathInput, ResolvedProjectPath, UntrustedPath
+from depmesh.domain.entities import PathInput, UntrustedPath
 
 PROJECT_ROOT_PREFIX = "@/"
-
-
-def _resolve_inside_project(
-    path: UntrustedPath, root: ProjectRootPath, *, original: str
-) -> Result[ResolvedProjectPath]:
-    try:
-        resolved = path.resolve()
-    except (OSError, RuntimeError) as error:
-        return Err([PathResolutionFailed(path=original, reason=str(error)).with_cause(error)])
-    root_path = Path(root)
-
-    if resolved == root_path or not resolved.is_relative_to(root_path):
-        return Err([InvalidProjectPath(path=original)])
-
-    return Ok(ResolvedProjectPath(resolved))
 
 
 def _canonical_from_resolved(resolved: ResolvedProjectPath, root: ProjectRootPath) -> ProjectPathId:
@@ -34,7 +26,7 @@ def _canonical_from_resolved(resolved: ResolvedProjectPath, root: ProjectRootPat
 def _resolve_root_anchored_path(value: str, root: ProjectRootPath) -> Result[ResolvedProjectPath]:
     normalized = normalize_project_path_id(value).unwrap()
     path = root.joinpath(*normalized.removeprefix(PROJECT_ROOT_PREFIX).split("/"))
-    return _resolve_inside_project(UntrustedPath(path), root, original=value)
+    return resolve_inside_project(path, root)
 
 
 @unwrap_to_error
@@ -51,9 +43,7 @@ def resolve_project_path(
         path = Path(value)
         if path.is_absolute() and not allow_absolute:
             return Ok(None)
-        resolved = _resolve_inside_project(
-            UntrustedPath(path if path.is_absolute() else project_root / path), project_root, original=value
-        )
+        resolved = resolve_inside_project(path if path.is_absolute() else project_root / path, project_root)
 
     if resolved.is_err(InvalidProjectPath):
         return Ok(None)
@@ -69,7 +59,7 @@ def normalize_path(value: str, root: PathInput, *, cwd: PathInput | None = None)
 
     path = Path(value)
     candidate = path if path.is_absolute() else (cwd or root) / path
-    resolved = _resolve_inside_project(UntrustedPath(candidate), project_root, original=value).unwrap()
+    resolved = resolve_inside_project(candidate, project_root).unwrap()
     return Ok(_canonical_from_resolved(resolved, project_root))
 
 
@@ -83,5 +73,5 @@ def normalize_path_pattern(value: str, root: PathInput, *, cwd: PathInput | None
 @unwrap_to_error
 def normalize_existing_path(path: UntrustedPath, root: PathInput) -> Result[ProjectPathId]:
     project_root = resolve_project_root(root).unwrap()
-    resolved = _resolve_inside_project(path, project_root, original=str(path)).unwrap()
+    resolved = resolve_inside_project(path, project_root).unwrap()
     return Ok(_canonical_from_resolved(resolved, project_root))

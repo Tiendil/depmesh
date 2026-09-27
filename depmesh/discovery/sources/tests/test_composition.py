@@ -40,7 +40,9 @@ class TestUnionSource:
             )
         source = compile_source(config)
 
-        assert source.evaluate(context(tmp_path)).unwrap_err() == [InvalidProjectPath(path="../outside.py")]
+        assert source.evaluate(context(tmp_path)).unwrap_err() == [
+            InvalidProjectPath(path=str(tmp_path / "../outside.py"))
+        ]
 
     def test_evaluate__deduplicates_child_artifacts(self, tmp_path: Path) -> None:
         source = compile_source(
@@ -113,7 +115,9 @@ class TestFilterSource:
             )
         )
 
-        assert source.evaluate(context(tmp_path)).unwrap_err() == [InvalidProjectPath(path="../outside.py")]
+        assert source.evaluate(context(tmp_path)).unwrap_err() == [
+            InvalidProjectPath(path=str(tmp_path / "../outside.py"))
+        ]
 
     def test_evaluate__keeps_matching_artifacts(self, tmp_path: Path) -> None:
         source = compile_source(
