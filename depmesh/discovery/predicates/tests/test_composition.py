@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 from llm_tool_cli.core.result import UnwrapError
+from llm_tool_cli.paths.errors import InvalidProjectPath
 
-from depmesh.discovery import errors
 from depmesh.discovery.artifacts import CaptureName
 from depmesh.discovery.predicates import (
     AllPredicateConfig,
@@ -27,7 +27,7 @@ class TestAnyPredicate:
         with pytest.raises(UnwrapError) as caught:
             predicate.match(ArtifactId("@/a.py"), ProjectRootPath(tmp_path))
 
-        assert caught.value.details["error"] == [errors.InvalidProjectPath(path="../outside.py")]
+        assert caught.value.details["error"] == [InvalidProjectPath(path="../outside.py")]
 
     def test_match__returns_first_matching_item_captures(self, tmp_path: Path) -> None:
         predicate = compile_predicate(
@@ -56,7 +56,7 @@ class TestAllPredicate:
         with pytest.raises(UnwrapError) as caught:
             predicate.match(ArtifactId("@/a.py"), ProjectRootPath(tmp_path))
 
-        assert caught.value.details["error"] == [errors.InvalidProjectPath(path="../outside.py")]
+        assert caught.value.details["error"] == [InvalidProjectPath(path="../outside.py")]
 
     def test_match__combines_captures_when_all_items_match(self, tmp_path: Path) -> None:
         predicate = compile_predicate(
@@ -85,7 +85,7 @@ class TestNotPredicate:
         with pytest.raises(UnwrapError) as caught:
             predicate.match(ArtifactId("@/a.py"), ProjectRootPath(tmp_path))
 
-        assert caught.value.details["error"] == [errors.InvalidProjectPath(path="../outside.py")]
+        assert caught.value.details["error"] == [InvalidProjectPath(path="../outside.py")]
 
     def test_variables__exposes_child_template_variables(self) -> None:
         predicate = NotPredicateConfig.model_validate(

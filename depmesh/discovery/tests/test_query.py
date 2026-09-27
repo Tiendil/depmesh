@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from llm_tool_cli.paths.errors import InvalidProjectPath
 
 from depmesh.core import warnings
 from depmesh.discovery import errors
@@ -57,7 +58,7 @@ class TestQueryDependencies:
             relation_ids=make_relation_ids(*relations),
         )
 
-        assert result.unwrap_err() == [errors.InvalidProjectPath(path="../outside.py")]
+        assert result.unwrap_err() == [InvalidProjectPath(path="../outside.py")]
 
     def test_deduplicates_and_orders_dependencies_from_one_artifact(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")

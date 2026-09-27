@@ -7,7 +7,6 @@ from llm_tool_cli.core.entities import BaseEntity
 
 ArtifactId = NewType("ArtifactId", str)
 ProjectRootPath = NewType("ProjectRootPath", Path)
-ProjectPathId = NewType("ProjectPathId", str)
 RelationDescription = NewType("RelationDescription", str)
 RelationId = NewType("RelationId", str)
 ResolvedProjectPath = NewType("ResolvedProjectPath", Path)

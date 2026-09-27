@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 
-from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Result
 
 from depmesh.discovery.entities import QueryResult
@@ -42,7 +41,7 @@ class AutomationRendered(Rendered):
 
         return "".join(lines)
 
-    def render_skill(self, document: SkillDocument = SkillDocument.usage) -> Result[str, EnvironmentErrors]:
+    def render_skill(self, document: SkillDocument = SkillDocument.usage) -> Result[str]:
         return load_skill_text(document).map(
             lambda text: to_jsonl({"type": "skill", "document": document, "text": text})
         )

@@ -13,11 +13,11 @@ from llm_tool_cli.config import load_config, locate_config
 from llm_tool_cli.core import errors as shared_errors
 from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Ok, Result, UnwrapError, unwrap_to_error
+from llm_tool_cli.paths.errors import InvalidProjectPath
 
 from depmesh.cli import errors as cli_errors
 from depmesh.cli.entities import ArtifactsArgument, ConfigOption, GlobalOptions, ProtocolOption, RelationOption
 from depmesh.core import warnings
-from depmesh.discovery import errors as discovery_errors
 from depmesh.discovery.entities import QueryResult
 from depmesh.discovery.paths import resolve_project_root
 from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
@@ -78,7 +78,7 @@ def dependencies(
                 lambda failures: [
                     (
                         cli_errors.InvalidArguments(reason=error.format_message())
-                        if isinstance(error, discovery_errors.InvalidProjectPath)
+                        if isinstance(error, InvalidProjectPath)
                         else error
                     )
                     for error in failures
@@ -149,7 +149,7 @@ class CommandContext:
         self.renderer: Rendered = renderer(self.protocol)
 
     @unwrap_to_error
-    def load_workspace(self) -> Result[Workspace, EnvironmentErrors]:
+    def load_workspace(self) -> Result[Workspace]:
         config_path = locate_config(CONFIG_FILE_NAME, path=self.global_options.config, cwd=Path.cwd()).unwrap()
         config = load_config(config_path, Config).unwrap()
         return Ok(construct_workspace(config, root=config_path.parent))

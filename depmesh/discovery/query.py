@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Err, Ok, Result, unwrap_to_error
 
 from depmesh.discovery import errors
@@ -21,7 +20,7 @@ def query_dependencies(
     *,
     relation_ids: set[RelationId],
     cwd: UntrustedPath | None = None,
-) -> Result[QueryResult, EnvironmentErrors]:
+) -> Result[QueryResult]:
     artifact = ArtifactId(
         normalize_path(
             str(artifact),
@@ -55,7 +54,7 @@ def normalize_input_artifacts(
     artifacts: list[ArtifactId],
     *,
     cwd: UntrustedPath | None = None,
-) -> Result[list[ArtifactId], EnvironmentErrors]:
+) -> Result[list[ArtifactId]]:
     return Ok(
         sorted(
             {
@@ -75,7 +74,7 @@ def normalize_input_artifacts(
 def selected_relation_ids(
     relations_by_id: Mapping[RelationId, Relation],
     relation_filters: list[RelationId] | None,
-) -> Result[set[RelationId], EnvironmentErrors]:
+) -> Result[set[RelationId]]:
     if not relation_filters:
         return Ok(set(relations_by_id))
 
@@ -97,7 +96,7 @@ def _evaluate_rule_dependencies(
     root: ProjectRootPath,
     rule: DependencyRule,
     captures: dict[str, str],
-) -> Result[list[ArtifactId], EnvironmentErrors]:
+) -> Result[list[ArtifactId]]:
     dependencies: set[ArtifactId] = set()
     context = EvaluationContext(root=root, relation_id=rule.relation, captures=captures)
 

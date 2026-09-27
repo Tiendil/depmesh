@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import importlib.resources
 
-from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Err, Ok, Result
 
 from depmesh.skills.entities import SkillDocument
@@ -15,7 +14,7 @@ _FIXTURES: dict[SkillDocument, str] = {
 }
 
 
-def load_skill_text(document: SkillDocument = SkillDocument.usage) -> Result[str, EnvironmentErrors]:
+def load_skill_text(document: SkillDocument = SkillDocument.usage) -> Result[str]:
     try:
         return Ok(
             importlib.resources.files(__package__)

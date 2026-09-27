@@ -3,7 +3,6 @@ from __future__ import annotations
 import glob
 from pathlib import Path
 
-from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Err, Ok, Result, unwrap_to_error
 
 from depmesh.core import warnings
@@ -22,7 +21,7 @@ class FilesSource(ArtifactSourceBase):
         self.config = config
 
     @unwrap_to_error
-    def evaluate(self, context: EvaluationContext) -> Result[list[ArtifactId], EnvironmentErrors]:
+    def evaluate(self, context: EvaluationContext) -> Result[list[ArtifactId]]:
         try:
             if self.config.pattern is None:
                 return Ok(

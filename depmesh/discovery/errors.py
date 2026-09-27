@@ -14,12 +14,6 @@ class UnknownRelationFilter(EnvironmentError):
     relation: RelationId
 
 
-class InvalidProjectPath(EnvironmentError):
-    code: str = "invalid_project_path"
-    message: str = "invalid project path `{error.path}`"
-    path: str
-
-
 class PathResolutionFailed(EnvironmentError):
     code: str = "path_resolution_failed"
     message: str = "could not resolve project path `{error.path}`: {error.reason}"

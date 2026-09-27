@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import abc
 
-from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Result
 
 from depmesh.discovery.entities import QueryResult
@@ -22,7 +21,7 @@ class Rendered(abc.ABC):
     ) -> str:
         raise NotImplementedError
 
-    def render_skill(self, document: SkillDocument = SkillDocument.usage) -> Result[str, EnvironmentErrors]:
+    def render_skill(self, document: SkillDocument = SkillDocument.usage) -> Result[str]:
         return load_skill_text(document)
 
     @abc.abstractmethod

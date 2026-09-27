@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.config import load_config
-from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Err, Result
 
 from depmesh.workspace import Config, construct_workspace, errors, init
@@ -100,7 +99,7 @@ class TestInitializeConfig:
     def test_path_resolution_failure_propagates(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         original = config_errors.PathResolutionFailed(path=tmp_path / "depmesh.toml", reason="permission denied")
 
-        def fail_resolution(_path: Path, _cwd: Path) -> Result[Path, EnvironmentErrors]:
+        def fail_resolution(_path: Path, _cwd: Path) -> Result[Path]:
             return Err([original])
 
         monkeypatch.setattr(init, "resolve_config_path", fail_resolution)

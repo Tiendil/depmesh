@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from llm_tool_cli.paths.errors import InvalidProjectPath
+
 from depmesh.core import warnings
 from depmesh.discovery import errors
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext
@@ -26,7 +28,7 @@ class TestCommandSource:
         source = CommandSource(CommandSourceConfig(type="command", command="printf '../outside.py'"))
         context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={})
 
-        assert source.evaluate(context).unwrap_err() == [errors.InvalidProjectPath(path="../outside.py")]
+        assert source.evaluate(context).unwrap_err() == [InvalidProjectPath(path="../outside.py")]
 
     def test_variables__extracts_template_variables(self) -> None:
         source = CommandSourceConfig(type="command", command="printf '@/tests/test_{module}.py\\n'")

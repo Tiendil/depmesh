@@ -22,9 +22,9 @@ Detailed requirements for individual specifications are out of scope except for 
 
 - `./specs/intro.md` — this file, contains a list of all specifications and their brief descriptions.
 - `./specs/dictionary.md` — dictionary of project-specific terms shared by multiple specifications, including returned expected operational errors.
-- `./specs/architecture/entities.md` — specification of project entity and data structure architecture, including direct use of the shared library's entity base.
-- `./specs/architecture/errors.md` — specification of project error and diagnostic architecture, including shared Result propagation, centralized CLI failure handling, exception-based predicate matching, explicitly named environment-error and internal-exception hierarchies, and exception boundaries.
-- `./specs/architecture/modules_layout.md` — specification of the project module structure and shared entity infrastructure ownership.
+- `./specs/architecture/entities.md` — specification of project entity and data structure architecture, including direct use of the shared library's entity base and canonical project path identifier type.
+- `./specs/architecture/errors.md` — specification of project error and diagnostic architecture, including shared Result propagation with a fixed environment-error list, centralized CLI failure handling, exception-based predicate matching, explicitly named environment-error and internal-exception hierarchies, and exception boundaries.
+- `./specs/architecture/modules_layout.md` — specification of the project module structure, shared entity infrastructure ownership, and shared lexical project path normalization boundary.
 - `./specs/architecture/naming.md` — specification of project code naming conventions.
 - `./specs/architecture/static_analysis.md` — specification of static analysis, formatting, linting, spelling, and type-checking expectations.
 - `./specs/architecture/tests.md` — specification of project test architecture, including returned error propagation, internal-exception separation, and CLI mapping checks.

@@ -10,6 +10,7 @@ from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.core import errors as shared_errors
 from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Err, Result, UnwrapErrError
+from llm_tool_cli.paths.errors import InvalidProjectPath
 from typer.testing import CliRunner
 
 from depmesh.cli import errors as cli_errors
@@ -78,8 +79,8 @@ class TestCommandContext:
             discovery_errors.UnknownRelationFilter(relation=RelationId("missing")),
         ]
 
-        def fail_workspace(_self: CommandContext) -> Result[Workspace, EnvironmentErrors]:
-            result: Result[Workspace, EnvironmentErrors] = Err(failures)
+        def fail_workspace(_self: CommandContext) -> Result[Workspace]:
+            result: Result[Workspace] = Err(failures)
             if unwrap_in_helper:
                 result.unwrap()
             return result
@@ -108,6 +109,7 @@ class TestCommandContext:
             (workspace_errors.ConfigTemplateUnreadable(template="base_config.toml", reason="denied"), 2),
             (cli_errors.InvalidArguments(reason="invalid argument"), 1),
             (discovery_errors.UnknownRelationFilter(relation=RelationId("missing")), 3),
+            (InvalidProjectPath(path="@/../outside.py"), 3),
             (SharedFailure(message="shared failure", context="shared"), 3),
             (ProjectFailure(message="project failure", context="local"), 3),
         ],
@@ -115,7 +117,7 @@ class TestCommandContext:
     def test_native_records_and_exit_categories(
         self, monkeypatch: pytest.MonkeyPatch, protocol: str, error: shared_errors.EnvironmentError, exit_code: int
     ) -> None:
-        def fail_workspace(_self: CommandContext) -> Result[Workspace, EnvironmentErrors]:
+        def fail_workspace(_self: CommandContext) -> Result[Workspace]:
             return Err([error])
 
         monkeypatch.setattr(CommandContext, "load_workspace", fail_workspace)
@@ -205,14 +207,34 @@ class TestDependencies:
         assert result.exit_code == 0
         assert result.output == "tests:\n  @/tests/test_a.py\n"
 
-    def test_human_query_accepts_root_anchored_input(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    @pytest.mark.parametrize("artifact", ["@/src/a.py", "@/src/../src/./a.py"])
+    def test_human_query_accepts_root_anchored_input(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, artifact: str
+    ) -> None:
         write_project(tmp_path)
         monkeypatch.chdir(tmp_path)
 
-        result = CliRunner().invoke(app, ["dependencies", "@/src/a.py"])
+        result = CliRunner().invoke(app, ["dependencies", artifact])
 
         assert result.exit_code == 0
         assert result.output == "tests:\n  @/tests/test_a.py\n"
+
+    def test_invalid_root_anchored_input_keeps_argument_error(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        write_project(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["--protocol", "automation", "dependencies", "@/../outside.py"])
+
+        assert result.exit_code == 1
+        assert json.loads(result.stdout) == {
+            "type": "error",
+            "code": "invalid_arguments",
+            "message": "invalid project path `@/../outside.py`",
+            "reason": "invalid project path `@/../outside.py`",
+        }
+        assert result.stderr == ""
 
     def test_human_query_accepts_absolute_input(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)

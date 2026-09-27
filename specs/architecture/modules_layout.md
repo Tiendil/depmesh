@@ -73,6 +73,8 @@ The `errors`, `entities`, and `tests` submodules MUST follow the corresponding a
 
 The common Pydantic entity base used by higher-level modules MUST be owned by `llm_tool_cli.core.entities`.
 
+Lexical root-anchored project path normalization, its canonical identifier type, and its invalid-path environment error MUST be owned by `llm_tool_cli.paths` and used directly. Project filesystem resolution, containment checks, and context-specific path handling MUST remain owned by the project.
+
 ### Test submodules
 
 Each submodule MUST have a corresponding `tests` submodule that contains tests for the code in the parent submodule.

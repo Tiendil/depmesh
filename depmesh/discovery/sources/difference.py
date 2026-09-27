@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
 
 from depmesh.discovery.artifacts import EvaluationContext
@@ -24,7 +23,7 @@ class DifferenceSource(ArtifactSourceBase):
         self.exclude = exclude
 
     @unwrap_to_error
-    def evaluate(self, context: EvaluationContext) -> Result[list[ArtifactId], EnvironmentErrors]:
+    def evaluate(self, context: EvaluationContext) -> Result[list[ArtifactId]]:
         included = set(self.include.evaluate(context).unwrap())
         excluded = set(self.exclude.evaluate(context).unwrap())
         return Ok(sorted(included - excluded))

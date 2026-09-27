@@ -26,7 +26,7 @@ The following topics are out of scope:
 
 ## General principles
 
-Expected fatal failures MUST be represented as shared `EnvironmentError` values returned through `Result[T, EnvironmentErrors]` before they cross module boundaries.
+Expected fatal failures MUST be represented as shared `EnvironmentError` values returned through `Result[T]` before they cross module boundaries. The result error payload MUST be `EnvironmentErrors`; only the success value type is parameterized.
 
 Project modules MUST use `Result`, `Ok`, `Err`, `EnvironmentError`, and `EnvironmentErrors` from `llm_tool_cli` directly. Project-local result implementations or compatibility re-exports MUST NOT duplicate them.
 
