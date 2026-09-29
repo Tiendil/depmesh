@@ -24,6 +24,8 @@
 
 ### Changes
 
+- Delegate command and early argument-error cell emission to the shared writer, preserving protocol output, stream routing, and exit codes.
+
 - Use the shared successful-operation record type default for initialization output, preserving the existing payload and configuration path.
 
 - Construct skill cells directly through the shared shortcut, preserving document selection, output payloads, protocol defaults, and loading-error handling.

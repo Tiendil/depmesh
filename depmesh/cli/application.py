@@ -16,7 +16,7 @@ from llm_tool_cli.paths.errors import InvalidProjectPath
 from llm_tool_cli.protocol import Protocol, cell_shortcuts, write_output
 from llm_tool_cli.protocol.cell_shortcuts import environment_error, operation_succeeded
 from llm_tool_cli.protocol.logic_cells.base import LogicCell
-from llm_tool_cli.protocol.rendering import render_cells
+from llm_tool_cli.protocol.rendering import write_cells
 
 from depmesh.cli import errors as cli_errors
 from depmesh.cli.entities import ArtifactsArgument, ConfigOption, GlobalOptions, ProtocolOption, RelationOption
@@ -156,7 +156,7 @@ class CommandContext:
         write_output(text)
 
     def write_cells(self, cells: Iterable[LogicCell], *, stderr: bool = False) -> None:
-        write_output(render_cells(cells, protocol=self.protocol, tool_label="DEPMESH").decode("utf-8"), error=stderr)
+        write_cells(cells, protocol=self.protocol, tool_label="DEPMESH", stderr=stderr)
 
 
 @contextmanager

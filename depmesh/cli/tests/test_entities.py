@@ -8,6 +8,7 @@ from llm_tool_cli.protocol import Protocol
 
 from depmesh.cli.entities import (
     GlobalOptions,
+    _exit_with_invalid_arguments,
     _parse_artifact,
     _parse_config,
     _parse_protocol,
@@ -34,6 +35,20 @@ class TestGlobalOptions:
 class TestParseArtifact:
     def test_success(self) -> None:
         assert _parse_artifact("./src/a.py") == ArtifactId("./src/a.py")
+
+
+class TestExitWithInvalidArguments:
+    def test_shared_human_cell_uses_stderr_and_exit_one(self, capsys: pytest.CaptureFixture[str]) -> None:
+        with pytest.raises(typer.Exit) as caught:
+            _exit_with_invalid_arguments("Invalid café 日本語")
+
+        assert caught.value.exit_code == 1
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert captured.err.startswith("----- DEPMESH CELL ")
+        assert "kind = error\n" in captured.err
+        assert "code = invalid_arguments\n" in captured.err
+        assert "Invalid café 日本語" in captured.err
 
 
 class TestValidateArtifacts:
