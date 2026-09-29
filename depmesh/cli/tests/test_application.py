@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import base64
 import json
+import re
 import sys
+import uuid
 from importlib import metadata
 from pathlib import Path
 
@@ -22,6 +25,24 @@ from depmesh.discovery import errors as discovery_errors
 from depmesh.domain.entities import RelationId
 from depmesh.workspace import Workspace
 from depmesh.workspace import errors as workspace_errors
+
+
+def normalize_cell_ids(text: str) -> str:
+    return re.sub(
+        r"(?m)^(--DEPMESH-CELL |----- DEPMESH CELL )[A-Za-z0-9_-]{22}( BEGIN--| END--| -----)$",
+        r"\1<id>\2",
+        text,
+    )
+
+
+def cell_records(text: str) -> list[dict[str, object]]:
+    records = []
+    for line in text.splitlines():
+        record = json.loads(line)
+        cell_id = record.pop("id")
+        assert uuid.UUID(bytes=base64.urlsafe_b64decode(cell_id + "==")).version == 4
+        records.append(record)
+    return records
 
 
 def touch(path: Path) -> None:
@@ -72,6 +93,30 @@ class ProjectFailure(core_errors.EnvironmentError):
 
 
 class TestCommandContext:
+    @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
+    def test_error_cells_include_guidance_and_keep_stream_policy(self, mocker: MockerFixture, protocol: str) -> None:
+        failure = ProjectFailure(
+            message="Problem with {error.context}.", context="project", ways_to_fix=["Check {error.context}."]
+        )
+        mocker.patch.object(CommandContext, "load_workspace", return_value=Err([failure]))
+
+        result = CliRunner().invoke(app, ["--protocol", protocol, "relations"])
+
+        assert result.exit_code == 3
+        if protocol == "automation":
+            assert not result.stderr
+            assert cell_records(result.stdout) == [
+                {
+                    "type": "error",
+                    "code": "project_failure",
+                    "context": "project",
+                    "content": "Problem with project.\nWay to fix: Check project.",
+                }
+            ]
+        else:
+            assert not result.stdout
+            assert "Problem with project.\nWay to fix: Check project." in result.stderr
+
     @pytest.mark.parametrize("unwrap_in_helper", [False, True])
     def test_multiple_errors_keep_order_and_first_category(
         self, monkeypatch: pytest.MonkeyPatch, unwrap_in_helper: bool
@@ -92,7 +137,7 @@ class TestCommandContext:
         result = CliRunner().invoke(app, ["--protocol", "automation", "relations"])
 
         assert result.exit_code == 2
-        assert [json.loads(line) for line in result.stdout.splitlines()] == [error.as_record() for error in failures]
+        assert_error_cells(result.stdout, failures)
         assert result.stderr == ""
 
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
@@ -117,7 +162,7 @@ class TestCommandContext:
             (ProjectFailure(message="project failure", context="local"), 3),
         ],
     )
-    def test_native_records_and_exit_categories(
+    def test_error_cells_and_exit_categories(
         self, monkeypatch: pytest.MonkeyPatch, protocol: str, error: shared_errors.EnvironmentError, exit_code: int
     ) -> None:
         def fail_workspace(_self: CommandContext) -> Result[Workspace]:
@@ -129,11 +174,16 @@ class TestCommandContext:
 
         assert result.exit_code == exit_code
         if protocol == "automation":
-            assert json.loads(result.stdout) == error.as_record()
+            assert_error_cells(result.stdout, [error])
             assert result.stderr == ""
         else:
             assert result.stdout == ""
             assert error.format_message() in result.stderr
+            prefix = "----- DEPMESH CELL " if protocol == "human" else "--DEPMESH-CELL "
+            assert result.stderr.startswith(prefix)
+            separator = " = " if protocol == "human" else "="
+            assert f"kind{separator}error\n" in result.stderr
+            assert f"code{separator}{error.code}\n" in result.stderr
 
     @pytest.mark.parametrize(
         "original",
@@ -173,6 +223,66 @@ class TestApp:
 
 
 class TestDependencies:
+    @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
+    def test_repeated_queries_preserve_payloads_with_random_ids(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, protocol: str
+    ) -> None:
+        write_project(tmp_path)
+        monkeypatch.chdir(tmp_path)
+        arguments = ["-p", protocol, "dependencies", "@/src/b.py", "@/src/a.py", "@/src/a.py"]
+
+        first = CliRunner().invoke(app, arguments)
+        second = CliRunner().invoke(app, arguments)
+
+        assert first.exit_code == second.exit_code == 0
+        assert first.stderr == second.stderr == ""
+        assert first.stdout != second.stdout
+        if protocol == "automation":
+            assert (
+                cell_records(first.stdout)
+                == cell_records(second.stdout)
+                == [
+                    {"type": "dependency", "relation": "tests", "dependency": "@/tests/test_a.py", "content": None},
+                    {"type": "dependency", "relation": "tests", "dependency": "@/tests/test_b.py", "content": None},
+                ]
+            )
+        else:
+            assert normalize_cell_ids(first.stdout) == normalize_cell_ids(second.stdout)
+            assert first.stdout.count("- @/tests/test_a.py\n") == 1
+            assert first.stdout.index("- @/tests/test_a.py") < first.stdout.index("- @/tests/test_b.py")
+
+    @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
+    def test_warning_cells_follow_results_and_do_not_leak(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, protocol: str
+    ) -> None:
+        (tmp_path / "depmesh.toml").write_text(
+            """[[relations]]
+id = "tests"
+[[rules]]
+relation = "tests"
+input = {type = "one_of", artifacts = ["@/a.py"]}
+output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"}
+""",
+            encoding="utf-8",
+        )
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["-p", protocol, "dependencies", "@/a.py"])
+        following = CliRunner().invoke(app, ["-p", protocol, "dependencies", "@/other.py"])
+
+        assert result.exit_code == following.exit_code == 0
+        assert result.stderr == following.stderr == ""
+        assert following.stdout == ""
+        message = "relation `tests`: command stderr: notice"
+        if protocol == "automation":
+            assert cell_records(result.stdout) == [
+                {"type": "dependency", "relation": "tests", "dependency": "@/café.py", "content": None},
+                {"type": "warning", "message": message, "content": None},
+            ]
+        else:
+            assert result.stdout.index("@/café.py") < result.stdout.index(message)
+            assert result.stdout.startswith("----- DEPMESH CELL" if protocol == "human" else "--DEPMESH-CELL")
+
     def test_home_relative_input(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)
         monkeypatch.setenv("HOME", str(tmp_path))
@@ -183,11 +293,9 @@ class TestDependencies:
         )
 
         assert result.exit_code == 0
-        assert json.loads(result.stdout) == {
-            "type": "dependency",
-            "relation": "tests",
-            "dependency": "@/tests/test_a.py",
-        }
+        assert cell_records(result.stdout) == [
+            {"type": "dependency", "relation": "tests", "dependency": "@/tests/test_a.py", "content": None}
+        ]
 
     @pytest.mark.parametrize(
         ("predicate", "source"),
@@ -222,11 +330,9 @@ class TestDependencies:
         )
 
         assert result.exit_code == 0
-        assert json.loads(result.stdout) == {
-            "type": "dependency",
-            "relation": "tests",
-            "dependency": "@/tests/test_a.py",
-        }
+        assert cell_records(result.stdout) == [
+            {"type": "dependency", "relation": "tests", "dependency": "@/tests/test_a.py", "content": None}
+        ]
 
     def test_home_expansion_failure_uses_shared_diagnostic(self, tmp_path: Path, mocker: MockerFixture) -> None:
         write_project(tmp_path)
@@ -245,7 +351,7 @@ class TestDependencies:
         )
 
         assert result.exit_code == 3
-        record = json.loads(result.stdout)
+        record = cell_records(result.stdout)[0]
         assert record["code"] == "path_resolution_failed"
         assert record["path"] == "~/src/a.py"
         assert record["reason"] == "unknown home"
@@ -292,7 +398,7 @@ class TestDependencies:
         assert result.exit_code == 3
         error = failure.unwrap_err()[0]
         if protocol == "automation":
-            assert json.loads(result.stdout) == error.as_record()
+            assert_error_cells(result.stdout, [error])
             assert not result.stderr
         else:
             assert not result.stdout
@@ -314,7 +420,18 @@ class TestDependencies:
         result = CliRunner().invoke(app, [*arguments, "dependencies", str(artifact)])
 
         assert result.exit_code == 0
-        assert result.stdout == "tests:\n  @/tests/test_a.py\n"
+        assert normalize_cell_ids(result.stdout) == (
+            "----- DEPMESH CELL <id> -----\n"
+            "kind = dependencies\n"
+            "media_type = text/markdown\n"
+            "relation = tests\n"
+            "type = dependencies\n"
+            "\n"
+            "Tests related to the input artifacts.\n"
+            "\n"
+            "- @/tests/test_a.py\n"
+            "\n"
+        )
 
     def test_empty_config_outputs_no_dependencies(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         config_path = tmp_path / "depmesh.toml"
@@ -333,7 +450,18 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["dependencies", "./src/a.py"])
 
         assert result.exit_code == 0
-        assert result.output == "tests:\n  @/tests/test_a.py\n"
+        assert normalize_cell_ids(result.output) == (
+            "----- DEPMESH CELL <id> -----\n"
+            "kind = dependencies\n"
+            "media_type = text/markdown\n"
+            "relation = tests\n"
+            "type = dependencies\n"
+            "\n"
+            "Tests related to the input artifacts.\n"
+            "\n"
+            "- @/tests/test_a.py\n"
+            "\n"
+        )
 
     @pytest.mark.parametrize("artifact", ["@/src/a.py", "@/src/../src/./a.py"])
     def test_human_query_accepts_root_anchored_input(
@@ -345,7 +473,18 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["dependencies", artifact])
 
         assert result.exit_code == 0
-        assert result.output == "tests:\n  @/tests/test_a.py\n"
+        assert normalize_cell_ids(result.output) == (
+            "----- DEPMESH CELL <id> -----\n"
+            "kind = dependencies\n"
+            "media_type = text/markdown\n"
+            "relation = tests\n"
+            "type = dependencies\n"
+            "\n"
+            "Tests related to the input artifacts.\n"
+            "\n"
+            "- @/tests/test_a.py\n"
+            "\n"
+        )
 
     def test_invalid_root_anchored_input_keeps_argument_error(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -356,10 +495,10 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["--protocol", "automation", "dependencies", "@/../outside.py"])
 
         assert result.exit_code == 1
-        assert json.loads(result.stdout) == {
+        assert cell_records(result.stdout)[0] == {
             "type": "error",
             "code": "invalid_arguments",
-            "message": "invalid project path `@/../outside.py`",
+            "content": "invalid project path `@/../outside.py`",
             "reason": "invalid project path `@/../outside.py`",
         }
         assert result.stderr == ""
@@ -371,7 +510,18 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["dependencies", str(tmp_path / "src" / "a.py")])
 
         assert result.exit_code == 0
-        assert result.output == "tests:\n  @/tests/test_a.py\n"
+        assert normalize_cell_ids(result.output) == (
+            "----- DEPMESH CELL <id> -----\n"
+            "kind = dependencies\n"
+            "media_type = text/markdown\n"
+            "relation = tests\n"
+            "type = dependencies\n"
+            "\n"
+            "Tests related to the input artifacts.\n"
+            "\n"
+            "- @/tests/test_a.py\n"
+            "\n"
+        )
 
     def test_human_query_accepts_relative_input_from_working_directory(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -382,7 +532,18 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["dependencies", "a.py"])
 
         assert result.exit_code == 0
-        assert result.output == "tests:\n  @/tests/test_a.py\n"
+        assert normalize_cell_ids(result.output) == (
+            "----- DEPMESH CELL <id> -----\n"
+            "kind = dependencies\n"
+            "media_type = text/markdown\n"
+            "relation = tests\n"
+            "type = dependencies\n"
+            "\n"
+            "Tests related to the input artifacts.\n"
+            "\n"
+            "- @/tests/test_a.py\n"
+            "\n"
+        )
 
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
     @pytest.mark.parametrize("filename", ["outside.py", "{name}.py"])
@@ -399,10 +560,10 @@ class TestDependencies:
         assert result.exit_code == 1
         reason = f"invalid project path `{outside}`"
         if protocol == "automation":
-            assert json.loads(result.stdout) == {
+            assert cell_records(result.stdout)[0] == {
                 "type": "error",
                 "code": "invalid_arguments",
-                "message": reason,
+                "content": reason,
                 "reason": reason,
             }
             assert result.stderr == ""
@@ -419,7 +580,19 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["dependencies", "./src/a.py", "./src/b.py"])
 
         assert result.exit_code == 0
-        assert result.output == "tests:\n  @/tests/test_a.py\n  @/tests/test_b.py\n"
+        assert normalize_cell_ids(result.output) == (
+            "----- DEPMESH CELL <id> -----\n"
+            "kind = dependencies\n"
+            "media_type = text/markdown\n"
+            "relation = tests\n"
+            "type = dependencies\n"
+            "\n"
+            "Tests related to the input artifacts.\n"
+            "\n"
+            "- @/tests/test_a.py\n"
+            "- @/tests/test_b.py\n"
+            "\n"
+        )
 
     def test_llm_query_output_includes_relation_description(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -430,7 +603,18 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["--protocol", "llm", "dependencies", "./src/a.py"])
 
         assert result.exit_code == 0
-        assert result.output == "## tests\n\nTests related to the input artifacts.\n\n- @/tests/test_a.py\n"
+        assert normalize_cell_ids(result.output) == (
+            "--DEPMESH-CELL <id> BEGIN--\n"
+            "kind=dependencies\n"
+            "media_type=text/markdown\n"
+            "relation=tests\n"
+            "type=dependencies\n"
+            "\n"
+            "Tests related to the input artifacts.\n"
+            "\n"
+            "- @/tests/test_a.py\n"
+            "--DEPMESH-CELL <id> END--\n"
+        )
 
     def test_automation_query_output_is_json_lines(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)
@@ -439,8 +623,9 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["--protocol", "automation", "dependencies", "./src/a.py"])
 
         assert result.exit_code == 0
-        records = [json.loads(line) for line in result.output.splitlines()]
-        assert records == [{"type": "dependency", "relation": "tests", "dependency": "@/tests/test_a.py"}]
+        assert cell_records(result.output) == [
+            {"type": "dependency", "relation": "tests", "dependency": "@/tests/test_a.py", "content": None}
+        ]
 
     def test_reverse_relation_query_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)
@@ -449,7 +634,18 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["dependencies", "--relation", "tested_by", "./tests/test_a.py"])
 
         assert result.exit_code == 0
-        assert result.output == "tested_by:\n  @/src/a.py\n"
+        assert normalize_cell_ids(result.output) == (
+            "----- DEPMESH CELL <id> -----\n"
+            "kind = dependencies\n"
+            "media_type = text/markdown\n"
+            "relation = tested_by\n"
+            "type = dependencies\n"
+            "\n"
+            "Artifacts tested by the input artifacts.\n"
+            "\n"
+            "- @/src/a.py\n"
+            "\n"
+        )
 
     def test_default_query_output_includes_reverse_relations_when_configured(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -460,7 +656,18 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["dependencies", "./tests/test_a.py"])
 
         assert result.exit_code == 0
-        assert result.output == "tested_by:\n  @/src/a.py\n"
+        assert normalize_cell_ids(result.output) == (
+            "----- DEPMESH CELL <id> -----\n"
+            "kind = dependencies\n"
+            "media_type = text/markdown\n"
+            "relation = tested_by\n"
+            "type = dependencies\n"
+            "\n"
+            "Artifacts tested by the input artifacts.\n"
+            "\n"
+            "- @/src/a.py\n"
+            "\n"
+        )
 
     def test_short_alias(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)
@@ -469,7 +676,18 @@ class TestDependencies:
         result = CliRunner().invoke(app, ["deps", "./src/a.py"])
 
         assert result.exit_code == 0
-        assert result.output == "tests:\n  @/tests/test_a.py\n"
+        assert normalize_cell_ids(result.output) == (
+            "----- DEPMESH CELL <id> -----\n"
+            "kind = dependencies\n"
+            "media_type = text/markdown\n"
+            "relation = tests\n"
+            "type = dependencies\n"
+            "\n"
+            "Tests related to the input artifacts.\n"
+            "\n"
+            "- @/tests/test_a.py\n"
+            "\n"
+        )
 
     def test_protocol_is_not_a_dependencies_option(self) -> None:
         result = CliRunner().invoke(app, ["dependencies", "--protocol", "llm", "./src/a.py"])
@@ -507,14 +725,15 @@ class TestDependencies:
         )
 
         assert result.exit_code == 2
-        record = json.loads(result.stdout)
+        record = cell_records(result.stdout)[0]
         assert record == {
             "type": "error",
             "code": "config_unreadable",
-            "message": f"{config_path}: {record['reason']}",
+            "content": f"{config_path}: {record['reason']}",
             "path": str(config_path),
             "reason": record["reason"],
         }
+        assert isinstance(record["reason"], str)
         assert "No such file" in record["reason"]
         assert result.stderr == ""
 
@@ -528,11 +747,12 @@ class TestDependencies:
         )
 
         assert result.exit_code == 2
-        record = json.loads(result.stdout)
+        record = cell_records(result.stdout)[0]
         assert record["type"] == "error"
         assert record["code"] == "config_invalid_toml"
         assert record["path"] == str(config_path)
-        assert record["message"] == f"{config_path}: {record['reason']}"
+        assert record["content"] == f"{config_path}: {record['reason']}"
+        assert isinstance(record["reason"], str)
         assert "line 1" in record["reason"]
         assert result.stderr == ""
 
@@ -546,7 +766,7 @@ class TestDependencies:
         )
 
         assert result.exit_code == 2
-        record = json.loads(result.stdout)
+        record = cell_records(result.stdout)[0]
         assert record["code"] == "config_invalid_encoding"
         assert record["path"] == str(config_path)
         assert record["reason"]
@@ -571,11 +791,12 @@ class TestDependencies:
         )
 
         assert result.exit_code == 2
-        record = json.loads(result.stdout)
+        record = cell_records(result.stdout)[0]
         assert record["type"] == "error"
         assert record["code"] == "config_validation_failed"
-        assert record["message"] == f"{config_path}: {record['reason']}"
+        assert record["content"] == f"{config_path}: {record['reason']}"
         assert record["path"] == str(config_path)
+        assert isinstance(record["reason"], str)
         assert reason in record["reason"]
         assert "validation" not in record
         assert result.stderr == ""
@@ -593,7 +814,9 @@ class TestRelations:
         result = CliRunner().invoke(app, ["relations"])
 
         assert result.exit_code == 0
-        assert result.stdout == "nearest:\n"
+        assert normalize_cell_ids(result.stdout) == (
+            "----- DEPMESH CELL <id> -----\n" "kind = relation\n" "relation = nearest\n" "type = relation\n" "\n"
+        )
 
     @pytest.mark.parametrize("config_path", ["home/depmesh.toml", "~/depmesh.toml"])
     def test_explicit_relative_and_home_paths(
@@ -609,7 +832,9 @@ class TestRelations:
         result = CliRunner().invoke(app, ["--config", config_path, "relations"])
 
         assert result.exit_code == 0
-        assert result.stdout == "selected:\n"
+        assert normalize_cell_ids(result.stdout) == (
+            "----- DEPMESH CELL <id> -----\n" "kind = relation\n" "relation = selected\n" "type = relation\n" "\n"
+        )
 
     def test_missing_discovered_config_uses_shared_error(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -619,14 +844,15 @@ class TestRelations:
         result = CliRunner().invoke(app, ["--protocol", "automation", "relations"])
 
         assert result.exit_code == 2
-        record = json.loads(result.stdout)
+        record = cell_records(result.stdout)[0]
         assert record == {
             "type": "error",
             "code": "config_not_found",
             "path": str(tmp_path),
             "reason": record["reason"],
-            "message": f"{tmp_path}: {record['reason']}",
+            "content": f"{tmp_path}: {record['reason']}",
         }
+        assert isinstance(record["reason"], str)
         assert "depmesh.toml" in record["reason"]
         assert result.stderr == ""
 
@@ -639,7 +865,7 @@ class TestRelations:
         result = CliRunner().invoke(app, ["--protocol", "automation", "--config", "missing.toml", "relations"])
 
         assert result.exit_code == 2
-        record = json.loads(result.stdout)
+        record = cell_records(result.stdout)[0]
         assert record["code"] == "config_unreadable"
         assert record["path"] == str(tmp_path / "missing.toml")
 
@@ -650,11 +876,19 @@ class TestRelations:
         result = CliRunner().invoke(app, ["relations"])
 
         assert result.exit_code == 0
-        assert result.output == (
-            "tested_by:\n"
-            "  Artifacts tested by the input artifacts.\n\n"
-            "tests:\n"
-            "  Tests related to the input artifacts.\n"
+        assert normalize_cell_ids(result.output) == (
+            "----- DEPMESH CELL <id> -----\n"
+            "kind = relation\n"
+            "description = Artifacts tested by the input artifacts.\n"
+            "relation = tested_by\n"
+            "type = relation\n"
+            "\n"
+            "----- DEPMESH CELL <id> -----\n"
+            "kind = relation\n"
+            "description = Tests related to the input artifacts.\n"
+            "relation = tests\n"
+            "type = relation\n"
+            "\n"
         )
 
     def test_short_alias(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -664,7 +898,7 @@ class TestRelations:
         result = CliRunner().invoke(app, ["rels"])
 
         assert result.exit_code == 0
-        assert "tests:" in result.output
+        assert "relation = tests\n" in result.output
 
     def test_llm_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)
@@ -673,11 +907,19 @@ class TestRelations:
         result = CliRunner().invoke(app, ["--protocol", "llm", "relations"])
 
         assert result.exit_code == 0
-        assert result.output == (
-            "## tested_by\n\n"
-            "Artifacts tested by the input artifacts.\n\n"
-            "## tests\n\n"
-            "Tests related to the input artifacts.\n"
+        assert normalize_cell_ids(result.output) == (
+            "--DEPMESH-CELL <id> BEGIN--\n"
+            "kind=relation\n"
+            "description=Artifacts tested by the input artifacts.\n"
+            "relation=tested_by\n"
+            "type=relation\n"
+            "--DEPMESH-CELL <id> END--\n"
+            "--DEPMESH-CELL <id> BEGIN--\n"
+            "kind=relation\n"
+            "description=Tests related to the input artifacts.\n"
+            "relation=tests\n"
+            "type=relation\n"
+            "--DEPMESH-CELL <id> END--\n"
         )
 
     def test_automation_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -687,16 +929,18 @@ class TestRelations:
         result = CliRunner().invoke(app, ["--protocol", "automation", "relations"])
 
         assert result.exit_code == 0
-        assert [json.loads(line) for line in result.output.splitlines()] == [
+        assert cell_records(result.output) == [
             {
                 "type": "relation",
-                "id": "tested_by",
                 "description": "Artifacts tested by the input artifacts.",
+                "relation": "tested_by",
+                "content": None,
             },
             {
                 "type": "relation",
-                "id": "tests",
                 "description": "Tests related to the input artifacts.",
+                "relation": "tests",
+                "content": None,
             },
         ]
 
@@ -709,29 +953,64 @@ class TestRelations:
 
 
 class TestSkill:
+    def test_human_protocol(self) -> None:
+        result = CliRunner().invoke(app, ["-p", "human", "skill"])
+
+        assert result.exit_code == 0
+        assert result.stderr == ""
+        assert result.stdout.startswith("----- DEPMESH CELL ")
+        assert "kind = skill\n" in result.stdout
+        assert "document = usage\n" in result.stdout
+        assert "# `depmesh` Usage\n" in result.stdout
+
+    @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
+    def test_missing_document_reports_native_error(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, protocol: str
+    ) -> None:
+        import importlib.resources
+
+        monkeypatch.setattr(importlib.resources, "files", lambda _package: tmp_path)
+
+        result = CliRunner().invoke(app, ["-p", protocol, "skill"])
+
+        assert result.exit_code == 3
+        if protocol == "automation":
+            record = cell_records(result.stdout)[0]
+            assert record["type"] == "error"
+            assert record["document"] == "usage"
+            assert record["content"]
+            assert result.stderr == ""
+        else:
+            assert result.stdout == ""
+            assert "usage" in result.stderr
+
     def test_skill_defaults_to_llm_protocol(self) -> None:
         result = CliRunner().invoke(app, ["skill"])
 
         assert result.exit_code == 0
-        assert result.output.startswith("# `depmesh` Usage\n")
+        assert result.output.startswith("--DEPMESH-CELL ")
+        assert "# `depmesh` Usage\n" in result.output
 
     def test_skill_usage_document(self) -> None:
         result = CliRunner().invoke(app, ["skill", "usage"])
 
         assert result.exit_code == 0
-        assert result.output.startswith("# `depmesh` Usage\n")
+        assert result.output.startswith("--DEPMESH-CELL ")
+        assert "# `depmesh` Usage\n" in result.output
 
     def test_skill_configuration_document(self) -> None:
         result = CliRunner().invoke(app, ["skill", "configuration"])
 
         assert result.exit_code == 0
-        assert result.output.startswith("# `depmesh` Configuration\n")
+        assert result.output.startswith("--DEPMESH-CELL ")
+        assert "# `depmesh` Configuration\n" in result.output
 
     def test_skill_initialization_document(self) -> None:
         result = CliRunner().invoke(app, ["skill", "initialization"])
 
         assert result.exit_code == 0
-        assert result.output.startswith("# `depmesh` Initialization\n")
+        assert result.output.startswith("--DEPMESH-CELL ")
+        assert "# `depmesh` Initialization\n" in result.output
 
     def test_skill_rejects_unknown_document(self) -> None:
         result = CliRunner().invoke(app, ["skill", "missing"])
@@ -753,16 +1032,39 @@ class TestSkill:
         assert result.exit_code == 0
         record = json.loads(result.output)
         assert record["document"] == "configuration"
-        assert record["text"].startswith("# `depmesh` Configuration\n")
+        assert record["content"].startswith("# `depmesh` Configuration\n")
 
     def test_global_config_option_is_accepted(self, tmp_path: Path) -> None:
         result = CliRunner().invoke(app, ["--config", str(tmp_path / "missing.toml"), "skill"])
 
         assert result.exit_code == 0
-        assert result.output.startswith("# `depmesh` Usage\n")
+        assert result.output.startswith("--DEPMESH-CELL ")
+        assert "# `depmesh` Usage\n" in result.output
 
 
 class TestInit:
+    @pytest.mark.parametrize("protocol", ["llm", "automation"])
+    def test_success_respects_protocol(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, protocol: str) -> None:
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["-p", protocol, "init"])
+
+        assert result.exit_code == 0
+        assert result.stderr == ""
+        assert (tmp_path / "depmesh.toml").is_file()
+        if protocol == "automation":
+            assert cell_records(result.stdout) == [
+                {
+                    "type": "operation_succeeded",
+                    "path": str(tmp_path / "depmesh.toml"),
+                    "content": "Configuration created.",
+                }
+            ]
+        else:
+            assert result.stdout.startswith("--DEPMESH-CELL ")
+            assert "kind=operation_succeeded\n" in result.stdout
+            assert f"path={tmp_path / 'depmesh.toml'}\n" in result.stdout
+
     def test_expands_home_in_config_path(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         home_dir = tmp_path / "home"
         home_dir.mkdir()
@@ -772,7 +1074,9 @@ class TestInit:
         result = CliRunner().invoke(app, ["--config", "~/custom.toml", "init"])
 
         assert result.exit_code == 0
-        assert result.stdout == f"created {home_dir / 'custom.toml'}\n"
+        assert "kind = operation_succeeded\n" in result.stdout
+        assert f"path = {home_dir / 'custom.toml'}\n" in result.stdout
+        assert "Configuration created.\n" in result.stdout
         assert (home_dir / "custom.toml").is_file()
 
     def test_creates_default_config(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -782,7 +1086,9 @@ class TestInit:
 
         config_path = tmp_path / "depmesh.toml"
         assert result.exit_code == 0
-        assert result.output == f"created {config_path}\n"
+        assert "kind = operation_succeeded\n" in result.output
+        assert f"path = {config_path}\n" in result.output
+        assert "Configuration created.\n" in result.output
         assert 'id = "governed_by"' in config_path.read_text(encoding="utf-8")
         assert 'id = "governs"' in config_path.read_text(encoding="utf-8")
 
@@ -833,3 +1139,12 @@ class TestMain:
 
         assert exit_info.value.code == 0
         assert capsys.readouterr().out == f"{metadata.version('depmesh')}\n"
+
+
+def assert_error_cells(text: str, errors: EnvironmentErrors) -> None:
+    records = cell_records(text)
+    assert len(records) == len(errors)
+    for record, error in zip(records, errors):
+        expected = error.as_record()
+        expected["content"] = expected.pop("message")
+        assert record == expected

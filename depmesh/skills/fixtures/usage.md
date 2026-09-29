@@ -41,13 +41,18 @@ The relation list tells you which dependency types exist in the current project 
 Example output:
 
 ```text
-## governed_by
-
-Specifications that apply to the artifact.
-
-## tested_by
-
-Tests that verify the artifact.
+--DEPMESH-CELL <id-1> BEGIN--
+kind=relation
+description=Specifications that apply to the artifact.
+relation=governed_by
+type=relation
+--DEPMESH-CELL <id-1> END--
+--DEPMESH-CELL <id-2> BEGIN--
+kind=relation
+description=Tests that verify the artifact.
+relation=tested_by
+type=relation
+--DEPMESH-CELL <id-2> END--
 ```
 
 2. Prepare to change a source file.
@@ -67,17 +72,30 @@ depmesh -p llm dependencies --relation tested_by --relation governed_by --relati
 Example output:
 
 ```text
-## governed_by
+--DEPMESH-CELL <id-1> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=governed_by
+type=dependencies
 
 - @/specs/behavior/app.md
-
-## imported_by
+--DEPMESH-CELL <id-1> END--
+--DEPMESH-CELL <id-2> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=imported_by
+type=dependencies
 
 - @/src/main.py
-
-## tested_by
+--DEPMESH-CELL <id-2> END--
+--DEPMESH-CELL <id-3> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=tested_by
+type=dependencies
 
 - @/tests/test_app.py
+--DEPMESH-CELL <id-3> END--
 ```
 
 3. Add a new module.
@@ -92,13 +110,22 @@ depmesh -p llm dependencies --relation governed_by --relation tested_by @/src/ex
 Example output:
 
 ```text
-## governed_by
+--DEPMESH-CELL <id-1> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=governed_by
+type=dependencies
 
 - @/specs/architecture/modules.md
-
-## tested_by
+--DEPMESH-CELL <id-1> END--
+--DEPMESH-CELL <id-2> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=tested_by
+type=dependencies
 
 - @/tests/test_existing_module.py
+--DEPMESH-CELL <id-2> END--
 ```
 
 4. Change a specification.
@@ -112,10 +139,15 @@ depmesh -p llm dependencies --relation governs @/specs/behavior/config.md
 Example output:
 
 ```text
-## governs
+--DEPMESH-CELL <id-1> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=governs
+type=dependencies
 
 - @/src/config.py
 - @/src/config_loader.py
+--DEPMESH-CELL <id-1> END--
 ```
 
 5. Change shared code.
@@ -129,14 +161,23 @@ depmesh -p llm dependencies --relation imported_by --relation tested_by @/src/sh
 Example output:
 
 ```text
-## imported_by
+--DEPMESH-CELL <id-1> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=imported_by
+type=dependencies
 
 - @/src/app.py
 - @/src/service.py
-
-## tested_by
+--DEPMESH-CELL <id-1> END--
+--DEPMESH-CELL <id-2> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=tested_by
+type=dependencies
 
 - @/tests/test_shared.py
+--DEPMESH-CELL <id-2> END--
 ```
 
 6. Edit several artifacts together.
@@ -150,15 +191,26 @@ depmesh -p llm dependencies @/src/app.py @/src/service.py
 Example output:
 
 ```text
-## tested_by
+--DEPMESH-CELL <id-1> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=tested_by
+type=dependencies
 
 - @/tests/test_app.py
 - @/tests/test_service.py
+--DEPMESH-CELL <id-1> END--
 ```
 
 Run separate queries when you need to know which requested artifact produced each dependency.
 
 ## Output Protocols
+
+Dependency results, relation lists, warnings, skill documents, and initialization confirmations use shared output cells. Human and LLM cells use `DEPMESH` framing. Cell content, metadata, and ordering are deterministic; generated cell IDs may differ. IDs in the examples are placeholders.
+
+Human and LLM dependency output groups paths into one cell per relation. Automation emits one cell per dependency, retaining `type`, `relation`, and `dependency`. Relation cells use `relation` for the relation name; `id` identifies the cell. Skill documents use `content` for their text. Warnings use `type = warning` and `message`. Fatal errors use ordinary cells with `type = error`, a native `code`, diagnostic metadata, and the formatted message in `content`. They retain nonzero exits; human and LLM errors go to stderr, and automation errors go to stdout.
+
+Help and version remain plain text.
 
 Use `llm` when invoking `depmesh` as a coding agent. It is the normal choice for this documentation's examples.
 
@@ -175,8 +227,8 @@ depmesh -p automation dependencies @/src/app.py
 Example automation output:
 
 ```jsonl
-{"type":"dependency","relation":"imports","dependency":"@/src/config.py"}
-{"type":"dependency","relation":"tests","dependency":"@/tests/test_app.py"}
+{"content":null,"dependency":"@/src/config.py","id":"<id-1>","relation":"imports","type":"dependency"}
+{"content":null,"dependency":"@/tests/test_app.py","id":"<id-2>","relation":"tests","type":"dependency"}
 ```
 
 Use full command names in agent workflows and generated notes. Short forms are human convenience aliases for interactive terminal use:
@@ -207,13 +259,18 @@ depmesh rels
 Example output:
 
 ```text
-## imports
-
-Python files imported by the artifact.
-
-## tests
-
-Tests that verify the artifact.
+--DEPMESH-CELL <id-1> BEGIN--
+kind=relation
+description=Python files imported by the artifact.
+relation=imports
+type=relation
+--DEPMESH-CELL <id-1> END--
+--DEPMESH-CELL <id-2> BEGIN--
+kind=relation
+description=Tests that verify the artifact.
+relation=tests
+type=relation
+--DEPMESH-CELL <id-2> END--
 ```
 
 Use relation ids from this output with `dependencies --relation`.
@@ -250,18 +307,27 @@ depmesh -p llm dependencies --relation imports --relation tests @/src/app.py
 Example output:
 
 ```text
-## imports
+--DEPMESH-CELL <id-1> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=imports
+type=dependencies
 
 Python files imported by the artifact.
 
 - @/src/config.py
 - @/src/service.py
-
-## tests
+--DEPMESH-CELL <id-1> END--
+--DEPMESH-CELL <id-2> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=tests
+type=dependencies
 
 Tests that verify the artifact.
 
 - @/tests/test_app.py
+--DEPMESH-CELL <id-2> END--
 ```
 
 ## Reverse Lookups
@@ -281,9 +347,11 @@ If the reverse relation is not listed by `depmesh -p llm relations`, it is not a
 Non-fatal problems can be included in command output:
 
 ```text
-## warnings
-
-- relation `imports`: skipped unresolved dependency `third_party_package`
+--DEPMESH-CELL <id-1> BEGIN--
+kind=warning
+message=relation `imports`: skipped unresolved dependency `third_party_package`
+type=warning
+--DEPMESH-CELL <id-1> END--
 ```
 
 A missing configuration file, invalid relation id, invalid arguments, or query failure exits non-zero. Read the diagnostic and either fix the invocation or inspect the relevant configuration documentation:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from importlib import metadata
 from pathlib import Path
@@ -9,12 +9,14 @@ from typing import Annotated, cast
 import typer
 from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.config import load_config, locate_config
-from llm_tool_cli.core import errors as shared_errors
 from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Ok, Result, UnwrapError, unwrap_to_error
 from llm_tool_cli.paths import UntrustedPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
 from llm_tool_cli.protocol import Protocol, write_output
+from llm_tool_cli.protocol.cell_shortcuts import environment_error, operation_succeeded
+from llm_tool_cli.protocol.logic_cells.base import LogicCell
+from llm_tool_cli.protocol.rendering import render_cells
 
 from depmesh.cli import errors as cli_errors
 from depmesh.cli.entities import ArtifactsArgument, ConfigOption, GlobalOptions, ProtocolOption, RelationOption
@@ -22,8 +24,8 @@ from depmesh.core import warnings
 from depmesh.discovery.entities import QueryResult
 from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
 from depmesh.domain.entities import Dependency
-from depmesh.protocol import SkillDocument, renderer
-from depmesh.protocol.renderers import Rendered
+from depmesh.protocol import SkillDocument
+from depmesh.protocol.cells import DependenciesCell, relation_cells, skill_cell
 from depmesh.workspace import Config, Workspace, construct_workspace
 from depmesh.workspace import errors as workspace_errors
 from depmesh.workspace.config import CONFIG_FILE_NAME
@@ -101,13 +103,7 @@ def dependencies(
         result = QueryResult(
             dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency)))
         )
-        command.write(
-            command.renderer.render_query(
-                result,
-                warnings.read(),
-                relations=workspace.relations,
-            )
-        )
+        command.write_cells([DependenciesCell(result=result, warnings=warnings.read(), relations=workspace.relations)])
 
 
 @app.command("relations")
@@ -115,7 +111,7 @@ def dependencies(
 def relations(context: typer.Context) -> None:
     with command_context(context, default_protocol=Protocol.human) as command:
         workspace = command.load_workspace().unwrap()
-        command.write(command.renderer.render_relations(workspace.relations))
+        command.write_cells(relation_cells(workspace.relations))
 
 
 @app.command("skill")
@@ -124,14 +120,22 @@ def skill(
     document: Annotated[SkillDocument, typer.Argument()] = SkillDocument.usage,
 ) -> None:
     with command_context(context, default_protocol=Protocol.llm) as command:
-        command.write(command.renderer.render_skill(document).unwrap())
+        command.write_cells([skill_cell(document).unwrap()])
 
 
 @app.command("init")
 def init(context: typer.Context) -> None:
     with command_context(context, default_protocol=Protocol.human) as command:
         config_path = initialize_config(command.global_options.config).unwrap()
-        command.write(f"created {config_path}\n")
+        command.write_cells(
+            [
+                operation_succeeded(
+                    "Configuration created.",
+                    type="operation_succeeded",
+                    path=str(config_path),
+                )
+            ]
+        )
 
 
 @app.command("version")
@@ -141,12 +145,11 @@ def version(context: typer.Context) -> None:
 
 
 class CommandContext:
-    __slots__ = ("global_options", "protocol", "renderer")
+    __slots__ = ("global_options", "protocol")
 
     def __init__(self, context: typer.Context, *, default_protocol: Protocol) -> None:
         self.global_options = _global_options(context)
         self.protocol = self.global_options.protocol or default_protocol
-        self.renderer: Rendered = renderer(self.protocol)
 
     @unwrap_to_error
     def load_workspace(self) -> Result[Workspace]:
@@ -157,10 +160,8 @@ class CommandContext:
     def write(self, text: str) -> None:
         write_output(text)
 
-    def render_fatal(self, error: shared_errors.EnvironmentError) -> None:
-        rendered = self.renderer.render_error(error.as_record())
-
-        write_output(rendered, error=self.protocol != Protocol.automation)
+    def write_cells(self, cells: Iterable[LogicCell], *, stderr: bool = False) -> None:
+        write_output(render_cells(cells, protocol=self.protocol, tool_label="DEPMESH").decode("utf-8"), error=stderr)
 
 
 @contextmanager
@@ -176,8 +177,10 @@ def command_context(
         yield command_context
     except UnwrapError as error:
         failures = cast(EnvironmentErrors, error.details["error"])
-        for failure in failures:
-            command_context.render_fatal(failure)
+        command_context.write_cells(
+            (environment_error(failure) for failure in failures),
+            stderr=command_context.protocol != Protocol.automation,
+        )
         first = failures[0]
         if isinstance(first, cli_errors.EnvironmentError):
             exit_code = EXIT_INVALID_ARGUMENTS

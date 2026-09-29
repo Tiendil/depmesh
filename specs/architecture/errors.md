@@ -175,6 +175,8 @@ When converting an exception, the original exception SHOULD be preserved as the 
 The CLI MUST explicitly handle failed results and map their environment errors to the exit code categories specified by the CLI behavior specification.
 
 Failure rendering and exit-code selection MUST be centralized at the CLI command boundary.
+Environment errors MUST remain structured values in the shared error logic cell until projection; `llm_tool_cli` MUST manage their content, corrective guidance, and metadata.
+The CLI MUST retain responsibility for error ordering, streams, and exit codes.
 
 The CLI module MUST own the mapping from environment-error categories to exit codes.
 
@@ -194,7 +196,7 @@ The CLI SHOULD choose the most specific non-zero exit code that matches the fail
 
 The CLI MUST NOT return a non-zero exit code only because warnings were produced.
 
-When a fatal error is rendered for the automation protocol, the `error` record MUST use the error's native code, message, and structured fields. Adopted shared errors MUST NOT be remapped to legacy project diagnostics.
+When a fatal error is rendered for the automation protocol, the ordinary `error` cell MUST use the shared library's identifier and content contract, retaining the native code and diagnostic context as metadata. Adopted shared errors MUST NOT be remapped to legacy project diagnostics.
 
 When a warning is rendered for the automation protocol, the `warning` record MUST include the warning string as the `message` field.
 

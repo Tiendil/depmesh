@@ -67,16 +67,18 @@ The CLI MUST write requested command output to stdout.
 
 Diagnostics that are not part of the requested output MUST be written to stderr.
 
-For `automation` output, stdout MUST contain only valid JSON Lines records.
+For commands that emit cells or fatal errors, `automation` stdout MUST contain only valid JSON Lines records. Help and version output retain their plain-text contracts.
 
 Diagnostics written to stderr MAY be plain text and MAY be non-JSONL, including when `--protocol automation` was requested.
 
-The CLI MUST produce deterministic output for the same:
+Cell content, metadata, and output ordering MUST be deterministic for the same:
 
 - input.
 - configuration.
 - working directory.
 - project state.
+
+Cell identifiers MAY vary between invocations and MUST use the shared library's generated identifiers.
 
 ## Commands
 
@@ -95,7 +97,9 @@ The root command MUST NOT perform a dependency query directly.
 
 ## Output behavior
 
-The CLI MUST use text writing provided by `llm_tool_cli.protocol`.
+The CLI MUST use the cell model, cell and environment-error construction and rendering, and text writing provided by `llm_tool_cli.protocol`. Text cell framing MUST use the label `DEPMESH`.
+
+Depmesh MUST own its logic-cell payloads and domain-specific projections, including dependency grouping, relation descriptions, and record metadata. Shared logic-cell projection and rendering MUST manage generic cell framing, sequence rendering contexts, identifier generation, and serialization.
 
 Output MUST NOT contain:
 
@@ -151,13 +155,32 @@ For commands that support multiple output protocols, the output protocol MUST be
 --protocol PROTOCOL
 ```
 
+### Output cells
+
+For a given protocol, the same domain data MUST produce equivalent cell payloads regardless of generated identifiers.
+
+- Human and LLM dependency output MUST contain one Markdown cell of kind `dependencies` per nonempty relation group, with `type = dependencies` and `relation` metadata. Its content MUST contain the optional description followed by a Markdown list of dependencies.
+- Automation dependency output MUST contain one metadata-only cell of kind `dependency` per merged dependency, with `type = dependency`, `relation`, and `dependency` metadata.
+- Each warning MUST be a metadata-only cell of kind `warning`, with `type = warning` and `message` metadata. Warning cells MUST follow dependency cells in warning insertion order.
+- Each relation MUST be a metadata-only cell of kind `relation`, with `type = relation`, `relation`, and optional `description` metadata.
+- Skill output MUST be one Markdown cell of kind `skill`, with `type = skill` and `document` metadata, and the document text as content.
+- Successful initialization MUST emit a shared `operation_succeeded` cell, with `type = operation_succeeded` and the created configuration `path` in metadata.
+
+Empty dependency results without warnings and empty relation lists MUST emit no cells.
+
+Cell `id` MUST refer to the generated cell identifier. Relation names MUST use `relation`, never `id`. Document text MUST use cell `content`, never a separate `text` field. Metadata-only automation cells MUST retain the shared absent-content representation.
+
+The `type` metadata MUST preserve the machine-readable record type because shared cell serialization does not automatically include the cell kind.
+
+Cell identifiers in examples are placeholders; actual identifiers MAY differ on each invocation.
+
 ### Human output
 
 Human output SHOULD use concise labels.
 
 Human output SHOULD prefer canonical root-anchored paths when the input and dependency are inside the project.
 
-Human output SHOULD avoid implementation metadata unless it is needed to understand the result.
+Human output MUST use shared human cell formatting with Depmesh-owned metadata.
 
 ### LLM output
 
@@ -169,9 +192,9 @@ LLM output SHOULD be concise and SHOULD avoid redundant information.
 
 LLM output SHOULD prefer stable identifiers and explicit paths over compact visual formatting.
 
-LLM output MUST include the configured relation description between a relation `h2` heading and the dependency list for that relation when the relation description is not `None`.
+Human and LLM dependency cells MUST identify the relation in metadata and include its configured description before the dependency list when the description is not `None`.
 
-LLM output MUST NOT display a relation description, placeholder, or blank description paragraph when the relation description is `None`.
+A dependency cell MUST NOT display a description, placeholder, or blank description paragraph when the relation description is `None`.
 
 ### Automation output
 
@@ -195,7 +218,8 @@ Known record types MUST include:
 - `relation` — one configured relation entry.
 - `warning` — non-fatal problem.
 - `skill` — record emitted by `depmesh --protocol automation skill`; record content is outside this specification.
-- `error` — fatal problem, emitted before a non-zero exit when possible.
+- `operation_succeeded` — successful initialization.
+- `error` — fatal problem, emitted as an ordinary shared error cell before a non-zero exit when possible, with the formatted message in `content`, native `code`, and diagnostic context in metadata.
 
 Additional fields MAY be added in future versions. Consumers MUST ignore unknown fields.
 
@@ -303,14 +327,12 @@ The command MUST NOT accept artifact arguments or dependency query options.
 
 The command MUST render all configured relations in deterministic order by relation id.
 
-For human output, each relation SHOULD be rendered as the relation id followed by its description when present.
+For human and LLM output, each relation MUST use the shared cell formatting with its relation name and optional description in metadata.
 
-For LLM output, each relation MUST be rendered as a Markdown `h2` heading. The relation description MUST be included below the heading when present.
-
-For automation output, each relation MUST be rendered as one JSON Lines record:
+For automation output, each relation MUST be rendered as one cell record:
 
 ```json
-{"type":"relation","id":"tests","description":"Tests related to the input artifacts."}
+{"content":null,"description":"Tests related to the input artifacts.","id":"<id-1>","relation":"tests","type":"relation"}
 ```
 
 The `description` field MUST be omitted when the relation has no description.
@@ -326,11 +348,18 @@ depmesh relations
 Example output:
 
 ```text
-imports:
-  Python files imported by the input Python file.
+----- DEPMESH CELL <id-1> -----
+kind = relation
+description = Python files imported by the input Python file.
+relation = imports
+type = relation
 
-tests:
-  Tests related to the input artifacts.
+----- DEPMESH CELL <id-2> -----
+kind = relation
+description = Tests related to the input artifacts.
+relation = tests
+type = relation
+
 ```
 
 ### Example: default human output
@@ -344,17 +373,33 @@ depmesh dependencies @/src/do_smth.py
 Example output:
 
 ```text
-imports:
-  @/src/another_module.py
-  @/src/some_module.py
+----- DEPMESH CELL <id-1> -----
+kind = dependencies
+media_type = text/markdown
+relation = imports
+type = dependencies
 
-specs:
-  @/specs/architecture.md
-  @/specs/top_level_behavior.md
-  @/specs/types.md
+- @/src/another_module.py
+- @/src/some_module.py
 
-tests:
-  @/src/tests/test_do_smth.py
+----- DEPMESH CELL <id-2> -----
+kind = dependencies
+media_type = text/markdown
+relation = specs
+type = dependencies
+
+- @/specs/architecture.md
+- @/specs/top_level_behavior.md
+- @/specs/types.md
+
+----- DEPMESH CELL <id-3> -----
+kind = dependencies
+media_type = text/markdown
+relation = tests
+type = dependencies
+
+- @/src/tests/test_do_smth.py
+
 ```
 
 ### Example: multiple artifacts
@@ -368,14 +413,25 @@ depmesh dependencies @/src/do_smth.py @/src/another_module.py
 Example output:
 
 ```text
-imports:
-  @/src/another_module.py
-  @/src/some_module.py
-  @/src/types.py
+----- DEPMESH CELL <id-1> -----
+kind = dependencies
+media_type = text/markdown
+relation = imports
+type = dependencies
 
-tests:
-  @/src/tests/test_another_module.py
-  @/src/tests/test_do_smth.py
+- @/src/another_module.py
+- @/src/some_module.py
+- @/src/types.py
+
+----- DEPMESH CELL <id-2> -----
+kind = dependencies
+media_type = text/markdown
+relation = tests
+type = dependencies
+
+- @/src/tests/test_another_module.py
+- @/src/tests/test_do_smth.py
+
 ```
 
 ### Example: relation filter
@@ -389,8 +445,14 @@ depmesh dependencies --relation tests @/src/do_smth.py
 Example output:
 
 ```text
-tests:
-  @/src/tests/test_do_smth.py
+----- DEPMESH CELL <id-1> -----
+kind = dependencies
+media_type = text/markdown
+relation = tests
+type = dependencies
+
+- @/src/tests/test_do_smth.py
+
 ```
 
 ### Example: reverse relation
@@ -404,9 +466,15 @@ depmesh dependencies --relation imported_by @/src/some_module.py
 Example output:
 
 ```text
-imported_by:
-  @/src/do_smth.py
-  @/src/feature.py
+----- DEPMESH CELL <id-1> -----
+kind = dependencies
+media_type = text/markdown
+relation = imported_by
+type = dependencies
+
+- @/src/do_smth.py
+- @/src/feature.py
+
 ```
 
 ### Example: LLM output
@@ -420,26 +488,39 @@ depmesh --protocol llm dependencies @/src/do_smth.py
 Example output:
 
 ```text
-## imports
+--DEPMESH-CELL <id-1> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=imports
+type=dependencies
 
 Files imported by the input artifacts.
 
 - @/src/another_module.py
 - @/src/some_module.py
-
-## specs
+--DEPMESH-CELL <id-1> END--
+--DEPMESH-CELL <id-2> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=specs
+type=dependencies
 
 Specifications related to the input artifacts.
 
 - @/specs/architecture.md
 - @/specs/top_level_behavior.md
 - @/specs/types.md
-
-## tests
+--DEPMESH-CELL <id-2> END--
+--DEPMESH-CELL <id-3> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=tests
+type=dependencies
 
 Tests related to the input artifacts.
 
 - @/src/tests/test_do_smth.py
+--DEPMESH-CELL <id-3> END--
 ```
 
 ### Example: automation output
@@ -453,12 +534,12 @@ depmesh --protocol automation dependencies @/src/do_smth.py
 Example output:
 
 ```jsonl
-{"type":"dependency","relation":"imports","dependency":"@/src/another_module.py"}
-{"type":"dependency","relation":"imports","dependency":"@/src/some_module.py"}
-{"type":"dependency","relation":"specs","dependency":"@/specs/architecture.md"}
-{"type":"dependency","relation":"specs","dependency":"@/specs/top_level_behavior.md"}
-{"type":"dependency","relation":"specs","dependency":"@/specs/types.md"}
-{"type":"dependency","relation":"tests","dependency":"@/src/tests/test_do_smth.py"}
+{"content":null,"dependency":"@/src/another_module.py","id":"<id-1>","relation":"imports","type":"dependency"}
+{"content":null,"dependency":"@/src/some_module.py","id":"<id-2>","relation":"imports","type":"dependency"}
+{"content":null,"dependency":"@/specs/architecture.md","id":"<id-3>","relation":"specs","type":"dependency"}
+{"content":null,"dependency":"@/specs/top_level_behavior.md","id":"<id-4>","relation":"specs","type":"dependency"}
+{"content":null,"dependency":"@/specs/types.md","id":"<id-5>","relation":"specs","type":"dependency"}
+{"content":null,"dependency":"@/src/tests/test_do_smth.py","id":"<id-6>","relation":"tests","type":"dependency"}
 ```
 
 ### Example: human output with warnings
@@ -472,12 +553,20 @@ depmesh dependencies @/src/do_smth.py
 Example output:
 
 ```text
-imports:
-  @/src/another_module.py
-  @/src/some_module.py
+----- DEPMESH CELL <id-1> -----
+kind = dependencies
+media_type = text/markdown
+relation = imports
+type = dependencies
 
-warnings:
-  relation `imports`: skipped unresolved dependency `third_party_package`
+- @/src/another_module.py
+- @/src/some_module.py
+
+----- DEPMESH CELL <id-2> -----
+kind = warning
+message = relation `imports`: skipped unresolved dependency `third_party_package`
+type = warning
+
 ```
 
 ### Example: LLM output with warnings
@@ -491,16 +580,22 @@ depmesh --protocol llm dependencies @/src/do_smth.py
 Example output:
 
 ```text
-## imports
+--DEPMESH-CELL <id-1> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=imports
+type=dependencies
 
 Files imported by the input artifacts.
 
 - @/src/another_module.py
 - @/src/some_module.py
-
-## warnings
-
-- relation `imports`: skipped unresolved dependency `third_party_package`
+--DEPMESH-CELL <id-1> END--
+--DEPMESH-CELL <id-2> BEGIN--
+kind=warning
+message=relation `imports`: skipped unresolved dependency `third_party_package`
+type=warning
+--DEPMESH-CELL <id-2> END--
 ```
 
 ### Example: automation output with warnings
@@ -514,9 +609,9 @@ depmesh --protocol automation dependencies @/src/do_smth.py
 Example output:
 
 ```jsonl
-{"type":"dependency","relation":"imports","dependency":"@/src/another_module.py"}
-{"type":"dependency","relation":"imports","dependency":"@/src/some_module.py"}
-{"type":"warning","relation":"imports","message":"skipped unresolved dependency `third_party_package`"}
+{"content":null,"dependency":"@/src/another_module.py","id":"<id-1>","relation":"imports","type":"dependency"}
+{"content":null,"dependency":"@/src/some_module.py","id":"<id-2>","relation":"imports","type":"dependency"}
+{"content":null,"id":"<id-3>","message":"relation `imports`: skipped unresolved dependency `third_party_package`","type":"warning"}
 ```
 
 ## Skill Command
@@ -565,7 +660,14 @@ depmesh skill
 Example output:
 
 ```text
+--DEPMESH-CELL <id-1> BEGIN--
+kind=skill
+media_type=text/markdown
+document=usage
+type=skill
+
 The exact Markdown text emitted by `depmesh skill` is not part of this specification.
+--DEPMESH-CELL <id-1> END--
 ```
 
 ### Example: automation output
@@ -579,7 +681,7 @@ depmesh --protocol automation skill
 Example output:
 
 ```jsonl
-{"type":"skill","text":"The exact content emitted by `depmesh skill` is not part of this specification."}
+{"content":"The exact content emitted by `depmesh skill` is not part of this specification.","document":"usage","id":"<id-1>","type":"skill"}
 ```
 
 ## Init Command
@@ -609,7 +711,7 @@ The generated configuration MUST:
 - include the `governs` relation.
 - include commented examples of relation rules.
 
-The command SHOULD print the created configuration path to stdout.
+The command MUST emit a shared success cell to stdout with the created configuration path in `path` metadata and a success message as content. It MUST honor the selected output protocol, defaulting to `human`.
 
 The command MUST NOT accept artifact arguments, relation options, dependency query options, or skill document arguments.
 
@@ -660,7 +762,9 @@ The CLI SHOULD use these exit codes:
 
 Human and LLM error messages SHOULD be written to stderr.
 
-The CLI MUST render returned project and documented public `llm_tool_cli` environment errors using their native codes, formatted messages, and structured fields.
+The CLI MUST delegate typed environment-error cell construction and rendering to `llm_tool_cli`, including its common content, corrective guidance, and metadata contract.
+Error content MUST now include corrective guidance when the error supplies it; native codes and diagnostic context retain their shared representation.
+Depmesh MUST own stream selection and exit categories.
 
 Shared configuration errors MUST exit with status `2`. Unmapped environment errors MUST exit with status `3`.
 
@@ -670,18 +774,18 @@ An unsuccessful upward configuration search MUST use the shared `config_not_foun
 
 Shared configuration diagnostics replace the previous project-specific mappings: invalid TOML uses `config_invalid_toml`, invalid UTF-8 uses `config_invalid_encoding`, and schema validation uses `config_validation_failed`. Discovery and explicit path resolution failures use `config_discovery_failed` and `config_path_resolution_failed`.
 
-Shared configuration error records MUST include `path` and `reason`. Validation details use `reason` instead of the previous `validation` field. File reading and creation failures retain their shared codes and use the shared message and reason fields.
+Shared configuration error records MUST include `path` and `reason`. Validation details use `reason` instead of the previous `validation` field. File reading and creation failures retain their shared codes, use the shared `reason` field, and place the formatted message in cell content.
 
 Failure to read the packaged starter template MUST use the project-owned `config_template_unreadable` code with `template` and `reason` fields, rather than reporting a configuration target write failure.
 
 For automation output, fatal errors SHOULD be written to stdout as an `error` record when possible and the process SHOULD still exit with a non-zero code.
 
-If automation output cannot be initialized, fatal diagnostics MAY be written to stderr as plain text instead of stdout as JSON Lines.
+If automation output cannot be initialized, fatal diagnostics MAY be written to stderr as human error cells. Argument validation before command initialization MUST use this fallback.
 
 Example automation fatal error:
 
 ```jsonl
-{"type":"error","code":"config_not_found","message":"/project: depmesh.toml was not found in this directory or its parents","path":"/project","reason":"depmesh.toml was not found in this directory or its parents"}
+{"code":"config_not_found","content":"/project: depmesh.toml was not found in this directory or its parents","id":"<cell-id>","path":"/project","reason":"depmesh.toml was not found in this directory or its parents","type":"error"}
 ```
 
 ## Compatibility rules

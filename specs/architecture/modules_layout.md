@@ -39,17 +39,25 @@ The following topics are out of scope:
   - artifact source definitions and evaluation behavior.
   - dependency query results.
   - dependency query evaluation.
-- `./depmesh/protocol/` — module responsible for output protocol types and rendering. Contains:
-  - protocol enums.
-  - renderer selection.
-  - protocol-specific renderers.
-  - serialized record construction for external output protocols.
-- `./depmesh/skills/` — module responsible for built-in skill text loaded by the CLI and renderers.
+- `./depmesh/protocol/` — module responsible for projecting project data into output cells. Contains:
+  - grouped Markdown dependency content for human and LLM output.
+  - structured dependency, relation, warning, and skill cell construction.
+  - dependency-result logic cells built on the shared logic-cell base.
+  - use of shared content logic cells for protocol-independent payloads and protocol-specific output-cell types inside dependency projections.
+- `./depmesh/skills/` — module responsible for built-in skill text loaded for output cells.
 - `./depmesh/workspace/` — module responsible for workspace management, including:
   - finding and parsing config.
   - detecting current project root.
   - operations with the filesystem.
-- `./depmesh/cli/` — module responsible for the CLI interface of the `depmesh` tool.
+- `./depmesh/cli/` — module responsible for the CLI interface of the `depmesh` tool, shared logic-cell rendering and output writing, and local stream and exit policies.
+
+Output protocol values, the abstract `OutputCell` and its protocol-specific subtypes, the `LogicCell` base and protocol dispatch, shared content logic cells, rendering contexts, sequence rendering and environment-error cell construction, and text writing MUST be owned by `llm_tool_cli.protocol` and used directly.
+Depmesh MUST own concrete dependency-result logic cells and their protocol-specific projections.
+Logic-cell projections MUST return the corresponding shared output-cell subtype.
+The CLI MUST pass complete logic-cell sequences to shared rendering with the selected protocol and Depmesh's tool label.
+Protocol-independent content MUST use shared content logic cells without an output-cell class supplied by the CLI.
+Depmesh MUST NOT maintain renderer wrappers or a parallel formatter family.
+Environment errors MUST use the shared typed error logic cell, which owns their content and metadata projection.
 
 ## Submodules
 

@@ -6,10 +6,11 @@ from typing import Annotated, NoReturn
 import typer
 from llm_tool_cli.core.entities import BaseEntity
 from llm_tool_cli.protocol import Protocol, write_output
+from llm_tool_cli.protocol.cell_shortcuts import environment_error
+from llm_tool_cli.protocol.rendering import render_cells
 
 from depmesh.cli import errors as cli_errors
 from depmesh.domain.entities import ArtifactId, RelationId
-from depmesh.protocol import renderer
 
 
 class GlobalOptions(BaseEntity):
@@ -18,7 +19,8 @@ class GlobalOptions(BaseEntity):
 
 
 def _exit_with_invalid_arguments(message: str) -> NoReturn:
-    rendered = renderer(Protocol.human).render_error(cli_errors.InvalidArguments(reason=message).as_record())
+    cell = environment_error(cli_errors.InvalidArguments(reason=message))
+    rendered = render_cells([cell], protocol=Protocol.human, tool_label="DEPMESH").decode("utf-8")
     write_output(rendered, error=True)
     raise typer.Exit(1)
 

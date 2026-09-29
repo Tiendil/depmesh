@@ -262,3 +262,5 @@ Rendered output tests SHOULD assert exact output only for stable protocol contra
 Rendered output tests MAY assert selected lines or records when exact text is intentionally outside the relevant specification.
 
 Automation protocol tests SHOULD parse JSON Lines output before asserting record contents.
+
+Cell output tests MUST compare content, metadata, and ordering independently of generated identifiers. CLI integration tests SHOULD verify that repeated invocations preserve cell payloads while accepting different identifiers. Generic cell formatting tests belong to the shared library; project tests MUST cover local cell construction and CLI integration.
