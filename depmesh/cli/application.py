@@ -13,7 +13,7 @@ from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Ok, Result, UnwrapError, unwrap_to_error
 from llm_tool_cli.paths import UntrustedPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
-from llm_tool_cli.protocol import Protocol, cell_shortcuts, write_output
+from llm_tool_cli.protocol import Protocol, cell_shortcuts
 from llm_tool_cli.protocol.cell_shortcuts import environment_error, operation_succeeded
 from llm_tool_cli.protocol.logic_cells.base import LogicCell
 from llm_tool_cli.protocol.rendering import write_cells
@@ -136,7 +136,7 @@ def init(context: typer.Context) -> None:
 @app.command("version")
 def version(context: typer.Context) -> None:
     with command_context(context, default_protocol=Protocol.human) as command:
-        command.write(metadata.version("depmesh") + "\n")
+        command.write_cells([cell_shortcuts.version(metadata.version("depmesh"))])
 
 
 class CommandContext:
@@ -151,9 +151,6 @@ class CommandContext:
         config_path = locate_config(CONFIG_FILE_NAME, path=self.global_options.config, cwd=Path.cwd()).unwrap()
         config = load_config(config_path, Config).unwrap()
         return Ok(construct_workspace(config, root=config_path.parent))
-
-    def write(self, text: str) -> None:
-        write_output(text)
 
     def write_cells(self, cells: Iterable[LogicCell], *, stderr: bool = False) -> None:
         write_cells(cells, protocol=self.protocol, tool_label="DEPMESH", stderr=stderr)

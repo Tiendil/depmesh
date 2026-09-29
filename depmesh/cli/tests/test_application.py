@@ -1125,20 +1125,44 @@ class TestInit:
 
 
 class TestVersion:
-    def test_version_output(self) -> None:
-        result = CliRunner().invoke(app, ["version"])
+    @pytest.mark.parametrize("protocol", [None, "human", "llm", "automation"])
+    def test_version_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, protocol: str | None) -> None:
+        monkeypatch.chdir(tmp_path)
+        options = [] if protocol is None else ["-p", protocol]
+
+        result = CliRunner().invoke(app, [*options, "version"])
 
         assert result.exit_code == 0
-        assert result.output == f"{metadata.version('depmesh')}\n"
+        assert not result.stderr
+        version = metadata.version("depmesh")
+        if protocol == "automation":
+            assert cell_records(result.stdout) == [{"type": "version", "version": version, "content": None}]
+        elif protocol == "llm":
+            assert normalize_cell_ids(result.stdout) == (
+                f"--DEPMESH-CELL <id> BEGIN--\nkind=version\ntype=version\nversion={version}\n"
+                "--DEPMESH-CELL <id> END--\n"
+            )
+        else:
+            assert normalize_cell_ids(result.stdout) == (
+                f"----- DEPMESH CELL <id> -----\nkind = version\ntype = version\nversion = {version}\n\n"
+            )
 
-    def test_global_options_are_accepted(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize("content", [None, "not valid TOML"])
+    def test_global_options_are_accepted(self, tmp_path: Path, content: str | None) -> None:
+        config_path = tmp_path / "depmesh.toml"
+        if content is not None:
+            config_path.write_text(content, encoding="utf-8")
+
         result = CliRunner().invoke(
             app,
-            ["--config", str(tmp_path / "missing.toml"), "--protocol", "automation", "version"],
+            ["--config", str(config_path), "--protocol", "automation", "version"],
         )
 
         assert result.exit_code == 0
-        assert result.output == f"{metadata.version('depmesh')}\n"
+        assert not result.stderr
+        assert cell_records(result.stdout) == [
+            {"type": "version", "version": metadata.version("depmesh"), "content": None}
+        ]
 
 
 class TestMain:
@@ -1149,7 +1173,12 @@ class TestMain:
             main()
 
         assert exit_info.value.code == 0
-        assert capsys.readouterr().out == f"{metadata.version('depmesh')}\n"
+        captured = capsys.readouterr()
+        assert not captured.err
+        assert normalize_cell_ids(captured.out) == (
+            "----- DEPMESH CELL <id> -----\nkind = version\ntype = version\n"
+            f"version = {metadata.version('depmesh')}\n\n"
+        )
 
 
 def assert_error_cells(text: str, errors: EnvironmentErrors) -> None:
