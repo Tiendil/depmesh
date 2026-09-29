@@ -24,6 +24,8 @@
 
 ### Changes
 
+- Use the shared successful-operation record type default for initialization output, preserving the existing payload and configuration path.
+
 - Construct skill cells directly through the shared shortcut, preserving document selection, output payloads, protocol defaults, and loading-error handling.
 
 - Adopt shared typed environment-error cells with deferred metadata and guidance rendering, and verify their CLI integration in every protocol.

@@ -1072,6 +1072,7 @@ class TestInit:
         else:
             assert result.stdout.startswith("--DEPMESH-CELL ")
             assert "kind=operation_succeeded\n" in result.stdout
+            assert "type=operation_succeeded\n" in result.stdout
             assert f"path={tmp_path / 'depmesh.toml'}\n" in result.stdout
 
     def test_expands_home_in_config_path(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1096,6 +1097,7 @@ class TestInit:
         config_path = tmp_path / "depmesh.toml"
         assert result.exit_code == 0
         assert "kind = operation_succeeded\n" in result.output
+        assert "type = operation_succeeded\n" in result.output
         assert f"path = {config_path}\n" in result.output
         assert "Configuration created.\n" in result.output
         assert 'id = "governed_by"' in config_path.read_text(encoding="utf-8")

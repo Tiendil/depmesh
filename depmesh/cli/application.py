@@ -130,15 +130,7 @@ def skill(
 def init(context: typer.Context) -> None:
     with command_context(context, default_protocol=Protocol.human) as command:
         config_path = initialize_config(command.global_options.config).unwrap()
-        command.write_cells(
-            [
-                operation_succeeded(
-                    "Configuration created.",
-                    type="operation_succeeded",
-                    path=str(config_path),
-                )
-            ]
-        )
+        command.write_cells([operation_succeeded("Configuration created.", path=str(config_path))])
 
 
 @app.command("version")
