@@ -39,6 +39,7 @@ depends_on = [
     "depmesh.discovery",
     "depmesh.domain",
     "depmesh.protocol",
+    "depmesh.skills",
     "depmesh.workspace",
 ]
 layer = "cli"

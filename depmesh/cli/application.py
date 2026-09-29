@@ -13,7 +13,7 @@ from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Ok, Result, UnwrapError, unwrap_to_error
 from llm_tool_cli.paths import UntrustedPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
-from llm_tool_cli.protocol import Protocol, write_output
+from llm_tool_cli.protocol import Protocol, cell_shortcuts, write_output
 from llm_tool_cli.protocol.cell_shortcuts import environment_error, operation_succeeded
 from llm_tool_cli.protocol.logic_cells.base import LogicCell
 from llm_tool_cli.protocol.rendering import render_cells
@@ -25,7 +25,8 @@ from depmesh.discovery.entities import QueryResult
 from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
 from depmesh.domain.entities import Dependency
 from depmesh.protocol import SkillDocument
-from depmesh.protocol.cells import DependenciesCell, relation_cells, skill_cell
+from depmesh.protocol.cells import DependenciesCell, relation_cells
+from depmesh.skills.fixtures import load_skill_text
 from depmesh.workspace import Config, Workspace, construct_workspace
 from depmesh.workspace import errors as workspace_errors
 from depmesh.workspace.config import CONFIG_FILE_NAME
@@ -120,7 +121,9 @@ def skill(
     document: Annotated[SkillDocument, typer.Argument()] = SkillDocument.usage,
 ) -> None:
     with command_context(context, default_protocol=Protocol.llm) as command:
-        command.write_cells([skill_cell(document).unwrap()])
+        command.write_cells(
+            [cell_shortcuts.skill(document=document.value, content=load_skill_text(document).unwrap())]
+        )
 
 
 @app.command("init")

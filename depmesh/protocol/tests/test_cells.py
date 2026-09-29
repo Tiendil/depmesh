@@ -1,6 +1,3 @@
-import importlib.resources
-from pathlib import Path
-
 import pytest
 from llm_tool_cli.protocol import Protocol
 from llm_tool_cli.protocol.output_cells import AutomationOutputCell, HumanOutputCell, LLMOutputCell
@@ -8,9 +5,7 @@ from llm_tool_cli.protocol.output_cells.base import OutputCell
 
 from depmesh.discovery.entities import QueryResult
 from depmesh.domain.entities import ArtifactId, Dependency, Relation, RelationDescription, RelationId
-from depmesh.protocol.cells import DependenciesCell, relation_cells, skill_cell
-from depmesh.skills.entities import SkillDocument
-from depmesh.skills.errors import SkillUnreadable
+from depmesh.protocol.cells import DependenciesCell, relation_cells
 
 
 def dependency(relation: str, artifact: str) -> Dependency:
@@ -191,31 +186,3 @@ class TestRelationCells:
 
     def test_empty_description_is_preserved(self) -> None:
         assert relation_cells((relation("tests", ""),))[0].meta["description"] == ""
-
-
-class TestSkillCell:
-    def test_default_document(self) -> None:
-        cell = skill_cell().unwrap()
-
-        assert cell.kind == "skill"
-        assert cell.meta == {"type": "skill", "document": "usage"}
-        assert cell.media_type == "text/markdown"
-        assert cell.content is not None
-        assert cell.content.startswith("# `depmesh` Usage\n")
-
-    @pytest.mark.parametrize("document", list(SkillDocument))
-    def test_selected_document(self, document: SkillDocument) -> None:
-        cell = skill_cell(document).unwrap()
-
-        assert cell.meta["document"] == document.value
-        assert cell.content is not None
-        assert cell.content.startswith(f"# `depmesh` {document.value.title()}\n")
-
-    def test_read_error_propagates(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(importlib.resources, "files", lambda _package: tmp_path)
-
-        error = skill_cell(SkillDocument.configuration).unwrap_err()[0]
-
-        assert isinstance(error, SkillUnreadable)
-        assert error.document is SkillDocument.configuration
-        assert isinstance(error.cause, FileNotFoundError)

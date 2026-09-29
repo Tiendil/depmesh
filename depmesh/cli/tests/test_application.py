@@ -960,6 +960,7 @@ class TestSkill:
         assert result.stderr == ""
         assert result.stdout.startswith("----- DEPMESH CELL ")
         assert "kind = skill\n" in result.stdout
+        assert "type = skill\n" in result.stdout
         assert "document = usage\n" in result.stdout
         assert "# `depmesh` Usage\n" in result.stdout
 
@@ -978,6 +979,7 @@ class TestSkill:
             record = cell_records(result.stdout)[0]
             assert record["type"] == "error"
             assert record["document"] == "usage"
+            assert record["code"] == "skill_unreadable"
             assert record["content"]
             assert result.stderr == ""
         else:
@@ -989,6 +991,7 @@ class TestSkill:
 
         assert result.exit_code == 0
         assert result.output.startswith("--DEPMESH-CELL ")
+        assert "type=skill\n" in result.output
         assert "# `depmesh` Usage\n" in result.output
 
     def test_skill_usage_document(self) -> None:
@@ -1026,13 +1029,19 @@ class TestSkill:
         assert result.exit_code == 0
         assert json.loads(result.output)["type"] == "skill"
 
-    def test_skill_automation_protocol_includes_selected_document(self) -> None:
-        result = CliRunner().invoke(app, ["--protocol", "automation", "skill", "configuration"])
+    @pytest.mark.parametrize("document", ["usage", "configuration", "initialization"])
+    def test_skill_automation_protocol_includes_selected_document(self, document: str) -> None:
+        result = CliRunner().invoke(app, ["--protocol", "automation", "skill", document])
 
         assert result.exit_code == 0
-        record = json.loads(result.output)
-        assert record["document"] == "configuration"
-        assert record["content"].startswith("# `depmesh` Configuration\n")
+        assert result.stderr == ""
+        records = cell_records(result.stdout)
+        assert len(records) == 1
+        assert records[0]["type"] == "skill"
+        assert records[0]["document"] == document
+        content = records[0]["content"]
+        assert isinstance(content, str)
+        assert content.startswith(f"# `depmesh` {document.title()}\n")
 
     def test_global_config_option_is_accepted(self, tmp_path: Path) -> None:
         result = CliRunner().invoke(app, ["--config", str(tmp_path / "missing.toml"), "skill"])

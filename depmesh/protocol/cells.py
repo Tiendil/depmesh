@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from llm_tool_cli.core.result import Result
 from llm_tool_cli.protocol.logic_cells import ContentCell
 from llm_tool_cli.protocol.logic_cells.base import LogicCell
 from llm_tool_cli.protocol.output_cells import AutomationOutputCell, HumanOutputCell, LLMOutputCell
@@ -8,8 +7,6 @@ from llm_tool_cli.protocol.output_cells.base import MetaValue, OutputCell
 
 from depmesh.discovery.entities import QueryResult
 from depmesh.domain.entities import Relation
-from depmesh.skills.entities import SkillDocument
-from depmesh.skills.fixtures import load_skill_text
 
 
 class DependenciesCell(LogicCell):
@@ -61,11 +58,3 @@ def relation_cells(relations: tuple[Relation, ...]) -> list[ContentCell]:
             meta["description"] = relation.description
         cells.append(ContentCell(kind="relation", meta=meta))
     return cells
-
-
-def skill_cell(document: SkillDocument = SkillDocument.usage) -> Result[ContentCell]:
-    return load_skill_text(document).map(
-        lambda text: ContentCell(
-            kind="skill", media_type="text/markdown", content=text, meta={"type": "skill", "document": document.value}
-        )
-    )

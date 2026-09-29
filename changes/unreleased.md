@@ -5,7 +5,8 @@
 
 - Fatal errors now use ordinary cell framing in human and LLM output. Automation gains a generated `id` and moves the formatted error message from `message` to `content`, retaining native codes and diagnostic context through shared cell metadata conversion. Stream routing and exit categories remain unchanged; argument failures before command initialization use human error cells on stderr.
 
-- Python integrations using `query_cells` must construct `DependenciesCell(result=..., relations=..., warnings=...)` and pass it to shared `render_cells` with `protocol` and `tool_label`. `relation_cells` and `skill_cell` return shared content logic cells and no longer accept `cell_type`.
+- Python integrations using `query_cells` must construct `DependenciesCell(result=..., relations=..., warnings=...)` and pass it to shared `render_cells` with `protocol` and `tool_label`. `relation_cells` returns shared content logic cells and no longer accepts `cell_type`.
+- Replace `depmesh.protocol.cells.skill_cell(document)` with application-owned document loading followed by `llm_tool_cli.protocol.cell_shortcuts.skill(document.value, content)`.
 - Import `ContentCell` from `llm_tool_cli.protocol.logic_cells` and `LogicCell` from `llm_tool_cli.protocol.logic_cells.base`; the shared `protocol.cells` module is removed.
 - Command results now use shared cells with `DEPMESH` text framing and random identifiers. Automation cells include `id` and `content`; relation names move from `id` to `relation`, and skill text moves from `text` to `content`. Initialization now honors the selected protocol and emits an `operation_succeeded` cell with `path`. Ignore cell identifiers when comparing repeated results; payloads and ordering remain deterministic. Exit codes, help, and version retain their existing contracts.
 - Python integrations must replace the removed `depmesh.protocol.renderers` family and `depmesh.protocol.utils.renderer` with Depmesh logic-cell construction and `llm_tool_cli.protocol.rendering.render_cells(cells, protocol=..., tool_label=...)`. `CommandContext.write_cells` accepts logic cells; the separate `write_logic_cell` method and `cell_type` property are removed.
@@ -22,6 +23,8 @@
 - Missing discovered configuration now uses the shared `config_not_found` message and `reason` field, with the search directory in `path`.
 
 ### Changes
+
+- Construct skill cells directly through the shared shortcut, preserving document selection, output payloads, protocol defaults, and loading-error handling.
 
 - Adopt shared typed environment-error cells with deferred metadata and guidance rendering, and verify their CLI integration in every protocol.
 
