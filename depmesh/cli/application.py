@@ -17,6 +17,7 @@ from llm_tool_cli.protocol import Protocol, cell_shortcuts
 from llm_tool_cli.protocol.cell_shortcuts import environment_error, operation_succeeded
 from llm_tool_cli.protocol.logic_cells.base import LogicCell
 from llm_tool_cli.protocol.rendering import write_cells
+from llm_tool_cli.skills import load_skill_text
 
 from depmesh.cli import errors as cli_errors
 from depmesh.cli.entities import ArtifactsArgument, ConfigOption, GlobalOptions, ProtocolOption, RelationOption
@@ -26,7 +27,6 @@ from depmesh.discovery.query import normalize_input_artifacts, query_dependencie
 from depmesh.domain.entities import Dependency
 from depmesh.protocol import SkillDocument
 from depmesh.protocol.cells import DependenciesCell, relation_cells
-from depmesh.skills.fixtures import load_skill_text
 from depmesh.workspace import Config, Workspace, construct_workspace
 from depmesh.workspace import errors as workspace_errors
 from depmesh.workspace.config import CONFIG_FILE_NAME
@@ -121,9 +121,8 @@ def skill(
     document: Annotated[SkillDocument, typer.Argument()] = SkillDocument.usage,
 ) -> None:
     with command_context(context, default_protocol=Protocol.llm) as command:
-        command.write_cells(
-            [cell_shortcuts.skill(document=document.value, content=load_skill_text(document).unwrap())]
-        )
+        content = load_skill_text(package="depmesh.skills", document=document.value).unwrap()
+        command.write_cells([cell_shortcuts.skill(document=document.value, content=content)])
 
 
 @app.command("init")

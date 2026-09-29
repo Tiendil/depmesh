@@ -1,6 +1,8 @@
 
 ### Migration
 
+- Replace `depmesh.skills.fixtures.load_skill_text(document)` with `llm_tool_cli.skills.load_skill_text(package="depmesh.skills", document=document.value)`. Import `SkillUnreadable` from `llm_tool_cli.skills.errors`; its `document` field is the document name string. The local loader and error modules are removed.
+
 - `depmesh version` now emits a version cell in the selected protocol instead of a bare version line. Scripts should use `depmesh -p automation version` and read the JSON record's `version` field; `id` is generated and `content` is null.
 
 - Shared error shortcuts now retain the structured error in `EnvironmentErrorCell` until projection. Error content includes corrective guidance when supplied; codes, context, stream routing, ordering, and exit categories retain their shared contracts.
@@ -25,6 +27,8 @@
 - Missing discovered configuration now uses the shared `config_not_found` message and `reason` field, with the search directory in `path`.
 
 ### Changes
+
+- Load skill documents directly through the shared library, preserving document selection, content, native diagnostics, stream routing, and exit codes.
 
 - Use the shared version-cell shortcut for every output protocol, preserving configuration-free execution and exit status zero on success.
 

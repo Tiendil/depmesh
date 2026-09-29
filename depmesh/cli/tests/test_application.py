@@ -965,26 +965,35 @@ class TestSkill:
         assert "# `depmesh` Usage\n" in result.stdout
 
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
-    def test_missing_document_reports_native_error(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, protocol: str
+    @pytest.mark.parametrize("content", [None, b"\xff"])
+    def test_unreadable_document_reports_shared_error(
+        self, tmp_path: Path, mocker: MockerFixture, protocol: str, content: bytes | None
     ) -> None:
-        import importlib.resources
-
-        monkeypatch.setattr(importlib.resources, "files", lambda _package: tmp_path)
+        fixtures = tmp_path / "fixtures"
+        fixtures.mkdir()
+        if content is not None:
+            (fixtures / "usage.md").write_bytes(content)
+        mocker.patch("llm_tool_cli.skills.fixtures.importlib.resources.files", return_value=tmp_path)
 
         result = CliRunner().invoke(app, ["-p", protocol, "skill"])
 
         assert result.exit_code == 3
         if protocol == "automation":
-            record = cell_records(result.stdout)[0]
+            records = cell_records(result.stdout)
+            assert len(records) == 1
+            record = records[0]
             assert record["type"] == "error"
             assert record["document"] == "usage"
             assert record["code"] == "skill_unreadable"
+            assert record["reason"]
             assert record["content"]
             assert result.stderr == ""
         else:
             assert result.stdout == ""
-            assert "usage" in result.stderr
+            separator = "=" if protocol == "llm" else " = "
+            assert f"kind{separator}error\n" in result.stderr
+            assert f"code{separator}skill_unreadable\n" in result.stderr
+            assert f"document{separator}usage\n" in result.stderr
 
     def test_skill_defaults_to_llm_protocol(self) -> None:
         result = CliRunner().invoke(app, ["skill"])

@@ -44,7 +44,7 @@ The following topics are out of scope:
   - structured dependency, relation, warning, and skill cell construction.
   - dependency-result logic cells built on the shared logic-cell base.
   - use of shared content logic cells for protocol-independent payloads and protocol-specific output-cell types inside dependency projections.
-- `./depmesh/skills/` — module responsible for built-in skill text loaded for output cells.
+- `./depmesh/skills/` — module responsible for built-in skill document definitions and packaged Markdown resources.
 - `./depmesh/workspace/` — module responsible for workspace management, including:
   - finding and parsing config.
   - detecting current project root.
@@ -58,6 +58,8 @@ The CLI MUST pass complete logic-cell sequences to shared rendering with the sel
 Protocol-independent content MUST use shared content logic cells without an output-cell class supplied by the CLI.
 Depmesh MUST NOT maintain renderer wrappers or a parallel formatter family.
 Environment errors MUST use the shared typed error logic cell, which owns their content and metadata projection.
+
+The CLI MUST use `llm_tool_cli.skills` directly for skill-document loading and propagate its returned errors without local adapters.
 
 ## Submodules
 
