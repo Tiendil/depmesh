@@ -223,8 +223,8 @@ Additional fields MAY be added in future versions. Consumers MUST ignore unknown
 
 ## Global options
 
-The CLI MUST use parsed global options, invocation storage, and command-context option retrieval, protocol selection, and cell writing managed by `llm_tool_cli`.
-Depmesh MUST combine shared and Depmesh-owned option parsing and pass the parsed options to shared context storage.
+The CLI MUST use global-option registration and parsing, invocation storage, and command-context option retrieval, protocol selection, and cell writing managed by `llm_tool_cli`.
+Depmesh MUST register its commands on the application provided by `llm_tool_cli`.
 Workspace loading, warning lifecycle, and dependency-query behavior MUST remain Depmesh-owned.
 
 ### Help and completion

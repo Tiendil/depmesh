@@ -10,10 +10,7 @@ from llm_tool_cli.cli.application import create_app
 from llm_tool_cli.cli.commands.skills import register_skill_command
 from llm_tool_cli.cli.commands.version import register_version_command
 from llm_tool_cli.cli.context import CommandContext as BaseCommandContext
-from llm_tool_cli.cli.context import set_global_options
-from llm_tool_cli.cli.entities import GlobalOptions
 from llm_tool_cli.cli.handling import handle_command_errors
-from llm_tool_cli.cli.options import ConfigOption, ProtocolOption
 from llm_tool_cli.config import initialize_config, load_config, locate_config
 from llm_tool_cli.core import settings
 from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
@@ -39,18 +36,6 @@ register_version_command(app, distribution="depmesh")
 def main() -> None:
     settings.initialize(tool_label=settings.ToolLabel("DEPMESH"))
     app()
-
-
-@app.callback()
-def root(
-    context: typer.Context,
-    protocol: ProtocolOption = None,
-    config: ConfigOption = None,
-) -> None:
-    set_global_options(
-        context,
-        GlobalOptions(protocol=protocol, config_path=config),
-    )
 
 
 @app.command("dependencies")

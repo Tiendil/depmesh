@@ -48,6 +48,8 @@
 
 ### Changes
 
+- Delegate root global-option registration and storage to `llm_tool_cli.cli.application.create_app`, removing the local callback while preserving application startup, CLI options, defaults, help, completions, and test-owned warning cleanup.
+
 - Isolate warning storage through an autouse test fixture and explicit cleanup between CLI invocations in one test; remove test-isolation cleanup from CLI startup. Separate CLI processes retain independent warning storage.
 
 - Inherit invocation-option retrieval, protocol selection, and cell writing from `llm_tool_cli.cli.context.CommandContext`, retaining Depmesh's workspace loading, warnings, dependency queries, and output contracts.
