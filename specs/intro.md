@@ -27,7 +27,7 @@ Detailed requirements for individual specifications are out of scope except for 
 - `./specs/architecture/modules_layout.md` — specification of the project module structure, shared entity infrastructure ownership, and shared lexical project path normalization boundary.
 - `./specs/architecture/naming.md` — specification of project code naming conventions.
 - `./specs/architecture/static_analysis.md` — specification of static analysis, formatting, linting, spelling, and type-checking expectations.
-- `./specs/architecture/tests.md` — specification of project test architecture, including returned error propagation, internal-exception separation, and CLI mapping checks.
+- `./specs/architecture/tests.md` — specification of project test architecture, including returned error propagation, internal-exception separation, CLI mapping checks, shared automation payload extraction and error-cell assertions, and local output parsing.
 - `./specs/behavior/cli.md` — specification of the `depmesh` command line interface, including configuration path inputs, native environment-error records, ordered error lists, and exit categories.
 - `./specs/behavior/config.md` — specification of the `depmesh.toml` configuration file behavior, including discovery and home-relative explicit paths.
 - `./specs/behavior/file_paths.md` — specification of local project file path syntax, semantics, and resolution behavior.

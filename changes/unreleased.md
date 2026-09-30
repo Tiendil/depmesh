@@ -48,6 +48,8 @@
 
 ### Changes
 
+- Use shared automation payload extraction throughout CLI tests, retaining local JSON parsing and preserving payload comparisons and generated cell-ID checks.
+
 - Use the shared automation error-cell assertion in CLI tests, retaining local output parsing and application-specific checks.
 
 - Delegate root global-option registration and storage to `llm_tool_cli.cli.application.create_app`, removing the local callback while preserving application startup, CLI options, defaults, help, completions, and test-owned warning cleanup.

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import base64
 import json
 import re
 import sys
-import uuid
 from importlib import metadata
 from pathlib import Path
 
@@ -16,7 +14,7 @@ from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Err, Result, UnwrapErrError, UnwrapError
 from llm_tool_cli.paths import resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
-from llm_tool_cli.protocol.tests.helpers import assert_error_cells
+from llm_tool_cli.protocol.tests.helpers import assert_error_cells, cell_payloads
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
 
@@ -36,14 +34,8 @@ def normalize_cell_ids(text: str) -> str:
     )
 
 
-def cell_records(text: str) -> list[dict[str, object]]:
-    records = []
-    for line in text.splitlines():
-        record = json.loads(line)
-        cell_id = record.pop("id")
-        assert uuid.UUID(bytes=base64.urlsafe_b64decode(cell_id + "==")).version == 4
-        records.append(record)
-    return records
+def json_lines(text: str) -> list[dict[str, object]]:
+    return [json.loads(line) for line in text.splitlines()]
 
 
 def touch(path: Path) -> None:
@@ -106,7 +98,7 @@ class TestCommandContext:
         assert not list(tmp_path.iterdir())
         if protocol == "automation":
             assert not result.stderr
-            records = cell_records(result.stdout)
+            records = cell_payloads(json_lines(result.stdout))
             assert len(records) == 1
             assert records[0]["type"] == "error"
             assert records[0]["code"] == code
@@ -124,7 +116,7 @@ class TestCommandContext:
 
         assert result.exit_code == 0
         assert not result.stderr
-        records = cell_records(result.stdout)
+        records = cell_payloads(json_lines(result.stdout))
         assert len(records) == 1
         assert records[0]["type"] == command
         assert not list(tmp_path.iterdir())
@@ -140,7 +132,7 @@ class TestCommandContext:
 
             assert result.exit_code == 2
             assert not result.stderr
-            record = cell_records(result.stdout)[0]
+            record = cell_payloads(json_lines(result.stdout))[0]
             assert record["code"] == "config_unreadable"
             assert record["path"] == str(tmp_path / name)
 
@@ -203,7 +195,7 @@ class TestCommandContext:
         assert result.exit_code == 3
         if protocol == "automation":
             assert not result.stderr
-            assert cell_records(result.stdout) == [
+            assert cell_payloads(json_lines(result.stdout)) == [
                 {
                     "type": "error",
                     "code": "project_failure",
@@ -241,7 +233,7 @@ class TestCommandContext:
 
         assert result.exit_code == 3
         if protocol == "automation":
-            assert_error_cells([json.loads(line) for line in result.stdout.splitlines()], failures)
+            assert_error_cells(json_lines(result.stdout), failures)
             assert not result.stderr
         else:
             assert not result.stdout
@@ -291,7 +283,7 @@ class TestCommandContext:
 
         assert result.exit_code == exit_code
         if protocol == "automation":
-            assert_error_cells([json.loads(line) for line in result.stdout.splitlines()], [error])
+            assert_error_cells(json_lines(result.stdout), [error])
             assert result.stderr == ""
         else:
             assert result.stdout == ""
@@ -388,8 +380,8 @@ class TestDependencies:
         assert first.stdout != second.stdout
         if protocol == "automation":
             assert (
-                cell_records(first.stdout)
-                == cell_records(second.stdout)
+                cell_payloads(json_lines(first.stdout))
+                == cell_payloads(json_lines(second.stdout))
                 == [
                     {"type": "dependency", "relation": "tests", "dependency": "@/tests/test_a.py", "content": None},
                     {"type": "dependency", "relation": "tests", "dependency": "@/tests/test_b.py", "content": None},
@@ -425,7 +417,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         assert following.stdout == ""
         message = "relation `tests`: command stderr: notice"
         if protocol == "automation":
-            assert cell_records(result.stdout) == [
+            assert cell_payloads(json_lines(result.stdout)) == [
                 {"type": "dependency", "relation": "tests", "dependency": "@/café.py", "content": None},
                 {"type": "warning", "message": message, "content": None},
             ]
@@ -443,7 +435,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         )
 
         assert result.exit_code == 0
-        assert cell_records(result.stdout) == [
+        assert cell_payloads(json_lines(result.stdout)) == [
             {"type": "dependency", "relation": "tests", "dependency": "@/tests/test_a.py", "content": None}
         ]
 
@@ -480,7 +472,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         )
 
         assert result.exit_code == 0
-        assert cell_records(result.stdout) == [
+        assert cell_payloads(json_lines(result.stdout)) == [
             {"type": "dependency", "relation": "tests", "dependency": "@/tests/test_a.py", "content": None}
         ]
 
@@ -501,7 +493,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         )
 
         assert result.exit_code == 3
-        record = cell_records(result.stdout)[0]
+        record = cell_payloads(json_lines(result.stdout))[0]
         assert record["code"] == "path_resolution_failed"
         assert record["path"] == "~/src/a.py"
         assert record["reason"] == "unknown home"
@@ -548,7 +540,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         assert result.exit_code == 3
         error = failure.unwrap_err()[0]
         if protocol == "automation":
-            assert_error_cells([json.loads(line) for line in result.stdout.splitlines()], [error])
+            assert_error_cells(json_lines(result.stdout), [error])
             assert not result.stderr
         else:
             assert not result.stdout
@@ -645,7 +637,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         result = CliRunner().invoke(app, ["--protocol", "automation", "dependencies", "@/../outside.py"])
 
         assert result.exit_code == 1
-        assert cell_records(result.stdout)[0] == {
+        assert cell_payloads(json_lines(result.stdout))[0] == {
             "type": "error",
             "code": "invalid_arguments",
             "content": "invalid project path `@/../outside.py`",
@@ -710,7 +702,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         assert result.exit_code == 1
         reason = f"invalid project path `{outside}`"
         if protocol == "automation":
-            assert cell_records(result.stdout)[0] == {
+            assert cell_payloads(json_lines(result.stdout))[0] == {
                 "type": "error",
                 "code": "invalid_arguments",
                 "content": reason,
@@ -773,7 +765,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         result = CliRunner().invoke(app, ["--protocol", "automation", "dependencies", "./src/a.py"])
 
         assert result.exit_code == 0
-        assert cell_records(result.output) == [
+        assert cell_payloads(json_lines(result.output)) == [
             {"type": "dependency", "relation": "tests", "dependency": "@/tests/test_a.py", "content": None}
         ]
 
@@ -875,7 +867,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         )
 
         assert result.exit_code == 2
-        record = cell_records(result.stdout)[0]
+        record = cell_payloads(json_lines(result.stdout))[0]
         assert record == {
             "type": "error",
             "code": "config_unreadable",
@@ -897,7 +889,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         )
 
         assert result.exit_code == 2
-        record = cell_records(result.stdout)[0]
+        record = cell_payloads(json_lines(result.stdout))[0]
         assert record["type"] == "error"
         assert record["code"] == "config_invalid_toml"
         assert record["path"] == str(config_path)
@@ -916,7 +908,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         )
 
         assert result.exit_code == 2
-        record = cell_records(result.stdout)[0]
+        record = cell_payloads(json_lines(result.stdout))[0]
         assert record["code"] == "config_invalid_encoding"
         assert record["path"] == str(config_path)
         assert record["reason"]
@@ -941,7 +933,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         )
 
         assert result.exit_code == 2
-        record = cell_records(result.stdout)[0]
+        record = cell_payloads(json_lines(result.stdout))[0]
         assert record["type"] == "error"
         assert record["code"] == "config_validation_failed"
         assert record["content"] == f"{config_path}: {record['reason']}"
@@ -994,7 +986,7 @@ class TestRelations:
         result = CliRunner().invoke(app, ["--protocol", "automation", "relations"])
 
         assert result.exit_code == 2
-        record = cell_records(result.stdout)[0]
+        record = cell_payloads(json_lines(result.stdout))[0]
         assert record == {
             "type": "error",
             "code": "config_not_found",
@@ -1015,7 +1007,7 @@ class TestRelations:
         result = CliRunner().invoke(app, ["--protocol", "automation", "--config", "missing.toml", "relations"])
 
         assert result.exit_code == 2
-        record = cell_records(result.stdout)[0]
+        record = cell_payloads(json_lines(result.stdout))[0]
         assert record["code"] == "config_unreadable"
         assert record["path"] == str(tmp_path / "missing.toml")
 
@@ -1079,7 +1071,7 @@ class TestRelations:
         result = CliRunner().invoke(app, ["--protocol", "automation", "relations"])
 
         assert result.exit_code == 0
-        assert cell_records(result.output) == [
+        assert cell_payloads(json_lines(result.output)) == [
             {
                 "type": "relation",
                 "description": "Artifacts tested by the input artifacts.",
@@ -1129,7 +1121,7 @@ class TestSkill:
 
         assert result.exit_code == 3
         if protocol == "automation":
-            records = cell_records(result.stdout)
+            records = cell_payloads(json_lines(result.stdout))
             assert len(records) == 1
             record = records[0]
             assert record["type"] == "error"
@@ -1194,7 +1186,7 @@ class TestSkill:
 
         assert result.exit_code == 0
         assert result.stderr == ""
-        records = cell_records(result.stdout)
+        records = cell_payloads(json_lines(result.stdout))
         assert len(records) == 1
         assert records[0]["type"] == "skill"
         assert records[0]["document"] == document
@@ -1223,7 +1215,7 @@ class TestInit:
         assert result.exit_code == 0
         assert (project / "depmesh.toml").is_file()
         assert parent_config.read_text(encoding="utf-8") == "version = 2"
-        assert cell_records(result.stdout) == [
+        assert cell_payloads(json_lines(result.stdout)) == [
             {
                 "type": "operation_succeeded",
                 "path": str(project / "depmesh.toml"),
@@ -1250,7 +1242,7 @@ class TestInit:
         assert not config_path.exists()
         if protocol == "automation":
             assert not result.stderr
-            records = cell_records(result.stdout)
+            records = cell_payloads(json_lines(result.stdout))
             assert len(records) == 1
             record = records[0]
             assert record["type"] == "error"
@@ -1277,7 +1269,7 @@ class TestInit:
         assert result.stderr == ""
         assert (tmp_path / "depmesh.toml").is_file()
         if protocol == "automation":
-            assert cell_records(result.stdout) == [
+            assert cell_payloads(json_lines(result.stdout)) == [
                 {
                     "type": "operation_succeeded",
                     "path": str(tmp_path / "depmesh.toml"),
@@ -1353,7 +1345,9 @@ class TestVersion:
         assert not result.stderr
         version = metadata.version("depmesh")
         if protocol == "automation":
-            assert cell_records(result.stdout) == [{"type": "version", "version": version, "content": None}]
+            assert cell_payloads(json_lines(result.stdout)) == [
+                {"type": "version", "version": version, "content": None}
+            ]
         elif protocol == "llm":
             assert normalize_cell_ids(result.stdout) == (
                 f"--DEPMESH-CELL <id> BEGIN--\nkind=version\ntype=version\nversion={version}\n"
@@ -1377,7 +1371,7 @@ class TestVersion:
 
         assert result.exit_code == 0
         assert not result.stderr
-        assert cell_records(result.stdout) == [
+        assert cell_payloads(json_lines(result.stdout)) == [
             {"type": "version", "version": metadata.version("depmesh"), "content": None}
         ]
 

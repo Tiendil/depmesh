@@ -198,7 +198,7 @@ CLI tests SHOULD verify that unmapped project and shared environment errors use 
 
 CLI tests for the automation protocol SHOULD verify that fatal errors are rendered as `error` records when possible.
 
-Common automation error-cell assertions are managed by `llm_tool_cli`; tests SHOULD use its shared assertion helper, keeping JSON Lines parsing, record filtering, and Depmesh's stream and exit policies local.
+Common automation payload extraction and error-cell assertions are managed by `llm_tool_cli`; tests SHOULD use its shared helpers, keeping JSON Lines parsing, record filtering, and Depmesh's stream and exit policies local.
 
 Warning tests SHOULD verify that non-fatal problems add warning strings to the core warning storage.
 
