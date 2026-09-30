@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from llm_tool_cli.paths import ProjectRootPath, UntrustedPath, resolve_project_root
+from llm_tool_cli.paths import PathInput, ProjectRootPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
 
 from depmesh.core import warnings
@@ -19,7 +19,7 @@ def touch(path: Path) -> None:
 
 
 def project_root(path: Path) -> ProjectRootPath:
-    return resolve_project_root(UntrustedPath(path)).unwrap()
+    return resolve_project_root(PathInput(path)).unwrap()
 
 
 def make_relation(relation_id: str) -> Relation:
@@ -41,7 +41,7 @@ def make_rules(*raw_rules: dict[str, object]) -> tuple[DependencyRule, ...]:
 class TestNormalizeInputArtifacts:
     @pytest.mark.parametrize("base", [None, "nested"])
     def test_rejects_empty_path_with_shared_diagnostic(self, tmp_path: Path, base: str | None) -> None:
-        cwd = None if base is None else UntrustedPath(tmp_path / base)
+        cwd = None if base is None else PathInput(tmp_path / base)
 
         result = normalize_input_artifacts(project_root(tmp_path), [ArtifactId("")], cwd=cwd)
 
@@ -49,7 +49,7 @@ class TestNormalizeInputArtifacts:
 
     def test_dot_identifies_explicit_non_root_base(self, tmp_path: Path) -> None:
         result = normalize_input_artifacts(
-            project_root(tmp_path), [ArtifactId(".")], cwd=UntrustedPath(tmp_path / "nested")
+            project_root(tmp_path), [ArtifactId(".")], cwd=PathInput(tmp_path / "nested")
         )
 
         assert result.unwrap() == [ArtifactId("@/nested")]
@@ -102,7 +102,7 @@ class TestQueryDependencies:
             rules,
             ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
-            cwd=UntrustedPath(tmp_path),
+            cwd=PathInput(tmp_path),
         ).unwrap()
 
         assert result.grouped() == {"tests": ["@/tests/test_a.py", "@/tests/test_b.py"]}
@@ -130,7 +130,7 @@ class TestQueryDependencies:
             rules,
             ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
-            cwd=UntrustedPath(tmp_path),
+            cwd=PathInput(tmp_path),
         ).unwrap()
 
         assert result.grouped() == {"specs": ["@/specs/a.md"]}
@@ -153,7 +153,7 @@ class TestQueryDependencies:
             rules,
             ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
-            cwd=UntrustedPath(tmp_path),
+            cwd=PathInput(tmp_path),
         ).unwrap()
 
         assert result.grouped() == {"tests": ["@/tests/test_a.py"]}
@@ -175,7 +175,7 @@ class TestQueryDependencies:
             rules,
             ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
-            cwd=UntrustedPath(tmp_path),
+            cwd=PathInput(tmp_path),
         ).unwrap()
 
         assert result.grouped() == {}
@@ -205,7 +205,7 @@ class TestQueryDependencies:
             rules,
             ArtifactId("@/src/a.py"),
             relation_ids={RelationId("tests")},
-            cwd=UntrustedPath(tmp_path),
+            cwd=PathInput(tmp_path),
         ).unwrap()
 
         assert result.grouped() == {"tests": ["@/tests/test_a.py"]}
@@ -234,7 +234,7 @@ class TestQueryDependencies:
             rules,
             ArtifactId("@/src/a.py"),
             relation_ids=make_relation_ids(*relations),
-            cwd=UntrustedPath(tmp_path),
+            cwd=PathInput(tmp_path),
         ).unwrap()
 
         assert result.grouped() == {
@@ -260,7 +260,7 @@ class TestQueryDependencies:
             rules,
             ArtifactId("@/tests/test_a.py"),
             relation_ids={RelationId("tested_by")},
-            cwd=UntrustedPath(tmp_path),
+            cwd=PathInput(tmp_path),
         ).unwrap()
 
         assert result.grouped() == {"tested_by": ["@/src/a.py"]}
@@ -282,7 +282,7 @@ class TestQueryDependencies:
             rules,
             ArtifactId("@/src/a.py"),
             relation_ids={RelationId("tests")},
-            cwd=UntrustedPath(tmp_path),
+            cwd=PathInput(tmp_path),
         ).unwrap()
 
         assert result.grouped() == {}

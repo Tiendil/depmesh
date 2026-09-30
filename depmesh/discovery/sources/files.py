@@ -4,7 +4,7 @@ import glob
 from pathlib import Path
 
 from llm_tool_cli.core.result import Err, Ok, Result, unwrap_to_error
-from llm_tool_cli.paths import UntrustedPath, project_path_id_from_filesystem, resolve_project_path
+from llm_tool_cli.paths import PathInput, project_path_id_from_filesystem, resolve_project_path
 from llm_tool_cli.paths.errors import InvalidProjectPath
 
 from depmesh.core import warnings
@@ -29,7 +29,7 @@ class FilesSource(ArtifactSourceBase):
                     [
                         ArtifactId(
                             project_path_id_from_filesystem(
-                                UntrustedPath(path),
+                                PathInput(path),
                                 context.root,
                             ).unwrap()
                         )
@@ -50,7 +50,7 @@ class FilesSource(ArtifactSourceBase):
                 [
                     ArtifactId(
                         project_path_id_from_filesystem(
-                            UntrustedPath(Path(match)),
+                            PathInput(Path(match)),
                             context.root,
                         ).unwrap()
                     )

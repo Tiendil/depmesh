@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from llm_tool_cli.core.result import Err, Ok, Result, unwrap_to_error
-from llm_tool_cli.paths import ProjectRootPath, UntrustedPath, normalize_path
+from llm_tool_cli.paths import PathInput, ProjectRootPath, normalize_path
 
 from depmesh.discovery import errors
 from depmesh.discovery.artifacts import EvaluationContext
@@ -19,7 +19,7 @@ def query_dependencies(
     artifact: ArtifactId,
     *,
     relation_ids: set[RelationId],
-    cwd: UntrustedPath | None = None,
+    cwd: PathInput | None = None,
 ) -> Result[QueryResult]:
     artifact = ArtifactId(
         normalize_path(
@@ -53,7 +53,7 @@ def normalize_input_artifacts(
     root: ProjectRootPath,
     artifacts: list[ArtifactId],
     *,
-    cwd: UntrustedPath | None = None,
+    cwd: PathInput | None = None,
 ) -> Result[list[ArtifactId]]:
     return Ok(
         sorted(

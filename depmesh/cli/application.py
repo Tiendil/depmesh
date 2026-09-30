@@ -14,7 +14,7 @@ from llm_tool_cli.cli.handling import handle_command_errors
 from llm_tool_cli.config import initialize_config, load_config, locate_config
 from llm_tool_cli.core import settings
 from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
-from llm_tool_cli.paths import PathInput, UntrustedPath, resolve_project_root
+from llm_tool_cli.paths import PathInput, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
 from llm_tool_cli.protocol.cell_shortcuts import configuration_created
 
@@ -49,8 +49,8 @@ def dependencies(
 
     with command_context(context) as command:
         workspace = command.load_workspace().unwrap()
-        project_root = resolve_project_root(UntrustedPath(Path(workspace.root))).unwrap()
-        cwd = UntrustedPath(Path.cwd())
+        project_root = resolve_project_root(PathInput(Path(workspace.root))).unwrap()
+        cwd = PathInput(Path.cwd())
         relation_ids = selected_relation_ids(workspace.relations_by_id, relations).unwrap()
         dependencies: set[Dependency] = set()
 

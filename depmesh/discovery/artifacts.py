@@ -6,7 +6,7 @@ from functools import cached_property
 from typing import NewType
 
 import pydantic
-from llm_tool_cli.paths import ProjectRootPath, UntrustedPath
+from llm_tool_cli.paths import PathInput, ProjectRootPath
 
 from depmesh.domain.entities import RelationId
 
@@ -48,7 +48,7 @@ class EvaluationContext:
         root: ProjectRootPath,
         relation_id: RelationId,
         captures: dict[str, str],
-        cwd: UntrustedPath | None = None,
+        cwd: PathInput | None = None,
     ) -> None:
         self.root = root
         self.relation_id = relation_id

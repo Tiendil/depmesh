@@ -37,7 +37,7 @@
 
 - Import `Protocol` from `llm_tool_cli.protocol` instead of `depmesh.protocol.OutputProtocol`, and import `to_jsonl` from the shared protocol package. Automation JSON now uses compact separators without optional whitespace; generic serialization is owned by the shared library.
 - Use `.` instead of an empty project-path input to refer to a directory base below the project root; empty inputs now report `invalid_project_path`.
-- Import `UntrustedPath` directly from `llm_tool_cli.paths` instead of `depmesh.domain.entities`.
+- Replace `UntrustedPath` from `depmesh.domain.entities` or `llm_tool_cli.paths` with `llm_tool_cli.paths.PathInput` in imports, annotations, and constructor calls.
 - Import `normalize_path` directly from `llm_tool_cli.paths` in Python integrations. Query inputs, list sources, command output, one-of predicates, glob predicates, and file-source patterns now expand filesystem home markers; use `@/~/...` for a literal project directory named `~`.
 - Import `resolve_project_path` from `llm_tool_cli.paths` instead of `depmesh.discovery.paths`; invalid paths now return `InvalidProjectPath` errors rather than `Ok(None)`. Home-expansion failures return `PathResolutionFailed` errors.
 - Replace `depmesh.discovery.paths.normalize_existing_path` with `llm_tool_cli.paths.project_path_id_from_filesystem` in Python integrations.
@@ -112,7 +112,7 @@
 
 - Use shared output modes, compact Unicode JSON Lines serialization, and direct text writing while preserving command defaults, warning behavior, and exit policies.
 - Reject empty project-path inputs through the shared normalizer instead of interpreting them as an explicit directory base; invalid glob patterns retain no-match handling.
-- Use the shared `UntrustedPath` semantic type for filesystem inputs, preserving runtime path behavior.
+- Use the shared `PathInput` semantic type for all filesystem inputs without established guarantees, preserving runtime path behavior.
 - Use the shared project-path resolver directly for file-source patterns, preserving warning-and-skip handling of invalid patterns and propagating resolution failures.
 - Use shared mixed path normalization directly, with home expansion and `path_resolution_failed` diagnostics when expansion fails. Relative roots without an explicit base now produce absolute filesystem candidate paths in containment diagnostics.
 - Share filesystem-to-identifier conversion through `llm-tool-cli`, preserving file discovery results and resolution diagnostics.
