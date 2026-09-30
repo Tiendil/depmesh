@@ -92,6 +92,21 @@ class ProjectFailure(core_errors.EnvironmentError):
 
 
 class TestCommandContext:
+    def test_protocol_defaults_are_selected_for_each_invocation(self) -> None:
+        invocations = [
+            (["skill"], "--DEPMESH-CELL ", "kind=skill\n"),
+            (["version"], "----- DEPMESH CELL ", "kind = version\n"),
+            (["-p", "human", "skill"], "----- DEPMESH CELL ", "kind = skill\n"),
+            (["skill"], "--DEPMESH-CELL ", "kind=skill\n"),
+        ]
+        for arguments, prefix, kind in invocations:
+            result = CliRunner().invoke(app, arguments)
+
+            assert result.exit_code == 0
+            assert not result.stderr
+            assert result.stdout.startswith(prefix)
+            assert kind in result.stdout
+
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
     @pytest.mark.parametrize(
         "payload",

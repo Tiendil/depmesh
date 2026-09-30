@@ -4,18 +4,12 @@ from pathlib import Path
 from typing import Annotated, NoReturn
 
 import typer
-from llm_tool_cli.core.entities import BaseEntity
 from llm_tool_cli.protocol import Protocol
 from llm_tool_cli.protocol.cell_shortcuts import environment_error
 from llm_tool_cli.protocol.rendering import write_cells
 
 from depmesh.cli import errors as cli_errors
 from depmesh.domain.entities import ArtifactId, RelationId
-
-
-class GlobalOptions(BaseEntity):
-    protocol: Protocol | None = None
-    config: Path | None = None
 
 
 def _exit_with_invalid_arguments(message: str) -> NoReturn:

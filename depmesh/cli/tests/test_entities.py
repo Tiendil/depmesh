@@ -7,7 +7,6 @@ import typer
 from llm_tool_cli.protocol import Protocol
 
 from depmesh.cli.entities import (
-    GlobalOptions,
     _exit_with_invalid_arguments,
     _parse_artifact,
     _parse_config,
@@ -16,20 +15,6 @@ from depmesh.cli.entities import (
     _validate_artifacts,
 )
 from depmesh.domain.entities import ArtifactId, RelationId
-
-
-class TestGlobalOptions:
-    def test_defaults(self) -> None:
-        options = GlobalOptions()
-
-        assert options.protocol is None
-        assert options.config is None
-
-    def test_values(self) -> None:
-        options = GlobalOptions(protocol=Protocol.automation, config=Path("./depmesh.toml"))
-
-        assert options.protocol is Protocol.automation
-        assert options.config == Path("./depmesh.toml")
 
 
 class TestParseArtifact:

@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from llm_tool_cli.cli.entities import GlobalOptions
 from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.config import load_config, locate_config
 from llm_tool_cli.core.result import Ok, Result, UnwrapError, unwrap_to_error
-from llm_tool_cli.paths import UntrustedPath, resolve_project_root
+from llm_tool_cli.paths import ProjectConfigPath, UntrustedPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
 from llm_tool_cli.protocol import Protocol, cell_shortcuts
 from llm_tool_cli.protocol.cell_shortcuts import environment_error, operation_succeeded
@@ -19,7 +20,7 @@ from llm_tool_cli.protocol.rendering import write_cells
 from llm_tool_cli.skills import load_skill_text
 
 from depmesh.cli import errors as cli_errors
-from depmesh.cli.entities import ArtifactsArgument, ConfigOption, GlobalOptions, ProtocolOption, RelationOption
+from depmesh.cli.entities import ArtifactsArgument, ConfigOption, ProtocolOption, RelationOption
 from depmesh.core import warnings
 from depmesh.discovery.entities import QueryResult
 from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
@@ -54,7 +55,9 @@ def root(
     protocol: ProtocolOption = None,
     config: ConfigOption = None,
 ) -> None:
-    context.meta[GLOBAL_OPTIONS_CONTEXT_KEY] = GlobalOptions(protocol=protocol, config=config)
+    context.meta[GLOBAL_OPTIONS_CONTEXT_KEY] = GlobalOptions(
+        protocol=protocol, config_path=None if config is None else ProjectConfigPath(config)
+    )
 
 
 @app.command("dependencies")
@@ -66,7 +69,7 @@ def dependencies(
 ) -> None:
     relations = relation or []
 
-    with command_context(context, default_protocol=Protocol.human) as command:
+    with command_context(context) as command:
         workspace = command.load_workspace().unwrap()
         project_root = resolve_project_root(UntrustedPath(Path(workspace.root))).unwrap()
         cwd = UntrustedPath(Path.cwd())
@@ -108,7 +111,7 @@ def dependencies(
 @app.command("relations")
 @app.command("rels")
 def relations(context: typer.Context) -> None:
-    with command_context(context, default_protocol=Protocol.human) as command:
+    with command_context(context) as command:
         workspace = command.load_workspace().unwrap()
         command.write_cells(relation_cells(workspace.relations))
 
@@ -118,34 +121,34 @@ def skill(
     context: typer.Context,
     document: Annotated[SkillDocument, typer.Argument()] = SkillDocument.usage,
 ) -> None:
-    with command_context(context, default_protocol=Protocol.llm) as command:
+    with command_context(context) as command:
         content = load_skill_text(package="depmesh.skills", document=document.value).unwrap()
         command.write_cells([cell_shortcuts.skill(document=document.value, content=content)])
 
 
 @app.command("init")
 def init(context: typer.Context) -> None:
-    with command_context(context, default_protocol=Protocol.human) as command:
-        config_path = initialize_config(command.global_options.config).unwrap()
+    with command_context(context) as command:
+        config_path = initialize_config(command.global_options.config_path).unwrap()
         command.write_cells([operation_succeeded("Configuration created.", path=str(config_path))])
 
 
 @app.command("version")
 def version(context: typer.Context) -> None:
-    with command_context(context, default_protocol=Protocol.human) as command:
+    with command_context(context) as command:
         command.write_cells([cell_shortcuts.version(metadata.version("depmesh"))])
 
 
 class CommandContext:
     __slots__ = ("global_options", "protocol")
 
-    def __init__(self, context: typer.Context, *, default_protocol: Protocol) -> None:
+    def __init__(self, context: typer.Context) -> None:
         self.global_options = _global_options(context)
-        self.protocol = self.global_options.protocol or default_protocol
+        self.protocol = self.global_options.protocol_for(context.info_name or "")
 
     @unwrap_to_error
     def load_workspace(self) -> Result[Workspace]:
-        config_path = locate_config(CONFIG_FILE_NAME, path=self.global_options.config, cwd=Path.cwd()).unwrap()
+        config_path = locate_config(CONFIG_FILE_NAME, path=self.global_options.config_path, cwd=Path.cwd()).unwrap()
         config = load_config(config_path, Config).unwrap()
         return Ok(construct_workspace(config, root=config_path.parent))
 
@@ -154,13 +157,9 @@ class CommandContext:
 
 
 @contextmanager
-def command_context(
-    context: typer.Context,
-    *,
-    default_protocol: Protocol,
-) -> Iterator[CommandContext]:
+def command_context(context: typer.Context) -> Iterator[CommandContext]:
     warnings.clear()
-    command_context = CommandContext(context, default_protocol=default_protocol)
+    command_context = CommandContext(context)
 
     try:
         yield command_context

@@ -137,7 +137,7 @@ The CLI MUST support the output modes defined by `llm_tool_cli.protocol`.
 
 Depmesh interprets these modes as follows:
 
-- `human` — default protocol for terminal users.
+- `human` — text protocol for terminal users.
 - `llm` — text protocol optimized for coding agents that invoke `depmesh` as a tool.
 - `automation` — protocol optimized for programs; output is serialized as JSON Lines.
 
@@ -148,12 +148,6 @@ LLM output SHOULD be:
 - explicit.
 - stable.
 - self-contained for coding agents that receive the output as a tool result.
-
-For commands that support multiple output protocols, the output protocol MUST be selected with:
-
-```bash
---protocol PROTOCOL
-```
 
 ### Output cells
 
@@ -225,6 +219,10 @@ Additional fields MAY be added in future versions. Consumers MUST ignore unknown
 
 ## Global options
 
+The CLI MUST use the parsed global options and command protocol selection provided by `llm_tool_cli`.
+The library owns optional protocol and configuration-path values, command defaults, and explicit-protocol precedence.
+Depmesh MUST parse its CLI options, retain them for the invocation, and supply the invoked command name to shared protocol selection.
+
 ### `-h`, `--help`
 
 `-h` and `--help` MUST print help information and exit with status `0`.
@@ -243,10 +241,6 @@ The selected protocol MUST be available to every subcommand.
 
 Subcommands that render protocol-specific output MUST use the selected protocol.
 
-For `depmesh dependencies` and `depmesh relations`, the default protocol MUST be `human`.
-
-For `depmesh skill`, the default protocol MUST be `llm`.
-
 Subcommands that do not render protocol-specific output MAY ignore this option.
 
 Allowed values MUST be the shared output modes described under [Output protocols](#output-protocols).
@@ -255,7 +249,7 @@ Allowed values MUST be the shared output modes described under [Output protocols
 
 `--config PATH` MUST be a global option accepted before the subcommand.
 
-The resolved configuration path MUST be available to every subcommand.
+The supplied configuration path MUST be available to every subcommand.
 
 Subcommands that load configuration MUST use this path instead of discovering `depmesh.toml` from the current working directory.
 
@@ -342,7 +336,7 @@ The `description` field MUST be omitted when the relation has no description.
 Command:
 
 ```bash
-depmesh relations
+depmesh --protocol human relations
 ```
 
 Example output:
@@ -362,12 +356,12 @@ type = relation
 
 ```
 
-### Example: default human output
+### Example: human output
 
 Command:
 
 ```bash
-depmesh dependencies @/src/do_smth.py
+depmesh --protocol human dependencies @/src/do_smth.py
 ```
 
 Example output:
@@ -407,7 +401,7 @@ type = dependencies
 Command:
 
 ```bash
-depmesh dependencies @/src/do_smth.py @/src/another_module.py
+depmesh --protocol human dependencies @/src/do_smth.py @/src/another_module.py
 ```
 
 Example output:
@@ -439,7 +433,7 @@ type = dependencies
 Command:
 
 ```bash
-depmesh dependencies --relation tests @/src/do_smth.py
+depmesh --protocol human dependencies --relation tests @/src/do_smth.py
 ```
 
 Example output:
@@ -460,7 +454,7 @@ type = dependencies
 Command:
 
 ```bash
-depmesh dependencies --relation imported_by @/src/some_module.py
+depmesh --protocol human dependencies --relation imported_by @/src/some_module.py
 ```
 
 Example output:
@@ -547,7 +541,7 @@ Example output:
 Command:
 
 ```bash
-depmesh dependencies @/src/do_smth.py
+depmesh --protocol human dependencies @/src/do_smth.py
 ```
 
 Example output:
@@ -629,8 +623,6 @@ For the `llm` protocol, `depmesh skill` output MUST be Markdown-compatible text.
 
 The command output SHOULD be suitable for coding agents that receive the output as a tool result.
 
-The default output protocol for this command MUST be `llm` when no global protocol is selected.
-
 The `skill` command MUST NOT accept artifact arguments or dependency query options.
 
 The `skill` command MUST accept an optional document argument.
@@ -647,14 +639,12 @@ Unknown document argument values MUST fail with an invalid-arguments exit.
 
 The `skill` command MUST support all shared output modes described under [Output protocols](#output-protocols).
 
-The `llm` protocol MUST be the canonical protocol for `depmesh skill`.
-
 ### Example: LLM output
 
 Command:
 
 ```bash
-depmesh skill
+depmesh --protocol llm skill
 ```
 
 Example output:
@@ -711,7 +701,8 @@ The generated configuration MUST:
 - include the `governs` relation.
 - include commented examples of relation rules.
 
-The command MUST emit a shared success cell to stdout with the created configuration path in `path` metadata and a success message as content. It MUST honor the selected output protocol, defaulting to `human`.
+The command MUST emit a shared success cell to stdout with the created configuration path in `path` metadata and a success message as content.
+It MUST honor the selected output protocol.
 
 The command MUST NOT accept artifact arguments, relation options, dependency query options, or skill document arguments.
 

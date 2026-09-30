@@ -216,6 +216,8 @@ Use `llm` when invoking `depmesh` as a coding agent. It is the normal choice for
 
 Use `human` for compact terminal inspection by a person.
 
+Without `--protocol`, `skill` uses `llm` and other commands use `human`. An explicit protocol overrides these defaults.
+
 Use `automation` when an agent or another program needs automatic processing of `depmesh` output. Automation output is JSON Lines: each stdout line is one JSON object.
 
 Example automation command:
