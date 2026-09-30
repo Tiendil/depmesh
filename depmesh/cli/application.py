@@ -10,16 +10,15 @@ from llm_tool_cli.cli.application import create_app
 from llm_tool_cli.cli.commands.skills import register_skill_command
 from llm_tool_cli.cli.commands.version import register_version_command
 from llm_tool_cli.cli.context import get_global_options, set_global_options
-from llm_tool_cli.cli.entities import ExitCode, GlobalOptions
+from llm_tool_cli.cli.entities import GlobalOptions
+from llm_tool_cli.cli.handling import handle_command_errors
 from llm_tool_cli.cli.options import ConfigOption, ProtocolOption
-from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.config import initialize_config, load_config, locate_config
 from llm_tool_cli.core import settings
-from llm_tool_cli.core.result import Ok, Result, UnwrapError, unwrap_to_error
+from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
 from llm_tool_cli.paths import PathInput, UntrustedPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
-from llm_tool_cli.protocol import Protocol
-from llm_tool_cli.protocol.cell_shortcuts import configuration_created, environment_error
+from llm_tool_cli.protocol.cell_shortcuts import configuration_created
 from llm_tool_cli.protocol.logic_cells.base import LogicCell
 from llm_tool_cli.protocol.rendering import write_cells
 
@@ -32,10 +31,6 @@ from depmesh.protocol import SkillDocument
 from depmesh.protocol.cells import DependenciesCell, relation_cells
 from depmesh.workspace import Config, Workspace, construct_workspace
 from depmesh.workspace.config import CONFIG_FILE_NAME
-
-EXIT_CONFIG = 2
-EXIT_QUERY = 3
-EXIT_PROJECT_ERROR = 3
 
 app = create_app(help="Inspect configured relations and dependencies.")
 register_skill_command(app, package="depmesh.skills", documents=SkillDocument)
@@ -150,20 +145,5 @@ class CommandContext:
 def command_context(context: typer.Context) -> Iterator[CommandContext]:
     command_context = CommandContext(context)
 
-    try:
+    with handle_command_errors(protocol=command_context.protocol):
         yield command_context
-    except UnwrapError as error:
-        failures = error.errors
-        command_context.write_cells(
-            (environment_error(failure) for failure in failures),
-            stderr=command_context.protocol != Protocol.automation,
-        )
-        first = failures[0]
-        if isinstance(first, cli_errors.InvalidArguments):
-            exit_code: int = ExitCode.invalid_arguments
-        elif isinstance(first, config_errors.EnvironmentError):
-            exit_code = EXIT_CONFIG
-        else:
-            exit_code = EXIT_PROJECT_ERROR
-        raise typer.Exit(exit_code) from error
-    raise typer.Exit(ExitCode.success)

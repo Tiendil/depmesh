@@ -212,13 +212,18 @@ class TestCommandContext:
             assert "Problem with project.\nWay to fix: Check project." in result.stderr
 
     @pytest.mark.parametrize("unwrap_in_helper", [False, True])
-    def test_multiple_errors_keep_order_and_first_category(
-        self, monkeypatch: pytest.MonkeyPatch, unwrap_in_helper: bool
+    @pytest.mark.parametrize("reverse", [False, True])
+    @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
+    def test_multiple_errors_keep_order_and_use_highest_code(
+        self, monkeypatch: pytest.MonkeyPatch, unwrap_in_helper: bool, reverse: bool, protocol: str
     ) -> None:
         failures: EnvironmentErrors = [
+            cli_errors.InvalidArguments(reason="invalid argument"),
             config_errors.Unreadable(path=Path("/config.toml"), reason="denied"),
             discovery_errors.UnknownRelationFilter(relation=RelationId("missing")),
         ]
+        if reverse:
+            failures.reverse()
 
         def fail_workspace(_self: CommandContext) -> Result[Workspace]:
             result: Result[Workspace] = Err(failures)
@@ -228,11 +233,20 @@ class TestCommandContext:
 
         monkeypatch.setattr(CommandContext, "load_workspace", fail_workspace)
 
-        result = CliRunner().invoke(app, ["--protocol", "automation", "relations"])
+        result = CliRunner().invoke(app, ["--protocol", protocol, "relations"])
 
-        assert result.exit_code == 2
-        assert_error_cells(result.stdout, failures)
-        assert result.stderr == ""
+        assert result.exit_code == 3
+        if protocol == "automation":
+            assert_error_cells(result.stdout, failures)
+            assert not result.stderr
+        else:
+            assert not result.stdout
+            separator = " = " if protocol == "human" else "="
+            codes = [f"code{separator}{error.code}\n" for error in failures]
+            assert all(code in result.stderr for code in codes)
+            positions = [result.stderr.index(code) for code in codes]
+            assert positions == sorted(positions)
+            assert "cli_exit_code" not in result.stderr
 
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
     @pytest.mark.parametrize(

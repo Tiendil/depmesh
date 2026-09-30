@@ -1,21 +1,13 @@
 from __future__ import annotations
 
-from typing import Annotated, NoReturn
+from typing import Annotated
 
 import typer
 from llm_tool_cli.cli import errors as cli_errors
-from llm_tool_cli.cli.entities import ExitCode
+from llm_tool_cli.cli.handling import report_errors_and_exit
 from llm_tool_cli.protocol import Protocol
-from llm_tool_cli.protocol.cell_shortcuts import environment_error
-from llm_tool_cli.protocol.rendering import write_cells
 
 from depmesh.domain.entities import ArtifactId, RelationId
-
-
-def _exit_with_invalid_arguments(message: str) -> NoReturn:
-    cell = environment_error(cli_errors.InvalidArguments(reason=message))
-    write_cells([cell], protocol=Protocol.human, stderr=True)
-    raise typer.Exit(ExitCode.invalid_arguments)
 
 
 def _parse_artifact(value: str) -> ArtifactId:
@@ -24,7 +16,9 @@ def _parse_artifact(value: str) -> ArtifactId:
 
 def _validate_artifacts(values: list[ArtifactId] | None) -> list[ArtifactId]:
     if not values:
-        _exit_with_invalid_arguments("at least one artifact is required")
+        report_errors_and_exit(
+            [cli_errors.InvalidArguments(reason="at least one artifact is required")], protocol=Protocol.human
+        )
     return values
 
 

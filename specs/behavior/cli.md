@@ -65,7 +65,7 @@ In the initial implementation this is expected to be a file path, but the CLI MU
 
 The CLI MUST write requested command output to stdout.
 
-Diagnostics that are not part of the requested output MUST be written to stderr.
+Environment-error diagnostics MUST use the stream selection managed by `llm_tool_cli`. Other diagnostics that are not part of the requested output MUST be written to stderr.
 
 For commands that emit cells or fatal errors, `automation` stdout MUST contain only valid JSON Lines records. Help retains its plain-text contract.
 
@@ -641,28 +641,12 @@ The library owns installed version lookup, help, configuration independence, pro
 Skill- and version-command failure handling MUST be managed by `llm_tool_cli`.
 The remaining execution policies apply to tool-owned commands.
 
-The CLI SHOULD use these exit codes:
-
-- `0` — command completed successfully.
-- `1` — invalid command line arguments.
-- `2` — configuration could not be discovered, resolved, loaded, parsed, validated, or created.
-- `3` — dependency query failed.
-
-Human and LLM error messages SHOULD be written to stderr.
-
-The CLI MUST delegate typed environment-error cell construction and rendering to `llm_tool_cli`, including its common content, corrective guidance, and metadata contract.
-Error content MUST now include corrective guidance when the error supplies it; native codes and diagnostic context retain their shared representation.
-Depmesh MUST own stream selection and exit categories.
-
-Shared configuration errors MUST exit with status `2`. Unmapped environment errors MUST exit with status `3`.
-
-A failed result containing multiple environment errors MUST render every error in list order and use the first error's exit category. Technical exceptions MUST NOT be treated as expected failures.
+The CLI MUST use command error handling and explicit error reporting managed by `llm_tool_cli`, including error cells, stream selection, diagnostic ordering, exit statuses, and exception propagation.
+Depmesh MUST retain workspace loading and command-specific behavior.
 
 Configuration selection, loading, and creation MUST propagate the diagnostics provided by `llm_tool_cli` without local translation.
 
-For automation output, fatal errors SHOULD be written to stdout as an `error` record when possible and the process SHOULD still exit with a non-zero code.
-
-If automation output cannot be initialized, fatal diagnostics MAY be written to stderr as human error cells. Depmesh-owned argument validation before command initialization MUST use this fallback.
+Depmesh-owned argument validation before command initialization MUST supply the human fallback protocol to the shared error reporter.
 Protocol-option parsing MUST use the diagnostics managed by `llm_tool_cli`.
 
 Example automation fatal error:

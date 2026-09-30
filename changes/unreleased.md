@@ -1,6 +1,8 @@
 
 ### Migration
 
+- Failed commands with multiple diagnostics now exit with the highest declared error code instead of the first error's category. Python integrations must replace `EXIT_CONFIG`, `EXIT_QUERY`, and `EXIT_PROJECT_ERROR` from `depmesh.cli.application` with `llm_tool_cli.core.entities.ExitCode.configuration_error` or `ExitCode.environment_error` as appropriate.
+
 - Replace the removed `depmesh.workspace.init.initialize_config` with `llm_tool_cli.config.initialize_config`, passing `"depmesh.toml"`, `package="depmesh.workspace"`, `template="base_config.toml"`, a `PathInput` working directory, and an optional keyword-only `ProjectConfigPath` target.
 
 - Import `InvalidArguments` from `llm_tool_cli.cli.errors` instead of the removed `depmesh.cli.errors` module. Use the shared concrete type when classifying invalid arguments; the local CLI environment-error root is removed.
@@ -45,6 +47,10 @@
 - Missing discovered configuration now uses the shared `config_not_found` message and `reason` field, with the search directory in `path`.
 
 ### Changes
+
+- Use the shared command error context manager and explicit reporter for command failures and early argument validation; preserve diagnostic payloads, ordering, stream routing, exit statuses, and unexpected exception propagation.
+
+- Delegate environment-error exit-code declarations and aggregation to `llm_tool_cli`, preserving diagnostic order, cell payloads, and streams while making exit status independent of error order.
 
 - Use the shared configuration-creation success cell for `init`, preserving its message, path metadata, output protocols, and exit behavior.
 

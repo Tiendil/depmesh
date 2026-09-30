@@ -42,7 +42,7 @@ Lower-level modules MUST NOT print errors, print warnings, write JSON Lines reco
 
 The CLI layer MUST be responsible for converting project errors and warnings into:
 
-- exit codes.
+- process termination using the shared environment-error exit-code contract.
 - stderr messages.
 - output protocol records.
 
@@ -70,7 +70,8 @@ Expected operational errors MUST be Pydantic models inheriting from the shared `
 
 Environment errors MUST carry a stable code and message, and MAY include corrective guidance and typed context fields owned by the concrete error.
 
-A module MAY define an environment-error classification model when callers need to distinguish that module's failures. Environment-error categories MUST NOT encode CLI exit codes.
+A module MAY define an environment-error classification model when callers need to distinguish that module's failures.
+Error classes MUST use the inherited class-level exit-code contract managed by `llm_tool_cli` and MAY declare overrides through the shared core enum.
 
 Internal and technical exceptions defined by the project MUST inherit from the project's core `InternalError`, which inherits from the shared exception `InternalError`.
 
@@ -172,29 +173,15 @@ When converting an exception, the original exception SHOULD be preserved as the 
 
 ## CLI mapping
 
-The CLI MUST explicitly handle failed results and map their environment errors to the exit code categories specified by the CLI behavior specification.
+The CLI MUST delegate failed result unwrapping and explicit environment-error reporting to the CLI handling boundary managed by `llm_tool_cli`.
 
 Failure rendering and exit-code selection MUST be centralized at the CLI command boundary.
 Environment errors MUST remain structured values in the shared error logic cell until projection; `llm_tool_cli` MUST manage their content, corrective guidance, and metadata.
-The CLI MUST retain responsibility for error ordering, streams, and exit codes during Depmesh-owned command execution.
+The shared CLI handling boundary MUST manage diagnostic ordering, streams, exit-code aggregation, and process termination during Depmesh-owned command execution.
 Skill-command failure handling MUST be managed by `llm_tool_cli`.
 Protocol-option parsing MUST use the error presentation and exit behavior managed by `llm_tool_cli` before command execution.
 
-The CLI module MUST own the mapping from environment-error categories to exit codes.
-
-The CLI mapping SHOULD be defined in the CLI module.
-
-The CLI mapping MAY map specific module error categories to specific exit codes.
-
-The CLI mapping MAY map specific concrete environment errors to specific exit codes when a category is too broad.
-
-The CLI mapping MUST define a default non-zero exit code for environment errors that are not explicitly mapped.
-
-The CLI MUST render every error in a failed result in list order. The first error MUST determine the exit category. Technical exceptions MUST NOT be rendered as expected environment errors.
-
-Shared configuration errors MUST use the configuration exit category.
-
-The CLI SHOULD choose the most specific non-zero exit code that matches the failure.
+The CLI MUST render every error in a failed result in list order. Technical exceptions MUST NOT be rendered as expected environment errors.
 
 The CLI MUST NOT return a non-zero exit code only because warnings were produced.
 
@@ -202,4 +189,4 @@ When a fatal error is rendered for the automation protocol, the ordinary `error`
 
 When a warning is rendered for the automation protocol, the `warning` record MUST include the warning string as the `message` field.
 
-Human and LLM protocols SHOULD render warnings in the output and fatal errors outside the requested output.
+Human and LLM protocols SHOULD render warnings in the output; environment-error streams MUST follow the shared CLI handling contract.
