@@ -1103,6 +1103,27 @@ class TestSkill:
 
 
 class TestInit:
+    def test_parent_config_is_not_reused(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        parent_config = tmp_path / "depmesh.toml"
+        parent_config.write_text("version = 2", encoding="utf-8")
+        project = tmp_path / "project"
+        project.mkdir()
+        monkeypatch.chdir(project)
+
+        result = CliRunner().invoke(app, ["-p", "automation", "init"])
+
+        assert result.exit_code == 0
+        assert (project / "depmesh.toml").is_file()
+        assert parent_config.read_text(encoding="utf-8") == "version = 2"
+        assert cell_records(result.stdout) == [
+            {
+                "type": "operation_succeeded",
+                "path": str(project / "depmesh.toml"),
+                "content": "Configuration created.",
+            }
+        ]
+        assert not result.stderr
+
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
     @pytest.mark.parametrize("content", [None, b"\xff"])
     def test_template_failure_uses_shared_configuration_error(

@@ -1,6 +1,8 @@
 
 ### Migration
 
+- Pass `llm_tool_cli.paths.ProjectConfigPath` to `initialize_config` in Python integrations.
+
 - Import `GlobalOptions` from `llm_tool_cli.cli.entities`, rename its `config` field to `config_path`, and supply `ProjectConfigPath`. Use `protocol_for(command_name)` for protocol selection; command contexts no longer accept `default_protocol`.
 
 - Malformed result-unwrapping payloads now propagate as the original `UnwrapError` without rendering partial diagnostics or failing later during rendering. Recover diagnostics through the shared `UnwrapError.errors` accessor.
@@ -33,6 +35,8 @@
 - Missing discovered configuration now uses the shared `config_not_found` message and `reason` field, with the search directory in `path`.
 
 ### Changes
+
+- Delegate initialization target selection and resolution to `llm_tool_cli`, preserving explicit paths, current-directory defaults, and the rule against upward discovery.
 
 - Delegate global CLI options and protocol-default selection to `llm_tool_cli`, preserving LLM output for `skill`, human output for other commands, and explicit protocol overrides.
 

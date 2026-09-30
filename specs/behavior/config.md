@@ -40,31 +40,12 @@ This specification defines configuration semantics that the implementation MUST 
 
 The canonical configuration file name MUST be `depmesh.toml`.
 
-When the CLI is invoked without `--config`, `depmesh` MUST discover the configuration file by searching from the current working directory toward the filesystem root.
-
-Discovery MUST stop at the first directory that contains `depmesh.toml`.
-
-The directory containing the discovered file MUST be the configuration root.
-
-When `--config PATH` is provided, `depmesh` MUST use that file as the configuration file and MUST NOT perform upward discovery.
-
-An explicit configuration path beginning with `~` or `~user` MUST expand the home directory before path resolution. If the home directory cannot be determined, configuration loading MUST fail.
-
-If `PATH` is relative, it MUST be resolved relative to the current working directory.
-
-When `--config PATH` is provided, the directory containing the resolved file MUST be the configuration root.
-
-If no configuration file can be found or the configured path cannot be read, configuration loading MUST fail.
-
-Configuration loading MUST be deterministic for the same:
-
-- configuration file content.
-- current working directory.
-- filesystem state.
+Depmesh MUST delegate configuration discovery, path resolution, TOML reading, and schema-validation mechanics to `llm_tool_cli`.
+Commands that load configuration MUST supply `depmesh.toml`, the invocation's working directory, and the optional `--config` path to shared configuration selection.
+The directory containing the selected configuration path MUST be the configuration root.
+Depmesh MUST supply the application schema defined below and propagate the library's configuration diagnostics without local translation.
 
 ## TOML structure
-
-The configuration file MUST be valid TOML 1.1.
 
 The top-level configuration MAY contain these fields:
 
@@ -580,7 +561,6 @@ Path normalization MUST preserve meaningful case on case-sensitive filesystems.
 
 Configuration loading MUST fail for:
 
-- invalid TOML.
 - unsupported schema version.
 - missing required relation fields.
 - duplicate relation ids.

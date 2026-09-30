@@ -6,9 +6,11 @@ from pathlib import Path
 import pytest
 from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.config import load_config
-from llm_tool_cli.core.result import Err, Result
+from llm_tool_cli.core.result import Err
+from llm_tool_cli.paths import ProjectConfigPath
+from pytest_mock import MockerFixture
 
-from depmesh.workspace import Config, construct_workspace, init
+from depmesh.workspace import Config, construct_workspace
 from depmesh.workspace.init import BASE_CONFIG_FIXTURE, initialize_config
 
 
@@ -46,7 +48,7 @@ class TestInitializeConfig:
         assert config_path.read_text(encoding="utf-8") == read_base_config_fixture()
 
     def test_relative_explicit_path(self, tmp_path: Path) -> None:
-        config_path = initialize_config(Path("custom.toml"), cwd=tmp_path).unwrap()
+        config_path = initialize_config(ProjectConfigPath(Path("custom.toml")), cwd=tmp_path).unwrap()
 
         assert config_path == tmp_path / "custom.toml"
         assert 'id = "governed_by"' in config_path.read_text(encoding="utf-8")
@@ -56,7 +58,7 @@ class TestInitializeConfig:
         home_dir.mkdir()
         monkeypatch.setenv("HOME", str(home_dir))
 
-        config_path = initialize_config(Path("~/custom.toml"), cwd=tmp_path).unwrap()
+        config_path = initialize_config(ProjectConfigPath(Path("~/custom.toml")), cwd=tmp_path).unwrap()
 
         assert config_path == home_dir / "custom.toml"
         assert config_path.read_text(encoding="utf-8") == read_base_config_fixture()
@@ -93,19 +95,15 @@ class TestInitializeConfig:
         assert config_path.read_text(encoding="utf-8") == "version = 1\n"
 
     def test_write_error(self, tmp_path: Path) -> None:
-        failures = initialize_config(Path("missing/depmesh.toml"), cwd=tmp_path).unwrap_err()
+        failures = initialize_config(ProjectConfigPath(Path("missing/depmesh.toml")), cwd=tmp_path).unwrap_err()
         assert isinstance(failures[0], config_errors.Unwritable)
 
-    def test_path_resolution_failure_propagates(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_path_resolution_failure_propagates(self, tmp_path: Path, mocker: MockerFixture) -> None:
         original = config_errors.PathResolutionFailed(path=tmp_path / "depmesh.toml", reason="permission denied")
-
-        def fail_resolution(_path: Path, _cwd: Path) -> Result[Path]:
-            return Err([original])
-
-        monkeypatch.setattr(init, "resolve_config_path", fail_resolution)
+        mocker.patch("depmesh.workspace.init.resolve_init_config_path", return_value=Err([original]))
 
         failures = initialize_config(cwd=tmp_path).unwrap_err()
-        assert failures[0] is original
+        assert failures == [original]
 
     @pytest.mark.parametrize("content", [None, b"\xff"])
     def test_template_read_failure_preserves_cause(

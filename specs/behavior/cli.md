@@ -251,13 +251,10 @@ Allowed values MUST be the shared output modes described under [Output protocols
 
 The supplied configuration path MUST be available to every subcommand.
 
-Subcommands that load configuration MUST use this path instead of discovering `depmesh.toml` from the current working directory.
+Subcommands that load configuration MUST pass this option to the configuration selection managed by `llm_tool_cli`.
+Depmesh's configuration filename, schema, and configuration-root rules are defined in `specs/behavior/config.md`.
 
 Subcommands that do not load workspace configuration MAY ignore this option.
-
-`PATH` MAY be relative to the current working directory or absolute.
-
-For commands that read or create configuration, a leading `~` or `~user` in `PATH` MUST expand to the corresponding home directory before resolution.
 
 ## Dependencies Command
 
@@ -683,15 +680,9 @@ depmesh init
 depmesh --config ./path/to/depmesh.toml init
 ```
 
-When no `--config` path is provided, the command MUST create `depmesh.toml` in the current working directory.
-
-When `--config PATH` is provided, the command MUST create the file at that path.
-
-Relative `--config` paths MUST be resolved against the current working directory.
-
-The command MUST NOT discover an existing configuration file in parent directories.
-
-The command MUST NOT overwrite an existing file.
+The command MUST use the initialization behavior managed by `llm_tool_cli`, supplying Depmesh's default configuration filename, the invocation's working directory, and the optional `--config` path.
+The library owns target selection and resolution, template reading, exclusive creation, and their diagnostics.
+Depmesh owns the starter contents described below.
 
 The generated configuration MUST:
 
@@ -761,13 +752,7 @@ Shared configuration errors MUST exit with status `2`. Unmapped environment erro
 
 A failed result containing multiple environment errors MUST render every error in list order and use the first error's exit category. Technical exceptions MUST NOT be treated as expected failures.
 
-An unsuccessful upward configuration search MUST use the shared `config_not_found` diagnostic, including the search directory in `path` and an explanation in `reason`. An explicit missing file MUST use `config_unreadable` and MUST NOT fall back to discovery.
-
-Shared configuration diagnostics replace the previous project-specific mappings: invalid TOML uses `config_invalid_toml`, invalid UTF-8 uses `config_invalid_encoding`, and schema validation uses `config_validation_failed`. Discovery and explicit path resolution failures use `config_discovery_failed` and `config_path_resolution_failed`.
-
-Shared configuration error records MUST include `path` and `reason`. Validation details use `reason` instead of the previous `validation` field. File reading and creation failures retain their shared codes, use the shared `reason` field, and place the formatted message in cell content.
-
-Failure to read the packaged starter template MUST use the project-owned `config_template_unreadable` code with `template` and `reason` fields, rather than reporting a configuration target write failure.
+Configuration selection, loading, and creation MUST propagate the diagnostics provided by `llm_tool_cli` without local translation.
 
 For automation output, fatal errors SHOULD be written to stdout as an `error` record when possible and the process SHOULD still exit with a non-zero code.
 
