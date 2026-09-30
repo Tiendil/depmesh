@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import importlib.resources
 from pathlib import Path
 
+from llm_tool_cli.config import load_config
 from llm_tool_cli.paths import ProjectRootPath
 
 from depmesh.discovery.query import query_dependencies
@@ -55,3 +57,29 @@ class TestConstructWorkspace:
 
         assert not workspace.relations
         assert not workspace.rules
+
+
+def read_base_config_fixture() -> str:
+    return (
+        importlib.resources.files("depmesh.workspace")
+        .joinpath("fixtures", "base_config.toml")
+        .read_text(encoding="utf-8")
+    )
+
+
+class TestBaseConfigFixture:
+    def test_content(self) -> None:
+        text = read_base_config_fixture()
+
+        assert text.startswith("version = 1\n")
+        assert 'id = "governed_by"' in text
+        assert 'id = "governs"' in text
+
+    def test_valid_config(self, tmp_path: Path) -> None:
+        config_path = tmp_path / "depmesh.toml"
+        config_path.write_text(read_base_config_fixture(), encoding="utf-8")
+
+        config = load_config(config_path, Config).unwrap()
+        workspace = construct_workspace(config, root=config_path.parent)
+
+        assert tuple(relation.id for relation in workspace.relations) == ("governed_by", "governs")

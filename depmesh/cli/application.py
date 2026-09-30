@@ -13,10 +13,10 @@ from llm_tool_cli.cli.context import get_global_options, set_global_options
 from llm_tool_cli.cli.entities import ExitCode, GlobalOptions
 from llm_tool_cli.cli.options import ConfigOption, ProtocolOption
 from llm_tool_cli.config import errors as config_errors
-from llm_tool_cli.config import load_config, locate_config
+from llm_tool_cli.config import initialize_config, load_config, locate_config
 from llm_tool_cli.core import settings
 from llm_tool_cli.core.result import Ok, Result, UnwrapError, unwrap_to_error
-from llm_tool_cli.paths import UntrustedPath, resolve_project_root
+from llm_tool_cli.paths import PathInput, UntrustedPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
 from llm_tool_cli.protocol import Protocol
 from llm_tool_cli.protocol.cell_shortcuts import environment_error, operation_succeeded
@@ -32,7 +32,6 @@ from depmesh.protocol import SkillDocument
 from depmesh.protocol.cells import DependenciesCell, relation_cells
 from depmesh.workspace import Config, Workspace, construct_workspace
 from depmesh.workspace.config import CONFIG_FILE_NAME
-from depmesh.workspace.init import initialize_config
 
 EXIT_CONFIG = 2
 EXIT_QUERY = 3
@@ -120,7 +119,13 @@ def relations(context: typer.Context) -> None:
 @app.command("init")
 def init(context: typer.Context) -> None:
     with command_context(context) as command:
-        config_path = initialize_config(command.global_options.config_path).unwrap()
+        config_path = initialize_config(
+            CONFIG_FILE_NAME,
+            package="depmesh.workspace",
+            template="base_config.toml",
+            cwd=PathInput(Path.cwd()),
+            path=command.global_options.config_path,
+        ).unwrap()
         command.write_cells([operation_succeeded("Configuration created.", path=str(config_path))])
 
 

@@ -616,8 +616,7 @@ depmesh init
 depmesh --config ./path/to/depmesh.toml init
 ```
 
-The command MUST use the initialization behavior managed by `llm_tool_cli`, supplying Depmesh's default configuration filename, the invocation's working directory, and the optional `--config` path.
-The library owns target selection and resolution, template reading, exclusive creation, and their diagnostics.
+The command MUST delegate complete configuration-file initialization to `llm_tool_cli`, supplying Depmesh's default configuration filename, invocation working directory, optional `--config` path, and packaged starter template.
 Depmesh owns the starter contents described below.
 
 The generated configuration MUST:

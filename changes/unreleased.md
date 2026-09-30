@@ -1,6 +1,8 @@
 
 ### Migration
 
+- Replace the removed `depmesh.workspace.init.initialize_config` with `llm_tool_cli.config.initialize_config`, passing `"depmesh.toml"`, `package="depmesh.workspace"`, `template="base_config.toml"`, a `PathInput` working directory, and an optional keyword-only `ProjectConfigPath` target.
+
 - Import `InvalidArguments` from `llm_tool_cli.cli.errors` instead of the removed `depmesh.cli.errors` module. Use the shared concrete type when classifying invalid arguments; the local CLI environment-error root is removed.
 
 - Python integrations must register version commands through `llm_tool_cli.cli.commands.version.register_version_command` instead of calling the removed `depmesh.cli.application.version`.
@@ -43,6 +45,8 @@
 - Missing discovered configuration now uses the shared `config_not_found` message and `reason` field, with the search directory in `path`.
 
 ### Changes
+
+- Call shared configuration-file initialization directly from `init`, preserving the packaged starter, created-path success metadata, diagnostics, and exit behavior; remove the local initializer module.
 
 - Use the shared invalid-argument diagnostic for artifact validation and preserve existing error messages, cell fields, streams, and exit categories.
 
