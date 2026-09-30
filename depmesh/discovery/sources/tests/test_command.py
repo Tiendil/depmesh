@@ -45,7 +45,6 @@ class TestCommandSource:
         assert source.evaluate(context).unwrap() == [ArtifactId("@/tests/test_a.py")]
 
     def test_evaluate__records_warnings(self, tmp_path: Path) -> None:
-        warnings.clear()
         source = CommandSource(
             CommandSourceConfig(
                 type="command",
@@ -60,4 +59,3 @@ class TestCommandSource:
             "relation `tests`: command exited with status 7: "
             "printf '@/tests/test_a.py\\n'; printf 'diagnostic\\n' >&2; exit 7",
         ]
-        warnings.clear()

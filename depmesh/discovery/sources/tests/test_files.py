@@ -103,13 +103,11 @@ class TestFilesSource:
 
     @pytest.mark.parametrize("pattern", ["../tests/*.py", "@/../*.py", "@/a//b", "@/", "@file", "."])
     def test_evaluate__invalid_pattern_adds_warning(self, tmp_path: Path, pattern: str) -> None:
-        warnings.clear()
         source = FilesSource(FilesSourceConfig.model_validate({"type": "files", "pattern": pattern}))
         context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={})
 
         assert source.evaluate(context).unwrap() == []
         assert warnings.read() == [f"relation `tests`: skipped invalid files source pattern `{pattern}`"]
-        warnings.clear()
 
     def test_evaluate__expands_home_in_pattern(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("HOME", str(tmp_path))
@@ -131,7 +129,6 @@ class TestFilesSource:
     def test_evaluate__home_outside_project_adds_warning(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        warnings.clear()
         monkeypatch.setenv("HOME", str(tmp_path))
         source = FilesSource(FilesSourceConfig.model_validate({"type": "files", "pattern": "~/*.py"}))
         context = EvaluationContext(
@@ -140,10 +137,8 @@ class TestFilesSource:
 
         assert source.evaluate(context).unwrap() == []
         assert warnings.read() == ["relation `tests`: skipped invalid files source pattern `~/*.py`"]
-        warnings.clear()
 
     def test_evaluate__home_expansion_failure_is_fatal(self, tmp_path: Path, mocker: MockerFixture) -> None:
-        warnings.clear()
         cause = RuntimeError("unknown home")
         mocker.patch.object(Path, "expanduser", side_effect=cause)
         source = FilesSource(FilesSourceConfig.model_validate({"type": "files", "pattern": "~/*.py"}))
@@ -156,10 +151,8 @@ class TestFilesSource:
         assert failure.path == "~/*.py"
         assert failure.cause == cause
         assert warnings.read() == []
-        warnings.clear()
 
     def test_evaluate__pattern_resolution_failure_is_fatal(self, tmp_path: Path) -> None:
-        warnings.clear()
         link = tmp_path / "loop"
         link.symlink_to(link)
         source = FilesSource(FilesSourceConfig.model_validate({"type": "files", "pattern": "@/loop/*.py"}))
@@ -172,4 +165,3 @@ class TestFilesSource:
         assert failure.path == str(link / "*.py")
         assert isinstance(failure.cause, (OSError, RuntimeError))
         assert warnings.read() == []
-        warnings.clear()

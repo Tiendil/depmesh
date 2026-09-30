@@ -47,7 +47,6 @@ def root(
     protocol: ProtocolOption = None,
     config: ConfigOption = None,
 ) -> None:
-    warnings.clear()
     set_global_options(
         context,
         GlobalOptions(protocol=protocol, config_path=config),

@@ -159,7 +159,6 @@ class TestQueryDependencies:
         assert result.grouped() == {"tests": ["@/tests/test_a.py"]}
 
     def test_files_source_missing_file_returns_empty_result(self, tmp_path: Path) -> None:
-        warnings.clear()
         touch(tmp_path / "src/a.py")
         relations = (make_relation("tests"),)
         rules = make_rules(
@@ -181,7 +180,6 @@ class TestQueryDependencies:
 
         assert result.grouped() == {}
         assert warnings.read() == []
-        warnings.clear()
 
     def test_relation_filter_uses_explicit_relation_id(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")

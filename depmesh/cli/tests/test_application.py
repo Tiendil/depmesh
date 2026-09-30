@@ -134,6 +134,7 @@ class TestCommandContext:
         runner = CliRunner()
 
         for name in ["first.toml", "second.toml"]:
+            warnings.clear()
             result = runner.invoke(app, ["--config", name, "-p", "automation", "relations"])
 
             assert result.exit_code == 2
@@ -142,6 +143,7 @@ class TestCommandContext:
             assert record["code"] == "config_unreadable"
             assert record["path"] == str(tmp_path / name)
 
+        warnings.clear()
         result = runner.invoke(app, ["relations"])
 
         assert result.exit_code == 0
@@ -157,6 +159,7 @@ class TestCommandContext:
             (["skill"], "--DEPMESH-CELL ", "kind=skill\n"),
         ]
         for arguments, prefix, kind in invocations:
+            warnings.clear()
             result = CliRunner().invoke(app, arguments)
 
             assert result.exit_code == 0
@@ -376,6 +379,7 @@ class TestDependencies:
         arguments = ["-p", protocol, "dependencies", "@/src/b.py", "@/src/a.py", "@/src/a.py"]
 
         first = CliRunner().invoke(app, arguments)
+        warnings.clear()
         second = CliRunner().invoke(app, arguments)
 
         assert first.exit_code == second.exit_code == 0
@@ -396,7 +400,7 @@ class TestDependencies:
             assert first.stdout.index("- @/tests/test_a.py") < first.stdout.index("- @/tests/test_b.py")
 
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
-    def test_warning_cells_follow_results_and_do_not_leak(
+    def test_warning_cells_follow_results_with_explicit_invocation_cleanup(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, protocol: str
     ) -> None:
         (tmp_path / "depmesh.toml").write_text(
@@ -412,6 +416,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         monkeypatch.chdir(tmp_path)
 
         result = CliRunner().invoke(app, ["-p", protocol, "dependencies", "@/a.py"])
+        warnings.clear()
         following = CliRunner().invoke(app, ["-p", protocol, "dependencies", "@/other.py"])
 
         assert result.exit_code == following.exit_code == 0
@@ -1097,19 +1102,6 @@ class TestRelations:
 
 
 class TestSkill:
-    def test_clears_previous_invocation_warnings(self) -> None:
-        warnings.clear()
-        try:
-            warnings.add("Previous invocation warning")
-
-            result = CliRunner().invoke(app, ["skill"])
-
-            assert result.exit_code == 0
-            assert not warnings.read()
-            assert "Previous invocation warning" not in result.output
-        finally:
-            warnings.clear()
-
     def test_human_protocol(self) -> None:
         result = CliRunner().invoke(app, ["-p", "human", "skill"])
 

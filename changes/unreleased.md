@@ -48,6 +48,8 @@
 
 ### Changes
 
+- Isolate warning storage through an autouse test fixture and explicit cleanup between CLI invocations in one test; remove test-isolation cleanup from CLI startup. Separate CLI processes retain independent warning storage.
+
 - Inherit invocation-option retrieval, protocol selection, and cell writing from `llm_tool_cli.cli.context.CommandContext`, retaining Depmesh's workspace loading, warnings, dependency queries, and output contracts.
 
 - Use the shared command error context manager and explicit reporter for command failures and early argument validation; preserve diagnostic payloads, ordering, stream routing, exit statuses, and unexpected exception propagation.
@@ -63,7 +65,7 @@
 - Delegate the complete version command to `llm_tool_cli`, preserving installed package lookup, output protocols, configuration independence, and exit behavior. Use common version help text and correct the usage documentation to describe existing version-cell output.
 
 - Use shared application construction and help aliases, and enable `--show-completion` and `--install-completion`. Delegate the entire skill command to `llm_tool_cli`, preserving Depmesh's documents, output protocols, and read-failure behavior.
-- Use the shared `ExitCode` enum for success and explicit invalid arguments. Reset invocation warnings in the root callback so shared commands retain warning isolation.
+- Use the shared `ExitCode` enum for success and explicit invalid arguments.
 
 - Use the shared `core.tests.fixtures.isolated_settings` pytest fixture for test isolation; production settings no longer provide a scoped override.
 

@@ -131,7 +131,7 @@ The core warning storage MUST provide operations to:
 
 Code that adds warnings SHOULD include enough context in the string for the CLI output to be useful.
 
-The CLI MUST clear the core warning storage at the start of each command.
+Each CLI invocation runs in a separate process. Warning storage MUST start empty with the process; the CLI MUST NOT reset it for test isolation.
 
 The CLI MUST read the core warning storage when rendering command output.
 

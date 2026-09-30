@@ -202,11 +202,11 @@ Warning tests SHOULD verify that non-fatal problems add warning strings to the c
 
 Warning tests SHOULD verify that the core warning storage preserves warning insertion order.
 
-Warning tests SHOULD clear the core warning storage before and after tests that use it.
+A function-scoped autouse fixture MUST clear the core warning storage before and after every test, including when a test fails.
+
+Tests that simulate multiple independent CLI invocations in one process MUST explicitly clear the core warning storage between invocations.
 
 CLI warning tests SHOULD verify that warnings do not cause a non-zero exit code when the command otherwise succeeds.
-
-CLI warning tests SHOULD verify that the CLI clears the core warning storage at the start of each command.
 
 CLI warning tests SHOULD verify that stored warning strings are rendered according to the selected output protocol.
 
