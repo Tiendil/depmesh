@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -9,7 +9,8 @@ from llm_tool_cli.cli import errors as cli_errors
 from llm_tool_cli.cli.application import create_app
 from llm_tool_cli.cli.commands.skills import register_skill_command
 from llm_tool_cli.cli.commands.version import register_version_command
-from llm_tool_cli.cli.context import get_global_options, set_global_options
+from llm_tool_cli.cli.context import CommandContext as BaseCommandContext
+from llm_tool_cli.cli.context import set_global_options
 from llm_tool_cli.cli.entities import GlobalOptions
 from llm_tool_cli.cli.handling import handle_command_errors
 from llm_tool_cli.cli.options import ConfigOption, ProtocolOption
@@ -19,8 +20,6 @@ from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
 from llm_tool_cli.paths import PathInput, UntrustedPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
 from llm_tool_cli.protocol.cell_shortcuts import configuration_created
-from llm_tool_cli.protocol.logic_cells.base import LogicCell
-from llm_tool_cli.protocol.rendering import write_cells
 
 from depmesh.cli.entities import ArtifactsArgument, RelationOption
 from depmesh.core import warnings
@@ -124,21 +123,14 @@ def init(context: typer.Context) -> None:
         command.write_cells([configuration_created(config_path)])
 
 
-class CommandContext:
-    __slots__ = ("global_options", "protocol")
-
-    def __init__(self, context: typer.Context) -> None:
-        self.global_options = get_global_options(context)
-        self.protocol = self.global_options.protocol_for(context.info_name or "")
+class CommandContext(BaseCommandContext):
+    __slots__ = ()
 
     @unwrap_to_error
     def load_workspace(self) -> Result[Workspace]:
         config_path = locate_config(CONFIG_FILE_NAME, path=self.global_options.config_path, cwd=Path.cwd()).unwrap()
         config = load_config(config_path, Config).unwrap()
         return Ok(construct_workspace(config, root=config_path.parent))
-
-    def write_cells(self, cells: Iterable[LogicCell], *, stderr: bool = False) -> None:
-        write_cells(cells, protocol=self.protocol, stderr=stderr)
 
 
 @contextmanager

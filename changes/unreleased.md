@@ -48,6 +48,8 @@
 
 ### Changes
 
+- Inherit invocation-option retrieval, protocol selection, and cell writing from `llm_tool_cli.cli.context.CommandContext`, retaining Depmesh's workspace loading, warnings, dependency queries, and output contracts.
+
 - Use the shared command error context manager and explicit reporter for command failures and early argument validation; preserve diagnostic payloads, ordering, stream routing, exit statuses, and unexpected exception propagation.
 
 - Delegate environment-error exit-code declarations and aggregation to `llm_tool_cli`, preserving diagnostic order, cell payloads, and streams while making exit status independent of error order.
