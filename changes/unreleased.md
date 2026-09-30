@@ -1,6 +1,8 @@
 
 ### Migration
 
+- Python integrations that bypass CLI `main()` must initialize `llm_tool_cli.core.settings` with `ToolLabel("DEPMESH")` before cell output or argument parsing. Tests can request `isolated_settings` from `llm_tool_cli.core.tests.fixtures` before initializing the label; pytest-mock restores prior settings afterward. Remove `tool_label` arguments from shared sequence rendering and writing.
+
 - Pass `llm_tool_cli.paths.ProjectConfigPath` to `initialize_config` in Python integrations.
 
 - Import `GlobalOptions` from `llm_tool_cli.cli.entities`, rename its `config` field to `config_path`, and supply `ProjectConfigPath`. Use `protocol_for(command_name)` for protocol selection; command contexts no longer accept `default_protocol`.
@@ -17,11 +19,11 @@
 
 - Fatal errors now use ordinary cell framing in human and LLM output. Automation gains a generated `id` and moves the formatted error message from `message` to `content`, retaining native codes and diagnostic context through shared cell metadata conversion. Stream routing and exit categories remain unchanged; argument failures before command initialization use human error cells on stderr.
 
-- Python integrations using `query_cells` must construct `DependenciesCell(result=..., relations=..., warnings=...)` and pass it to shared `render_cells` with `protocol` and `tool_label`. `relation_cells` returns shared content logic cells and no longer accepts `cell_type`.
+- Python integrations using `query_cells` must construct `DependenciesCell(result=..., relations=..., warnings=...)` and pass it to shared `render_cells` with `protocol` after initializing shared application settings. `relation_cells` returns shared content logic cells and no longer accepts `cell_type`.
 - Replace `depmesh.protocol.cells.skill_cell(document)` with application-owned document loading followed by `llm_tool_cli.protocol.cell_shortcuts.skill(document.value, content)`.
 - Import `ContentCell` from `llm_tool_cli.protocol.logic_cells` and `LogicCell` from `llm_tool_cli.protocol.logic_cells.base`; the shared `protocol.cells` module is removed.
 - Command results now use shared cells with `DEPMESH` text framing and random identifiers. Automation cells include `id` and `content`; relation names move from `id` to `relation`, and skill text moves from `text` to `content`. Initialization now honors the selected protocol and emits an `operation_succeeded` cell with `path`. Ignore cell identifiers when comparing repeated results; payloads and ordering remain deterministic. Exit codes, help, and version retain their existing contracts.
-- Python integrations must replace the removed `depmesh.protocol.renderers` family and `depmesh.protocol.utils.renderer` with Depmesh logic-cell construction and `llm_tool_cli.protocol.rendering.render_cells(cells, protocol=..., tool_label=...)`. `CommandContext.write_cells` accepts logic cells; the separate `write_logic_cell` method and `cell_type` property are removed.
+- Python integrations must replace the removed `depmesh.protocol.renderers` family and `depmesh.protocol.utils.renderer` with Depmesh logic-cell construction and `llm_tool_cli.protocol.rendering.render_cells(cells, protocol=...)`. `CommandContext.write_cells` accepts logic cells; the separate `write_logic_cell` method and `cell_type` property are removed.
 
 - Import `Protocol` from `llm_tool_cli.protocol` instead of `depmesh.protocol.OutputProtocol`, and import `to_jsonl` from the shared protocol package. Automation JSON now uses compact separators without optional whitespace; generic serialization is owned by the shared library.
 - Use `.` instead of an empty project-path input to refer to a directory base below the project root; empty inputs now report `invalid_project_path`.
@@ -35,6 +37,12 @@
 - Missing discovered configuration now uses the shared `config_not_found` message and `reason` field, with the search directory in `path`.
 
 ### Changes
+
+- Use the shared `core.tests.fixtures.isolated_settings` pytest fixture for test isolation; production settings no longer provide a scoped override.
+
+- Initialize the shared `DEPMESH` tool label once at CLI startup and use it for all cell output, including early argument diagnostics. Use the shared `ProtocolOption` annotation without repeating labels.
+
+- Delegate protocol option parsing and help to `llm_tool_cli`. Unsupported values now emit an LLM error cell on stderr instead of a human cell, preserving `invalid_arguments` and exit status `1`.
 
 - Use shared `--config` parsing from `llm_tool_cli`, with a semantic configuration path and common option help; filesystem validation remains deferred to configuration operations.
 

@@ -13,7 +13,7 @@ from depmesh.domain.entities import ArtifactId, RelationId
 
 def _exit_with_invalid_arguments(message: str) -> NoReturn:
     cell = environment_error(cli_errors.InvalidArguments(reason=message))
-    write_cells([cell], protocol=Protocol.human, tool_label="DEPMESH", stderr=True)
+    write_cells([cell], protocol=Protocol.human, stderr=True)
     raise typer.Exit(1)
 
 
@@ -27,14 +27,6 @@ def _validate_artifacts(values: list[ArtifactId] | None) -> list[ArtifactId]:
     return values
 
 
-def _parse_protocol(value: str) -> Protocol:
-    try:
-        return Protocol(value)
-    except ValueError:
-        choices = ", ".join(protocol.value for protocol in Protocol)
-        _exit_with_invalid_arguments(f"invalid protocol `{value}`; expected one of: {choices}")
-
-
 def _parse_relation(value: str) -> RelationId:
     return RelationId(value)
 
@@ -45,15 +37,6 @@ ArtifactsArgument = Annotated[
         metavar="ARTIFACT",
         parser=_parse_artifact,
         callback=_validate_artifacts,
-    ),
-]
-
-ProtocolOption = Annotated[
-    Protocol | None,
-    typer.Option(
-        "-p",
-        "--protocol",
-        parser=_parse_protocol,
     ),
 ]
 

@@ -9,9 +9,10 @@ from typing import Annotated
 import typer
 from llm_tool_cli.cli.context import get_global_options, set_global_options
 from llm_tool_cli.cli.entities import GlobalOptions
-from llm_tool_cli.cli.options import ConfigOption
+from llm_tool_cli.cli.options import ConfigOption, ProtocolOption
 from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.config import load_config, locate_config
+from llm_tool_cli.core import settings
 from llm_tool_cli.core.result import Ok, Result, UnwrapError, unwrap_to_error
 from llm_tool_cli.paths import UntrustedPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
@@ -22,7 +23,7 @@ from llm_tool_cli.protocol.rendering import write_cells
 from llm_tool_cli.skills import load_skill_text
 
 from depmesh.cli import errors as cli_errors
-from depmesh.cli.entities import ArtifactsArgument, ProtocolOption, RelationOption
+from depmesh.cli.entities import ArtifactsArgument, RelationOption
 from depmesh.core import warnings
 from depmesh.discovery.entities import QueryResult
 from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
@@ -47,6 +48,7 @@ app = typer.Typer(
 
 
 def main() -> None:
+    settings.initialize(tool_label=settings.ToolLabel("DEPMESH"))
     app()
 
 
@@ -155,7 +157,7 @@ class CommandContext:
         return Ok(construct_workspace(config, root=config_path.parent))
 
     def write_cells(self, cells: Iterable[LogicCell], *, stderr: bool = False) -> None:
-        write_cells(cells, protocol=self.protocol, tool_label="DEPMESH", stderr=stderr)
+        write_cells(cells, protocol=self.protocol, stderr=stderr)
 
 
 @contextmanager

@@ -308,11 +308,16 @@ class TestCommandContext:
 
 
 class TestApp:
+    @pytest.mark.parametrize("option", ["-p", "--protocol"])
     @pytest.mark.parametrize("protocol", ["invalid", "{protocol}", "{"])
-    def test_protocol_choices__match_cli_contract(self, protocol: str) -> None:
-        result = CliRunner().invoke(app, ["--protocol", protocol, "dependencies", "./src/a.py"])
+    def test_protocol_choices__match_cli_contract(self, option: str, protocol: str) -> None:
+        result = CliRunner().invoke(app, [option, protocol, "dependencies", "./src/a.py"])
 
         assert result.exit_code == 1
+        assert result.stderr.startswith("--DEPMESH-CELL ")
+        assert result.stderr.count(" BEGIN--\n") == 1
+        assert "kind=error\n" in result.stderr
+        assert "code=invalid_arguments\n" in result.stderr
         assert protocol in result.stderr
         assert "human" in result.stderr
         assert "llm" in result.stderr
@@ -1329,6 +1334,10 @@ class TestVersion:
 
 
 class TestMain:
+    @pytest.fixture
+    def initialized_settings(self, isolated_settings: None) -> None:
+        """Keep the label unset so main must initialize it."""
+
     def test_success(self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
         monkeypatch.setattr(sys, "argv", ["depmesh", "version"])
 
@@ -1342,6 +1351,19 @@ class TestMain:
             "----- DEPMESH CELL <id> -----\nkind = version\ntype = version\n"
             f"version = {metadata.version('depmesh')}\n\n"
         )
+
+    def test_initializes_label_before_parsing(self, mocker: MockerFixture, capsys: pytest.CaptureFixture[str]) -> None:
+        mocker.patch.object(sys, "argv", ["depmesh", "--protocol", "invalid", "version"])
+
+        for _ in range(2):
+            with pytest.raises(SystemExit) as caught:
+                main()
+
+            assert caught.value.code == 1
+            captured = capsys.readouterr()
+            assert not captured.out
+            assert captured.err.startswith("--DEPMESH-CELL ")
+            assert "code=invalid_arguments\n" in captured.err
 
 
 def assert_error_cells(text: str, errors: EnvironmentErrors) -> None:

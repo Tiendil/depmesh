@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import pytest
 import typer
-from llm_tool_cli.protocol import Protocol
 
 from depmesh.cli.entities import (
     _exit_with_invalid_arguments,
     _parse_artifact,
-    _parse_protocol,
     _parse_relation,
     _validate_artifacts,
 )
@@ -46,15 +44,6 @@ class TestValidateArtifacts:
     def test_none(self) -> None:
         with pytest.raises(typer.Exit):
             _validate_artifacts(None)
-
-
-class TestParseProtocol:
-    def test_success(self) -> None:
-        assert _parse_protocol("automation") is Protocol.automation
-
-    def test_unsupported_value(self) -> None:
-        with pytest.raises(typer.Exit):
-            _parse_protocol("unknown")
 
 
 class TestParseRelation:

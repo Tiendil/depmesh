@@ -95,6 +95,11 @@ The CLI MUST support these commands and command forms:
 
 The root command MUST NOT perform a dependency query directly.
 
+## Application identity
+
+The CLI MUST initialize the tool label `DEPMESH` through `llm_tool_cli` at application startup before command-line parsing.
+Label storage, initialization checks, and label selection for cell rendering MUST be managed by `llm_tool_cli`.
+
 ## Output behavior
 
 The CLI MUST use the cell model, cell and environment-error construction and rendering, and text writing provided by `llm_tool_cli.protocol`. Text cell framing MUST use the label `DEPMESH`.
@@ -235,13 +240,11 @@ depmesh --help
 
 ### `-p`, `--protocol PROTOCOL`
 
-`-p` and `--protocol PROTOCOL` MUST be global options accepted before the subcommand.
+The CLI MUST use protocol-option parsing and invalid-value diagnostics managed by `llm_tool_cli`.
 
 Subcommands that render protocol-specific output MUST use the selected protocol.
 
 Subcommands that do not render protocol-specific output MAY ignore this option.
-
-Allowed values MUST be the shared output modes described under [Output protocols](#output-protocols).
 
 ### `--config PATH`
 
@@ -754,7 +757,8 @@ Configuration selection, loading, and creation MUST propagate the diagnostics pr
 
 For automation output, fatal errors SHOULD be written to stdout as an `error` record when possible and the process SHOULD still exit with a non-zero code.
 
-If automation output cannot be initialized, fatal diagnostics MAY be written to stderr as human error cells. Argument validation before command initialization MUST use this fallback.
+If automation output cannot be initialized, fatal diagnostics MAY be written to stderr as human error cells. Depmesh-owned argument validation before command initialization MUST use this fallback.
+Protocol-option parsing MUST use the diagnostics managed by `llm_tool_cli`.
 
 Example automation fatal error:
 
