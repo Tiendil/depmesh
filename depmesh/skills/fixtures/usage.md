@@ -206,11 +206,13 @@ Run separate queries when you need to know which requested artifact produced eac
 
 ## Output Protocols
 
-Dependency results, relation lists, warnings, skill documents, and initialization confirmations use shared output cells. Human and LLM cells use `DEPMESH` framing. Cell content, metadata, and ordering are deterministic; generated cell IDs may differ. IDs in the examples are placeholders.
+Dependency results, relation lists, warnings, skill documents, versions, and initialization confirmations use shared output cells. Human and LLM cells use `DEPMESH` framing. Cell content, metadata, and ordering are deterministic; generated cell IDs may differ. IDs in the examples are placeholders.
 
 Human and LLM dependency output groups paths into one cell per relation. Automation emits one cell per dependency, retaining `type`, `relation`, and `dependency`. Relation cells use `relation` for the relation name; `id` identifies the cell. Skill documents use `content` for their text. Warnings use `type = warning` and `message`. Fatal errors use ordinary cells with `type = error`, a native `code`, diagnostic metadata, and the formatted message in `content`. They retain nonzero exits; human and LLM errors go to stderr, and automation errors go to stdout.
 
-Help and version remain plain text.
+`depmesh version` emits one cell with `type = version` and the installed package version in `version` metadata. Automation output has null `content`. The command does not require project configuration.
+
+Help remains plain text.
 
 Use `llm` when invoking `depmesh` as a coding agent. It is the normal choice for this documentation's examples.
 

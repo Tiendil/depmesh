@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
-from importlib import metadata
 from pathlib import Path
 
 import typer
 from llm_tool_cli.cli.application import create_app
 from llm_tool_cli.cli.commands.skills import register_skill_command
+from llm_tool_cli.cli.commands.version import register_version_command
 from llm_tool_cli.cli.context import get_global_options, set_global_options
 from llm_tool_cli.cli.entities import ExitCode, GlobalOptions
 from llm_tool_cli.cli.options import ConfigOption, ProtocolOption
@@ -17,7 +17,7 @@ from llm_tool_cli.core import settings
 from llm_tool_cli.core.result import Ok, Result, UnwrapError, unwrap_to_error
 from llm_tool_cli.paths import UntrustedPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
-from llm_tool_cli.protocol import Protocol, cell_shortcuts
+from llm_tool_cli.protocol import Protocol
 from llm_tool_cli.protocol.cell_shortcuts import environment_error, operation_succeeded
 from llm_tool_cli.protocol.logic_cells.base import LogicCell
 from llm_tool_cli.protocol.rendering import write_cells
@@ -40,6 +40,7 @@ EXIT_PROJECT_ERROR = 3
 
 app = create_app(help="Inspect configured relations and dependencies.")
 register_skill_command(app, package="depmesh.skills", documents=SkillDocument)
+register_version_command(app, distribution="depmesh")
 
 
 def main() -> None:
@@ -121,12 +122,6 @@ def init(context: typer.Context) -> None:
     with command_context(context) as command:
         config_path = initialize_config(command.global_options.config_path).unwrap()
         command.write_cells([operation_succeeded("Configuration created.", path=str(config_path))])
-
-
-@app.command("version")
-def version(context: typer.Context) -> None:
-    with command_context(context) as command:
-        command.write_cells([cell_shortcuts.version(metadata.version("depmesh"))])
 
 
 class CommandContext:

@@ -67,7 +67,7 @@ The CLI MUST write requested command output to stdout.
 
 Diagnostics that are not part of the requested output MUST be written to stderr.
 
-For commands that emit cells or fatal errors, `automation` stdout MUST contain only valid JSON Lines records. Help and version output retain their plain-text contracts.
+For commands that emit cells or fatal errors, `automation` stdout MUST contain only valid JSON Lines records. Help retains its plain-text contract.
 
 Diagnostics written to stderr MAY be plain text and MAY be non-JSONL, including when `--protocol automation` was requested.
 
@@ -216,6 +216,7 @@ Known record types MUST include:
 - `relation` — one configured relation entry.
 - `warning` — non-fatal problem.
 - `skill` — record emitted by `depmesh --protocol automation skill`; record content is outside this specification.
+- `version` — record emitted by the version command managed by `llm_tool_cli`.
 - `operation_succeeded` — successful initialization.
 - `error` — fatal problem, emitted as an ordinary shared error cell before a non-zero exit when possible, with the formatted message in `content`, native `code`, and diagnostic context in metadata.
 
@@ -634,29 +635,12 @@ The command MUST NOT accept artifact arguments, relation options, dependency que
 
 ## Version Command
 
-The `version` command MUST print the tool version and exit with status `0`.
-
-The command MUST NOT load workspace configuration.
-
-Version output MUST be a single line containing only the version number.
-
-```bash
-depmesh [GLOBAL_OPTIONS] version
-```
-
-Example output:
-
-```text
-1.2.3
-```
-
-The `version` command MUST NOT accept dependency query options, skill options, or artifact arguments.
-
-The `version` command MAY ignore global options that do not affect version output.
+The CLI MUST register the version command managed by `llm_tool_cli`, supplying the distribution name `depmesh`.
+The library owns installed version lookup, help, configuration independence, protocol selection, version-cell output, and exit and failure behavior.
 
 ## Errors and exit codes
 
-Skill-command failure handling MUST be managed by `llm_tool_cli`.
+Skill- and version-command failure handling MUST be managed by `llm_tool_cli`.
 The remaining execution policies apply to tool-owned commands.
 
 The CLI SHOULD use these exit codes:

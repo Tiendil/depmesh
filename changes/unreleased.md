@@ -1,6 +1,8 @@
 
 ### Migration
 
+- Python integrations must register version commands through `llm_tool_cli.cli.commands.version.register_version_command` instead of calling the removed `depmesh.cli.application.version`.
+
 - Python integrations must register skill commands through `llm_tool_cli.cli.commands.skills.register_skill_command` instead of calling the removed `depmesh.cli.application.skill`. Import `ExitCode` from `llm_tool_cli.cli.entities` and use `ExitCode.invalid_arguments` instead of `EXIT_INVALID_ARGUMENTS`.
 
 - Python integrations that bypass CLI `main()` must initialize `llm_tool_cli.core.settings` with `ToolLabel("DEPMESH")` before cell output or argument parsing. Tests can request `isolated_settings` from `llm_tool_cli.core.tests.fixtures` before initializing the label; pytest-mock restores prior settings afterward. Remove `tool_label` arguments from shared sequence rendering and writing.
@@ -39,6 +41,8 @@
 - Missing discovered configuration now uses the shared `config_not_found` message and `reason` field, with the search directory in `path`.
 
 ### Changes
+
+- Delegate the complete version command to `llm_tool_cli`, preserving installed package lookup, output protocols, configuration independence, and exit behavior. Use common version help text and correct the usage documentation to describe existing version-cell output.
 
 - Use shared application construction and help aliases, and enable `--show-completion` and `--install-completion`. Delegate the entire skill command to `llm_tool_cli`, preserving Depmesh's documents, output protocols, and read-failure behavior.
 - Use the shared `ExitCode` enum for success and explicit invalid arguments. Reset invocation warnings in the root callback so shared commands retain warning isolation.
