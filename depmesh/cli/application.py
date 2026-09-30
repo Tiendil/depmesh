@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import typer
+from llm_tool_cli.cli import errors as cli_errors
 from llm_tool_cli.cli.application import create_app
 from llm_tool_cli.cli.commands.skills import register_skill_command
 from llm_tool_cli.cli.commands.version import register_version_command
@@ -22,7 +23,6 @@ from llm_tool_cli.protocol.cell_shortcuts import environment_error, operation_su
 from llm_tool_cli.protocol.logic_cells.base import LogicCell
 from llm_tool_cli.protocol.rendering import write_cells
 
-from depmesh.cli import errors as cli_errors
 from depmesh.cli.entities import ArtifactsArgument, RelationOption
 from depmesh.core import warnings
 from depmesh.discovery.entities import QueryResult
@@ -154,7 +154,7 @@ def command_context(context: typer.Context) -> Iterator[CommandContext]:
             stderr=command_context.protocol != Protocol.automation,
         )
         first = failures[0]
-        if isinstance(first, cli_errors.EnvironmentError):
+        if isinstance(first, cli_errors.InvalidArguments):
             exit_code: int = ExitCode.invalid_arguments
         elif isinstance(first, config_errors.EnvironmentError):
             exit_code = EXIT_CONFIG

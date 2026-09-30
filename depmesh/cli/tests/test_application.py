@@ -9,6 +9,7 @@ from importlib import metadata
 from pathlib import Path
 
 import pytest
+from llm_tool_cli.cli import errors as cli_errors
 from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.core import errors as shared_errors
 from llm_tool_cli.core.errors import EnvironmentErrors
@@ -18,7 +19,6 @@ from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
 
-from depmesh.cli import errors as cli_errors
 from depmesh.cli.application import CommandContext, app, main
 from depmesh.core import errors as core_errors
 from depmesh.core import warnings

@@ -28,6 +28,8 @@ class TestExitWithInvalidArguments:
         assert captured.err.startswith("----- DEPMESH CELL ")
         assert "kind = error\n" in captured.err
         assert "code = invalid_arguments\n" in captured.err
+        assert "reason = Invalid café 日本語\n" in captured.err
+        assert "type = error\n" in captured.err
         assert "Invalid café 日本語" in captured.err
 
 

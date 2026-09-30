@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import Annotated, NoReturn
 
 import typer
+from llm_tool_cli.cli import errors as cli_errors
 from llm_tool_cli.cli.entities import ExitCode
 from llm_tool_cli.protocol import Protocol
 from llm_tool_cli.protocol.cell_shortcuts import environment_error
 from llm_tool_cli.protocol.rendering import write_cells
 
-from depmesh.cli import errors as cli_errors
 from depmesh.domain.entities import ArtifactId, RelationId
 
 

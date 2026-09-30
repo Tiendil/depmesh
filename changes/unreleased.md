@@ -1,6 +1,8 @@
 
 ### Migration
 
+- Import `InvalidArguments` from `llm_tool_cli.cli.errors` instead of the removed `depmesh.cli.errors` module. Use the shared concrete type when classifying invalid arguments; the local CLI environment-error root is removed.
+
 - Python integrations must register version commands through `llm_tool_cli.cli.commands.version.register_version_command` instead of calling the removed `depmesh.cli.application.version`.
 
 - Python integrations must register skill commands through `llm_tool_cli.cli.commands.skills.register_skill_command` instead of calling the removed `depmesh.cli.application.skill`. Import `ExitCode` from `llm_tool_cli.cli.entities` and use `ExitCode.invalid_arguments` instead of `EXIT_INVALID_ARGUMENTS`.
@@ -41,6 +43,8 @@
 - Missing discovered configuration now uses the shared `config_not_found` message and `reason` field, with the search directory in `path`.
 
 ### Changes
+
+- Use the shared invalid-argument diagnostic for artifact validation and preserve existing error messages, cell fields, streams, and exit categories.
 
 - Delegate the complete version command to `llm_tool_cli`, preserving installed package lookup, output protocols, configuration independence, and exit behavior. Use common version help text and correct the usage documentation to describe existing version-cell output.
 
