@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 import typer
 from llm_tool_cli.protocol import Protocol
@@ -9,7 +7,6 @@ from llm_tool_cli.protocol import Protocol
 from depmesh.cli.entities import (
     _exit_with_invalid_arguments,
     _parse_artifact,
-    _parse_config,
     _parse_protocol,
     _parse_relation,
     _validate_artifacts,
@@ -49,11 +46,6 @@ class TestValidateArtifacts:
     def test_none(self) -> None:
         with pytest.raises(typer.Exit):
             _validate_artifacts(None)
-
-
-class TestParseConfig:
-    def test_success(self) -> None:
-        assert _parse_config("./depmesh.toml") == Path("./depmesh.toml")
 
 
 class TestParseProtocol:

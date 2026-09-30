@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Annotated, NoReturn
 
 import typer
@@ -28,10 +27,6 @@ def _validate_artifacts(values: list[ArtifactId] | None) -> list[ArtifactId]:
     return values
 
 
-def _parse_config(value: str) -> Path:
-    return Path(value)
-
-
 def _parse_protocol(value: str) -> Protocol:
     try:
         return Protocol(value)
@@ -50,14 +45,6 @@ ArtifactsArgument = Annotated[
         metavar="ARTIFACT",
         parser=_parse_artifact,
         callback=_validate_artifacts,
-    ),
-]
-
-ConfigOption = Annotated[
-    Path | None,
-    typer.Option(
-        "--config",
-        parser=_parse_config,
     ),
 ]
 

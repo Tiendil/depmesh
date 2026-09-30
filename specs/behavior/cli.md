@@ -221,7 +221,7 @@ Additional fields MAY be added in future versions. Consumers MUST ignore unknown
 
 The CLI MUST use the parsed global options, invocation-context storage and retrieval, and command protocol selection provided by `llm_tool_cli`.
 The library owns option availability across subcommands, invocation isolation, and protocol selection.
-Depmesh MUST parse its CLI options, pass them to shared context storage, and supply the invoked command name to shared protocol selection.
+Depmesh MUST combine shared and Depmesh-owned option parsing, pass the parsed options to shared context storage, and supply the invoked command name to shared protocol selection.
 
 ### `-h`, `--help`
 
@@ -245,12 +245,10 @@ Allowed values MUST be the shared output modes described under [Output protocols
 
 ### `--config PATH`
 
-`--config PATH` MUST be a global option accepted before the subcommand.
+The CLI MUST use the configuration-option parsing managed by `llm_tool_cli`, including its deferred filesystem validation.
 
 Subcommands that load configuration MUST pass this option to the configuration selection managed by `llm_tool_cli`.
 Depmesh's configuration filename, schema, and configuration-root rules are defined in `specs/behavior/config.md`.
-
-Subcommands that do not load workspace configuration MAY ignore this option.
 
 ## Dependencies Command
 
@@ -605,6 +603,8 @@ Example output:
 
 The `skill` command MUST print built-in documentation for coding agents.
 
+The command MUST NOT load workspace configuration.
+
 ```bash
 depmesh skill
 depmesh skill usage
@@ -696,6 +696,8 @@ The command MUST NOT accept artifact arguments, relation options, dependency que
 ## Version Command
 
 The `version` command MUST print the tool version and exit with status `0`.
+
+The command MUST NOT load workspace configuration.
 
 Version output MUST be a single line containing only the version number.
 

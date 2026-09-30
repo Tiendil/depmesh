@@ -36,6 +36,8 @@
 
 ### Changes
 
+- Use shared `--config` parsing from `llm_tool_cli`, with a semantic configuration path and common option help; filesystem validation remains deferred to configuration operations.
+
 - Obtain Typer and its version constraint through `llm_tool_cli`, retaining the locked 0.25.1 version.
 
 - Delegate Typer context storage and retrieval of global options to `llm_tool_cli`, preserving CLI behavior and invocation isolation.

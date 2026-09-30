@@ -92,6 +92,41 @@ class ProjectFailure(core_errors.EnvironmentError):
 
 
 class TestCommandContext:
+    @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
+    @pytest.mark.parametrize("command, code", [("relations", "config_unreadable"), ("init", "config_already_exists")])
+    def test_config_path_directory_is_checked_by_configuration_operation(
+        self, tmp_path: Path, protocol: str, command: str, code: str
+    ) -> None:
+        result = CliRunner().invoke(app, ["--config", str(tmp_path), "-p", protocol, command])
+
+        assert result.exit_code == 2
+        assert tmp_path.is_dir()
+        assert not list(tmp_path.iterdir())
+        if protocol == "automation":
+            assert not result.stderr
+            records = cell_records(result.stdout)
+            assert len(records) == 1
+            assert records[0]["type"] == "error"
+            assert records[0]["code"] == code
+            assert records[0]["path"] == str(tmp_path)
+        else:
+            assert not result.stdout
+            separator = " = " if protocol == "human" else "="
+            assert f"kind{separator}error\n" in result.stderr
+            assert f"code{separator}{code}\n" in result.stderr
+            assert f"path{separator}{tmp_path}\n" in result.stderr
+
+    @pytest.mark.parametrize("command", ["skill", "version"])
+    def test_config_path_unused_directory_does_not_prevent_execution(self, tmp_path: Path, command: str) -> None:
+        result = CliRunner().invoke(app, ["--config", str(tmp_path), "-p", "automation", command])
+
+        assert result.exit_code == 0
+        assert not result.stderr
+        records = cell_records(result.stdout)
+        assert len(records) == 1
+        assert records[0]["type"] == command
+        assert not list(tmp_path.iterdir())
+
     def test_config_path_does_not_leak_between_invocations(self, mocker: MockerFixture, tmp_path: Path) -> None:
         write_project(tmp_path)
         mocker.patch("pathlib.Path.cwd", return_value=tmp_path)
