@@ -12,7 +12,7 @@ import pytest
 from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.core import errors as shared_errors
 from llm_tool_cli.core.errors import EnvironmentErrors
-from llm_tool_cli.core.result import Err, Result, UnwrapErrError
+from llm_tool_cli.core.result import Err, Result, UnwrapErrError, UnwrapError
 from llm_tool_cli.paths import resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
 from pytest_mock import MockerFixture
@@ -92,6 +92,29 @@ class ProjectFailure(core_errors.EnvironmentError):
 
 
 class TestCommandContext:
+    @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            config_errors.Unreadable(path=Path("/config.toml"), reason="denied"),
+            (config_errors.Unreadable(path=Path("/config.toml"), reason="denied"),),
+            [config_errors.Unreadable(path=Path("/config.toml"), reason="denied"), "unexpected payload"],
+        ],
+    )
+    def test_malformed_unwrap_payload_is_not_rendered_as_expected(
+        self, mocker: MockerFixture, protocol: str, payload: object
+    ) -> None:
+        failure = UnwrapError(error=[])
+        failure.details["error"] = payload
+        mocker.patch.object(CommandContext, "load_workspace", side_effect=failure)
+
+        result = CliRunner().invoke(app, ["--protocol", protocol, "relations"])
+
+        assert result.exception == failure
+        assert result.exit_code != 0
+        assert not result.stdout
+        assert not result.stderr
+
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
     def test_error_cells_include_guidance_and_keep_stream_policy(self, mocker: MockerFixture, protocol: str) -> None:
         failure = ProjectFailure(

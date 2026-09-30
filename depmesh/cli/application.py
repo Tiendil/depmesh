@@ -4,12 +4,11 @@ from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from importlib import metadata
 from pathlib import Path
-from typing import Annotated, cast
+from typing import Annotated
 
 import typer
 from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.config import load_config, locate_config
-from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Ok, Result, UnwrapError, unwrap_to_error
 from llm_tool_cli.paths import UntrustedPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
@@ -166,7 +165,7 @@ def command_context(
     try:
         yield command_context
     except UnwrapError as error:
-        failures = cast(EnvironmentErrors, error.details["error"])
+        failures = error.errors
         command_context.write_cells(
             (environment_error(failure) for failure in failures),
             stderr=command_context.protocol != Protocol.automation,
