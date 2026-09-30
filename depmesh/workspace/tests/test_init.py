@@ -8,7 +8,7 @@ from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.config import load_config
 from llm_tool_cli.core.result import Err, Result
 
-from depmesh.workspace import Config, construct_workspace, errors, init
+from depmesh.workspace import Config, construct_workspace, init
 from depmesh.workspace.init import BASE_CONFIG_FIXTURE, initialize_config
 
 
@@ -118,13 +118,14 @@ class TestInitializeConfig:
         monkeypatch.setattr(importlib.resources, "files", lambda _package: tmp_path)
 
         failure = initialize_config(cwd=tmp_path).unwrap_err()[0]
-        assert isinstance(failure, errors.ConfigTemplateUnreadable)
+        assert isinstance(failure, config_errors.TemplateUnreadable)
         original = failure.cause
         expected_cause = FileNotFoundError if content is None else UnicodeDecodeError
         assert isinstance(original, expected_cause)
         assert failure.as_record() == {
             "type": "error",
             "code": "config_template_unreadable",
+            "path": str(tmp_path / "depmesh.toml"),
             "message": f"could not read configuration template `{BASE_CONFIG_FIXTURE}`: {original}",
             "template": BASE_CONFIG_FIXTURE,
             "reason": str(original),

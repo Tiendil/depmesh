@@ -24,7 +24,6 @@ from depmesh.core import errors as core_errors
 from depmesh.discovery import errors as discovery_errors
 from depmesh.domain.entities import RelationId
 from depmesh.workspace import Workspace
-from depmesh.workspace import errors as workspace_errors
 
 
 def normalize_cell_ids(text: str) -> str:
@@ -153,7 +152,12 @@ class TestCommandContext:
             (config_errors.AlreadyExists(path=Path("/config.toml"), reason="exists"), 2),
             (config_errors.Unwritable(path=Path("/config.toml"), reason="denied"), 2),
             (config_errors.NotFound(path=Path("/project"), reason="config.toml was not found"), 2),
-            (workspace_errors.ConfigTemplateUnreadable(template="base_config.toml", reason="denied"), 2),
+            (
+                config_errors.TemplateUnreadable(
+                    path=Path("/config.toml"), template="base_config.toml", reason="denied"
+                ),
+                2,
+            ),
             (cli_errors.InvalidArguments(reason="invalid argument"), 1),
             (discovery_errors.UnknownRelationFilter(relation=RelationId("missing")), 3),
             (InvalidProjectPath(path="@/../outside.py"), 3),
@@ -1061,6 +1065,41 @@ class TestSkill:
 
 
 class TestInit:
+    @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
+    @pytest.mark.parametrize("content", [None, b"\xff"])
+    def test_template_failure_uses_shared_configuration_error(
+        self, mocker: MockerFixture, tmp_path: Path, protocol: str, content: bytes | None
+    ) -> None:
+        fixtures = tmp_path / "fixtures"
+        fixtures.mkdir()
+        if content is not None:
+            (fixtures / "base_config.toml").write_bytes(content)
+        mocker.patch("llm_tool_cli.config.files.importlib.resources.files", return_value=tmp_path)
+        config_path = tmp_path / "depmesh.toml"
+
+        result = CliRunner().invoke(app, ["--config", str(config_path), "-p", protocol, "init"])
+
+        assert result.exit_code == 2
+        assert not config_path.exists()
+        if protocol == "automation":
+            assert not result.stderr
+            records = cell_records(result.stdout)
+            assert len(records) == 1
+            record = records[0]
+            assert record["type"] == "error"
+            assert record["code"] == "config_template_unreadable"
+            assert record["path"] == str(config_path)
+            assert record["template"] == "base_config.toml"
+            assert record["reason"]
+            assert record["content"]
+        else:
+            assert not result.stdout
+            separator = " = " if protocol == "human" else "="
+            assert f"kind{separator}error\n" in result.stderr
+            assert f"code{separator}config_template_unreadable\n" in result.stderr
+            assert f"path{separator}{config_path}\n" in result.stderr
+            assert f"template{separator}base_config.toml\n" in result.stderr
+
     @pytest.mark.parametrize("protocol", ["llm", "automation"])
     def test_success_respects_protocol(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, protocol: str) -> None:
         monkeypatch.chdir(tmp_path)

@@ -28,7 +28,6 @@ from depmesh.domain.entities import Dependency
 from depmesh.protocol import SkillDocument
 from depmesh.protocol.cells import DependenciesCell, relation_cells
 from depmesh.workspace import Config, Workspace, construct_workspace
-from depmesh.workspace import errors as workspace_errors
 from depmesh.workspace.config import CONFIG_FILE_NAME
 from depmesh.workspace.init import initialize_config
 
@@ -175,7 +174,7 @@ def command_context(
         first = failures[0]
         if isinstance(first, cli_errors.EnvironmentError):
             exit_code = EXIT_INVALID_ARGUMENTS
-        elif isinstance(first, (workspace_errors.EnvironmentError, config_errors.EnvironmentError)):
+        elif isinstance(first, config_errors.EnvironmentError):
             exit_code = EXIT_CONFIG
         else:
             exit_code = EXIT_PROJECT_ERROR
