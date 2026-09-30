@@ -176,7 +176,8 @@ The CLI MUST explicitly handle failed results and map their environment errors t
 
 Failure rendering and exit-code selection MUST be centralized at the CLI command boundary.
 Environment errors MUST remain structured values in the shared error logic cell until projection; `llm_tool_cli` MUST manage their content, corrective guidance, and metadata.
-The CLI MUST retain responsibility for error ordering, streams, and exit codes during command execution.
+The CLI MUST retain responsibility for error ordering, streams, and exit codes during Depmesh-owned command execution.
+Skill-command failure handling MUST be managed by `llm_tool_cli`.
 Protocol-option parsing MUST use the error presentation and exit behavior managed by `llm_tool_cli` before command execution.
 
 The CLI module MUST own the mapping from environment-error categories to exit codes.

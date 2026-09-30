@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated, NoReturn
 
 import typer
+from llm_tool_cli.cli.entities import ExitCode
 from llm_tool_cli.protocol import Protocol
 from llm_tool_cli.protocol.cell_shortcuts import environment_error
 from llm_tool_cli.protocol.rendering import write_cells
@@ -14,7 +15,7 @@ from depmesh.domain.entities import ArtifactId, RelationId
 def _exit_with_invalid_arguments(message: str) -> NoReturn:
     cell = environment_error(cli_errors.InvalidArguments(reason=message))
     write_cells([cell], protocol=Protocol.human, stderr=True)
-    raise typer.Exit(1)
+    raise typer.Exit(ExitCode.invalid_arguments)
 
 
 def _parse_artifact(value: str) -> ArtifactId:

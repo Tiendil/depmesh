@@ -27,7 +27,7 @@ Built-in skill documentation fixtures MUST live under:
 ```
 
 `llm_tool_cli` provides packaged UTF-8 Markdown loading and read-failure diagnostics.
-Depmesh MUST use this shared behavior for its own fixture set; document selection and contents remain Depmesh-owned.
+Depmesh MUST supply its fixture set to the skill command managed by `llm_tool_cli`; available document names and contents remain Depmesh-owned.
 
 ## Fixture set
 

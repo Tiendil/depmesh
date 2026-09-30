@@ -4,11 +4,12 @@ from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from importlib import metadata
 from pathlib import Path
-from typing import Annotated
 
 import typer
+from llm_tool_cli.cli.application import create_app
+from llm_tool_cli.cli.commands.skills import register_skill_command
 from llm_tool_cli.cli.context import get_global_options, set_global_options
-from llm_tool_cli.cli.entities import GlobalOptions
+from llm_tool_cli.cli.entities import ExitCode, GlobalOptions
 from llm_tool_cli.cli.options import ConfigOption, ProtocolOption
 from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.config import load_config, locate_config
@@ -20,7 +21,6 @@ from llm_tool_cli.protocol import Protocol, cell_shortcuts
 from llm_tool_cli.protocol.cell_shortcuts import environment_error, operation_succeeded
 from llm_tool_cli.protocol.logic_cells.base import LogicCell
 from llm_tool_cli.protocol.rendering import write_cells
-from llm_tool_cli.skills import load_skill_text
 
 from depmesh.cli import errors as cli_errors
 from depmesh.cli.entities import ArtifactsArgument, RelationOption
@@ -34,17 +34,12 @@ from depmesh.workspace import Config, Workspace, construct_workspace
 from depmesh.workspace.config import CONFIG_FILE_NAME
 from depmesh.workspace.init import initialize_config
 
-EXIT_INVALID_ARGUMENTS = 1
 EXIT_CONFIG = 2
 EXIT_QUERY = 3
 EXIT_PROJECT_ERROR = 3
 
-app = typer.Typer(
-    add_completion=False,
-    context_settings={"help_option_names": ["-h", "--help"]},
-    help="Inspect configured relations and dependencies.",
-    no_args_is_help=False,
-)
+app = create_app(help="Inspect configured relations and dependencies.")
+register_skill_command(app, package="depmesh.skills", documents=SkillDocument)
 
 
 def main() -> None:
@@ -58,6 +53,7 @@ def root(
     protocol: ProtocolOption = None,
     config: ConfigOption = None,
 ) -> None:
+    warnings.clear()
     set_global_options(
         context,
         GlobalOptions(protocol=protocol, config_path=config),
@@ -120,16 +116,6 @@ def relations(context: typer.Context) -> None:
         command.write_cells(relation_cells(workspace.relations))
 
 
-@app.command("skill")
-def skill(
-    context: typer.Context,
-    document: Annotated[SkillDocument, typer.Argument()] = SkillDocument.usage,
-) -> None:
-    with command_context(context) as command:
-        content = load_skill_text(package="depmesh.skills", document=document.value).unwrap()
-        command.write_cells([cell_shortcuts.skill(document=document.value, content=content)])
-
-
 @app.command("init")
 def init(context: typer.Context) -> None:
     with command_context(context) as command:
@@ -162,7 +148,6 @@ class CommandContext:
 
 @contextmanager
 def command_context(context: typer.Context) -> Iterator[CommandContext]:
-    warnings.clear()
     command_context = CommandContext(context)
 
     try:
@@ -175,10 +160,10 @@ def command_context(context: typer.Context) -> Iterator[CommandContext]:
         )
         first = failures[0]
         if isinstance(first, cli_errors.EnvironmentError):
-            exit_code = EXIT_INVALID_ARGUMENTS
+            exit_code: int = ExitCode.invalid_arguments
         elif isinstance(first, config_errors.EnvironmentError):
             exit_code = EXIT_CONFIG
         else:
             exit_code = EXIT_PROJECT_ERROR
         raise typer.Exit(exit_code) from error
-    raise typer.Exit(0)
+    raise typer.Exit(ExitCode.success)

@@ -21,6 +21,7 @@ from typer.testing import CliRunner
 from depmesh.cli import errors as cli_errors
 from depmesh.cli.application import CommandContext, app, main
 from depmesh.core import errors as core_errors
+from depmesh.core import warnings
 from depmesh.discovery import errors as discovery_errors
 from depmesh.domain.entities import RelationId
 from depmesh.workspace import Workspace
@@ -308,6 +309,32 @@ class TestCommandContext:
 
 
 class TestApp:
+    @pytest.mark.parametrize("option", ["-h", "--help"])
+    @pytest.mark.parametrize("command", [[], ["skill"]])
+    def test_shared_help(self, option: str, command: list[str]) -> None:
+        result = CliRunner().invoke(app, [*command, option])
+
+        assert result.exit_code == 0
+        assert not result.stderr
+        if command:
+            assert "initialization" in result.stdout
+            assert "workflows" not in result.stdout
+        else:
+            assert "--show-completion" in result.stdout
+            assert "--install-completion" in result.stdout
+
+    def test_skill_completion_uses_local_documents(self) -> None:
+        result = CliRunner().invoke(
+            app,
+            [],
+            prog_name="depmesh",
+            env={"_DEPMESH_COMPLETE": "complete_bash", "COMP_WORDS": "depmesh skill i", "COMP_CWORD": "2"},
+        )
+
+        assert result.exit_code == 0
+        assert result.stdout.splitlines() == ["initialization"]
+        assert not result.stderr
+
     @pytest.mark.parametrize("option", ["-p", "--protocol"])
     @pytest.mark.parametrize("protocol", ["invalid", "{protocol}", "{"])
     def test_protocol_choices__match_cli_contract(self, option: str, protocol: str) -> None:
@@ -1056,6 +1083,19 @@ class TestRelations:
 
 
 class TestSkill:
+    def test_clears_previous_invocation_warnings(self) -> None:
+        warnings.clear()
+        try:
+            warnings.add("Previous invocation warning")
+
+            result = CliRunner().invoke(app, ["skill"])
+
+            assert result.exit_code == 0
+            assert not warnings.read()
+            assert "Previous invocation warning" not in result.output
+        finally:
+            warnings.clear()
+
     def test_human_protocol(self) -> None:
         result = CliRunner().invoke(app, ["-p", "human", "skill"])
 
