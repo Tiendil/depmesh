@@ -19,7 +19,7 @@ from llm_tool_cli.core.result import Ok, Result, UnwrapError, unwrap_to_error
 from llm_tool_cli.paths import PathInput, UntrustedPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
 from llm_tool_cli.protocol import Protocol
-from llm_tool_cli.protocol.cell_shortcuts import environment_error, operation_succeeded
+from llm_tool_cli.protocol.cell_shortcuts import configuration_created, environment_error
 from llm_tool_cli.protocol.logic_cells.base import LogicCell
 from llm_tool_cli.protocol.rendering import write_cells
 
@@ -126,7 +126,7 @@ def init(context: typer.Context) -> None:
             cwd=PathInput(Path.cwd()),
             path=command.global_options.config_path,
         ).unwrap()
-        command.write_cells([operation_succeeded("Configuration created.", path=str(config_path))])
+        command.write_cells([configuration_created(config_path)])
 
 
 class CommandContext:

@@ -46,6 +46,8 @@
 
 ### Changes
 
+- Use the shared configuration-creation success cell for `init`, preserving its message, path metadata, output protocols, and exit behavior.
+
 - Call shared configuration-file initialization directly from `init`, preserving the packaged starter, created-path success metadata, diagnostics, and exit behavior; remove the local initializer module.
 
 - Use the shared invalid-argument diagnostic for artifact validation and preserve existing error messages, cell fields, streams, and exit categories.

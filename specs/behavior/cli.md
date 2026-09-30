@@ -162,7 +162,6 @@ For a given protocol, the same domain data MUST produce equivalent cell payloads
 - Automation dependency output MUST contain one metadata-only cell of kind `dependency` per merged dependency, with `type = dependency`, `relation`, and `dependency` metadata.
 - Each warning MUST be a metadata-only cell of kind `warning`, with `type = warning` and `message` metadata. Warning cells MUST follow dependency cells in warning insertion order.
 - Each relation MUST be a metadata-only cell of kind `relation`, with `type = relation`, `relation`, and optional `description` metadata.
-- Successful initialization MUST emit a shared `operation_succeeded` cell, with `type = operation_succeeded` and the created configuration `path` in metadata.
 
 Empty dependency results without warnings and empty relation lists MUST emit no cells.
 
@@ -627,7 +626,7 @@ The generated configuration MUST:
 - include the `governs` relation.
 - include commented examples of relation rules.
 
-The command MUST emit a shared success cell to stdout with the created configuration path in `path` metadata and a success message as content.
+The command MUST emit the configuration-creation success cell managed by `llm_tool_cli` to stdout, supplying the created configuration path.
 It MUST honor the selected output protocol.
 
 The command MUST NOT accept artifact arguments, relation options, dependency query options, or skill document arguments.

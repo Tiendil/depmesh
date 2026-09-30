@@ -1282,6 +1282,7 @@ class TestInit:
             assert "kind=operation_succeeded\n" in result.stdout
             assert "type=operation_succeeded\n" in result.stdout
             assert f"path={tmp_path / 'depmesh.toml'}\n" in result.stdout
+            assert "Configuration created.\n" in result.stdout
 
     def test_expands_home_in_config_path(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         home_dir = tmp_path / "home"
@@ -1318,6 +1319,7 @@ class TestInit:
 
         assert result.exit_code == 0
         assert (tmp_path / "custom.toml").is_file()
+        assert f"path = {tmp_path / 'custom.toml'}\n" in result.stdout
 
     def test_does_not_overwrite_existing_config(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.chdir(tmp_path)
