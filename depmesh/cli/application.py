@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from llm_tool_cli.cli.context import get_global_options, set_global_options
 from llm_tool_cli.cli.entities import GlobalOptions
 from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.config import load_config, locate_config
@@ -35,7 +36,6 @@ EXIT_INVALID_ARGUMENTS = 1
 EXIT_CONFIG = 2
 EXIT_QUERY = 3
 EXIT_PROJECT_ERROR = 3
-GLOBAL_OPTIONS_CONTEXT_KEY = "depmesh_global_options"
 
 app = typer.Typer(
     add_completion=False,
@@ -55,8 +55,9 @@ def root(
     protocol: ProtocolOption = None,
     config: ConfigOption = None,
 ) -> None:
-    context.meta[GLOBAL_OPTIONS_CONTEXT_KEY] = GlobalOptions(
-        protocol=protocol, config_path=None if config is None else ProjectConfigPath(config)
+    set_global_options(
+        context,
+        GlobalOptions(protocol=protocol, config_path=None if config is None else ProjectConfigPath(config)),
     )
 
 
@@ -143,7 +144,7 @@ class CommandContext:
     __slots__ = ("global_options", "protocol")
 
     def __init__(self, context: typer.Context) -> None:
-        self.global_options = _global_options(context)
+        self.global_options = get_global_options(context)
         self.protocol = self.global_options.protocol_for(context.info_name or "")
 
     @unwrap_to_error
@@ -178,10 +179,3 @@ def command_context(context: typer.Context) -> Iterator[CommandContext]:
             exit_code = EXIT_PROJECT_ERROR
         raise typer.Exit(exit_code) from error
     raise typer.Exit(0)
-
-
-def _global_options(context: typer.Context) -> GlobalOptions:
-    global_options = context.find_root().meta.get(GLOBAL_OPTIONS_CONTEXT_KEY)
-    if isinstance(global_options, GlobalOptions):
-        return global_options
-    return GlobalOptions()

@@ -36,6 +36,10 @@
 
 ### Changes
 
+- Obtain Typer and its version constraint through `llm_tool_cli`, retaining the locked 0.25.1 version.
+
+- Delegate Typer context storage and retrieval of global options to `llm_tool_cli`, preserving CLI behavior and invocation isolation.
+
 - Delegate initialization target selection and resolution to `llm_tool_cli`, preserving explicit paths, current-directory defaults, and the rule against upward discovery.
 
 - Delegate global CLI options and protocol-default selection to `llm_tool_cli`, preserving LLM output for `skill`, human output for other commands, and explicit protocol overrides.

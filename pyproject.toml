@@ -39,7 +39,6 @@ classifiers = [
 dependencies = [
     # Resolve the shared library from the local checkout until it is published.
     "llm-tool-cli>=0.1.0",
-    "typer~=0.25.1",
 ]
 
 # Temporary local source override; uv.lock records this editable checkout.

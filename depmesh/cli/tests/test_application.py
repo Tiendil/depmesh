@@ -92,6 +92,27 @@ class ProjectFailure(core_errors.EnvironmentError):
 
 
 class TestCommandContext:
+    def test_config_path_does_not_leak_between_invocations(self, mocker: MockerFixture, tmp_path: Path) -> None:
+        write_project(tmp_path)
+        mocker.patch("pathlib.Path.cwd", return_value=tmp_path)
+        runner = CliRunner()
+
+        for name in ["first.toml", "second.toml"]:
+            result = runner.invoke(app, ["--config", name, "-p", "automation", "relations"])
+
+            assert result.exit_code == 2
+            assert not result.stderr
+            record = cell_records(result.stdout)[0]
+            assert record["code"] == "config_unreadable"
+            assert record["path"] == str(tmp_path / name)
+
+        result = runner.invoke(app, ["relations"])
+
+        assert result.exit_code == 0
+        assert not result.stderr
+        assert result.stdout.startswith("----- DEPMESH CELL ")
+        assert "relation = tests" in result.stdout
+
     def test_protocol_defaults_are_selected_for_each_invocation(self) -> None:
         invocations = [
             (["skill"], "--DEPMESH-CELL ", "kind=skill\n"),
