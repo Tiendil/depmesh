@@ -16,6 +16,7 @@ from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Err, Result, UnwrapErrError, UnwrapError
 from llm_tool_cli.paths import resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
+from llm_tool_cli.protocol.tests.helpers import assert_error_cells
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
 
@@ -240,7 +241,7 @@ class TestCommandContext:
 
         assert result.exit_code == 3
         if protocol == "automation":
-            assert_error_cells(result.stdout, failures)
+            assert_error_cells([json.loads(line) for line in result.stdout.splitlines()], failures)
             assert not result.stderr
         else:
             assert not result.stdout
@@ -290,7 +291,7 @@ class TestCommandContext:
 
         assert result.exit_code == exit_code
         if protocol == "automation":
-            assert_error_cells(result.stdout, [error])
+            assert_error_cells([json.loads(line) for line in result.stdout.splitlines()], [error])
             assert result.stderr == ""
         else:
             assert result.stdout == ""
@@ -547,7 +548,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         assert result.exit_code == 3
         error = failure.unwrap_err()[0]
         if protocol == "automation":
-            assert_error_cells(result.stdout, [error])
+            assert_error_cells([json.loads(line) for line in result.stdout.splitlines()], [error])
             assert not result.stderr
         else:
             assert not result.stdout
@@ -1412,12 +1413,3 @@ class TestMain:
             assert not captured.out
             assert captured.err.startswith("--DEPMESH-CELL ")
             assert "code=invalid_arguments\n" in captured.err
-
-
-def assert_error_cells(text: str, errors: EnvironmentErrors) -> None:
-    records = cell_records(text)
-    assert len(records) == len(errors)
-    for record, error in zip(records, errors):
-        expected = error.as_record()
-        expected["content"] = expected.pop("message")
-        assert record == expected
