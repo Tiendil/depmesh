@@ -20,10 +20,3 @@ class CommandFailed(EnvironmentError):
     relation: RelationId
     command: str
     reason: str
-
-
-class FilesUnreadable(EnvironmentError):
-    code: str = "files_unreadable"
-    message: str = "could not discover files under `{error.path}`: {error.reason}"
-    path: str
-    reason: str

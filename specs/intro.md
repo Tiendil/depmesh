@@ -24,13 +24,13 @@ Detailed requirements for individual specifications are out of scope except for 
 - `./specs/dictionary.md` — dictionary of project-specific terms shared by multiple specifications, including returned expected operational errors.
 - `./specs/architecture/entities.md` — specification of project entity and data structure architecture, including direct use of the shared library's entity base and canonical project path identifier type.
 - `./specs/architecture/errors.md` — specification of project error and diagnostic architecture, including shared Result propagation with a fixed environment-error list, centralized CLI failure handling, exception-based predicate matching, explicitly named environment-error and internal-exception hierarchies, and exception boundaries.
-- `./specs/architecture/modules_layout.md` — specification of the project module structure, shared entity infrastructure ownership, and shared lexical project path normalization boundary.
+- `./specs/architecture/modules_layout.md` — specification of the project module structure, shared entity infrastructure ownership, and shared lexical project path normalization boundary; shared file enumeration and rejection of symbolic links below the resolved project root are included.
 - `./specs/architecture/naming.md` — specification of project code naming conventions.
 - `./specs/architecture/static_analysis.md` — specification of static analysis, formatting, linting, spelling, and type-checking expectations.
 - `./specs/architecture/tests.md` — specification of project test architecture, including returned error propagation, internal-exception separation, CLI mapping checks, shared automation payload extraction and error-cell assertions, and local output parsing.
 - `./specs/behavior/cli.md` — specification of the `depmesh` command line interface, including configuration path inputs, native environment-error records, ordered error lists, and exit categories.
-- `./specs/behavior/config.md` — specification of the `depmesh.toml` configuration file behavior, including discovery and home-relative explicit paths.
-- `./specs/behavior/file_paths.md` — specification of local project file path syntax, semantics, and resolution behavior.
+- `./specs/behavior/config.md` — specification of the `depmesh.toml` configuration file behavior, including discovery and home-relative explicit paths; file discovery uses shared enumeration without symbolic-link traversal.
+- `./specs/behavior/file_paths.md` — specification of local project file path syntax, semantics, and resolution behavior; shared file enumeration and rejection of symbolic links below the resolved project root are included.
 - `./specs/behavior/skill_fixtures.md` — specification of built-in skill documentation fixture behavior.
 - `./specs/documentation/changelog.md` — specification of changelog tooling, source files, version record structure, and entry format.
 - `./specs/documentation/readme.md` — specification of the root `README.md` content and purpose.

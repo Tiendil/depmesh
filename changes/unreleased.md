@@ -1,6 +1,8 @@
 
 ### Migration
 
+- Project file paths no longer follow symbolic links below the resolved project root, including links to internal targets. Use ordinary project paths and directories instead; discovery skips links and explicit inputs reject them.
+
 - Failed commands with multiple diagnostics now exit with the highest declared error code instead of the first error's category. Python integrations must replace `EXIT_CONFIG`, `EXIT_QUERY`, and `EXIT_PROJECT_ERROR` from `depmesh.cli.application` with `llm_tool_cli.core.entities.ExitCode.configuration_error` or `ExitCode.environment_error` as appropriate.
 
 - Replace the removed `depmesh.workspace.init.initialize_config` with `llm_tool_cli.config.initialize_config`, passing `"depmesh.toml"`, `package="depmesh.workspace"`, `template="base_config.toml"`, a `PathInput` working directory, and an optional keyword-only `ProjectConfigPath` target.
@@ -47,6 +49,8 @@
 - Missing discovered configuration now uses the shared `config_not_found` message and `reason` field, with the search directory in `path`.
 
 ### Changes
+
+- Use shared file enumeration for file sources, include hidden entries in glob matches, skip all discovered links, and retain invalid-pattern warnings and shared error diagnostics.
 
 - Use shared automation payload extraction throughout CLI tests, retaining local JSON parsing and preserving payload comparisons and generated cell-ID checks.
 

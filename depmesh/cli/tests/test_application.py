@@ -363,6 +363,43 @@ class TestApp:
 
 
 class TestDependencies:
+    @pytest.mark.parametrize("spelling", ["identifier", "absolute", "relative"])
+    def test_rejects_internal_link_for_all_input_spellings(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, spelling: str
+    ) -> None:
+        write_project(tmp_path)
+        link = tmp_path / "src/link.py"
+        link.symlink_to(tmp_path / "src/a.py")
+        monkeypatch.chdir(tmp_path)
+        value = {"identifier": "@/src/link.py", "relative": "src/link.py", "absolute": str(link)}[spelling]
+
+        result = CliRunner().invoke(app, ["-p", "automation", "dependencies", value])
+
+        assert result.exit_code == 1
+        assert_error_cells(
+            json_lines(result.stdout),
+            [cli_errors.InvalidArguments(reason=InvalidProjectPath(path=str(link)).format_message())],
+        )
+        assert not result.stderr
+
+    def test_file_source_uses_shared_enumeration(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        (tmp_path / "depmesh.toml").write_text(
+            '[[relations]]\nid = "files"\n[[rules]]\nrelation = "files"\n'
+            'input = { type = "one_of", artifacts = ["@/input"] }\n'
+            'output = { type = "files", pattern = "@/**/*.py" }\n',
+            encoding="utf-8",
+        )
+        touch(tmp_path / ".hidden/a.py")
+        touch(tmp_path / "ordinary.py")
+        (tmp_path / "link.py").symlink_to(tmp_path / "ordinary.py")
+        (tmp_path / "cycle").symlink_to(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["-p", "automation", "dependencies", "@/input"])
+
+        assert result.exit_code == 0
+        assert [r["dependency"] for r in json_lines(result.stdout)] == ["@/.hidden/a.py", "@/ordinary.py"]
+
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
     def test_repeated_queries_preserve_payloads_with_random_ids(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, protocol: str
@@ -501,7 +538,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         assert not result.stderr
 
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
-    def test_target_resolution_failure_uses_shared_diagnostic(self, tmp_path: Path, protocol: str) -> None:
+    def test_target_symlink_loop_uses_invalid_path_diagnostic(self, tmp_path: Path, protocol: str) -> None:
         write_project(tmp_path)
         link = tmp_path / "loop"
         link.symlink_to(link)
@@ -511,12 +548,11 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
             app, ["--config", str(tmp_path / "depmesh.toml"), "-p", protocol, "dependencies", str(target)]
         )
 
-        assert result.exit_code == 3
+        assert result.exit_code == 1
         if protocol == "automation":
             diagnostic = json.loads(result.stdout)
-            assert diagnostic["code"] == "path_resolution_failed"
-            assert diagnostic["path"] == str(target)
-            assert diagnostic["reason"]
+            assert diagnostic["code"] == "invalid_arguments"
+            assert str(target) in diagnostic["reason"]
             assert "cause" not in diagnostic
             assert not result.stderr
         else:

@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from os import stat_result
 from pathlib import Path
 
 import pytest
 from llm_tool_cli.paths import ProjectRootPath
-from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
+from llm_tool_cli.paths.errors import FilesUnreadable, PathResolutionFailed
 from pytest_mock import MockerFixture
 
 from depmesh.core import warnings
-from depmesh.discovery import errors
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext
 from depmesh.discovery.sources.files import FilesSource, FilesSourceConfig
 from depmesh.domain.entities import ArtifactId, RelationId
@@ -22,7 +22,7 @@ def touch(path: Path) -> None:
 
 class TestFilesSource:
     @pytest.mark.parametrize("pattern", [None, "@/*.py"])
-    def test_evaluate__rejects_symlink_outside_project(self, tmp_path: Path, pattern: str | None) -> None:
+    def test_evaluate__skips_symlink_outside_project(self, tmp_path: Path, pattern: str | None) -> None:
         project = tmp_path / "project"
         project.mkdir()
         outside = tmp_path / "outside.py"
@@ -32,7 +32,7 @@ class TestFilesSource:
         source = FilesSource(FilesSourceConfig.model_validate({"type": "files", "pattern": pattern}))
         context = EvaluationContext(root=ProjectRootPath(project), relation_id=RelationId("all"), captures={})
 
-        assert source.evaluate(context).unwrap_err() == [InvalidProjectPath(path=str(link))]
+        assert source.evaluate(context).unwrap() == []
 
     @pytest.mark.parametrize("pattern", [None, "@/*.py"])
     def test_evaluate__preserves_path_resolution_failure(
@@ -41,14 +41,14 @@ class TestFilesSource:
         path = tmp_path / "file.py"
         touch(path)
         cause = PermissionError("permission denied")
-        resolve = Path.resolve
+        lstat = Path.lstat
 
-        def fail_target(candidate: Path) -> Path:
+        def fail_target(candidate: Path) -> stat_result:
             if candidate == path:
                 raise cause
-            return resolve(candidate)
+            return lstat(candidate)
 
-        mocker.patch.object(Path, "resolve", autospec=True, side_effect=fail_target)
+        mocker.patch.object(Path, "lstat", autospec=True, side_effect=fail_target)
         source = FilesSource(FilesSourceConfig.model_validate({"type": "files", "pattern": pattern}))
         context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("all"), captures={})
 
@@ -56,25 +56,25 @@ class TestFilesSource:
 
         assert len(failures) == 1
         failure = failures[0]
-        assert isinstance(failure, PathResolutionFailed)
-        assert failure.code == "path_resolution_failed"
-        assert failure.path == str(path)
+        assert isinstance(failure, FilesUnreadable)
+        assert failure.code == "files_unreadable"
+        assert failure.path == str(tmp_path)
         assert failure.cause == cause
 
-    def test_evaluate__filesystem_failure_returns_error(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_evaluate__filesystem_failure_returns_error(self, tmp_path: Path, mocker: MockerFixture) -> None:
         original = PermissionError("permission denied")
 
-        def fail_glob(_path: Path, _pattern: str) -> Iterator[Path]:
+        def fail_glob(_path: Path) -> Iterator[Path]:
             raise original
 
-        monkeypatch.setattr(Path, "rglob", fail_glob)
+        mocker.patch.object(Path, "iterdir", autospec=True, side_effect=fail_glob)
         source = FilesSource(FilesSourceConfig(type="files"))
         context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("all"), captures={})
 
         failure = source.evaluate(context).unwrap_err()[0]
 
-        assert isinstance(failure, errors.FilesUnreadable)
-        assert failure.cause is original
+        assert isinstance(failure, FilesUnreadable)
+        assert failure.cause == original
 
     def test_variables__extracts_template_variables(self) -> None:
         source = FilesSourceConfig.model_validate({"type": "files", "pattern": "@/tests/test_{module}.py"})
@@ -152,16 +152,25 @@ class TestFilesSource:
         assert failure.cause == cause
         assert warnings.read() == []
 
-    def test_evaluate__pattern_resolution_failure_is_fatal(self, tmp_path: Path) -> None:
+    def test_evaluate__explicit_symlink_pattern_adds_warning(self, tmp_path: Path) -> None:
         link = tmp_path / "loop"
         link.symlink_to(link)
         source = FilesSource(FilesSourceConfig.model_validate({"type": "files", "pattern": "@/loop/*.py"}))
         context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={})
 
-        failure = source.evaluate(context).unwrap_err()[0]
+        assert source.evaluate(context).unwrap() == []
+        assert warnings.read() == ["relation `tests`: skipped invalid files source pattern `@/loop/*.py`"]
 
-        assert isinstance(failure, PathResolutionFailed)
-        assert failure.code == "path_resolution_failed"
-        assert failure.path == str(link / "*.py")
-        assert isinstance(failure.cause, (OSError, RuntimeError))
-        assert warnings.read() == []
+    @pytest.mark.parametrize("pattern", [None, "@/**/*.py"])
+    def test_evaluate__includes_hidden_files_and_skips_internal_links(
+        self, tmp_path: Path, pattern: str | None
+    ) -> None:
+        touch(tmp_path / ".hidden/a.py")
+        touch(tmp_path / "ordinary.py")
+        (tmp_path / "link.py").symlink_to(tmp_path / "ordinary.py")
+        (tmp_path / "alias").symlink_to(tmp_path / ".hidden")
+        (tmp_path / "cycle").symlink_to(tmp_path)
+        source = FilesSource(FilesSourceConfig.model_validate({"type": "files", "pattern": pattern}))
+        context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("all"), captures={})
+
+        assert source.evaluate(context).unwrap() == [ArtifactId("@/.hidden/a.py"), ArtifactId("@/ordinary.py")]

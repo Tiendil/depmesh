@@ -58,7 +58,9 @@ Normalization MUST remove `.` segments and resolve `..` segments to the parent, 
 
 Normalization MUST NOT require the referenced file to exist unless the calling context requires an existing file.
 Lexical normalization of a root-anchored path MUST NOT be treated as proof of filesystem containment.
-Filesystem resolution MUST reject paths that escape the project root through symbolic links.
+Filesystem resolution MUST reject all symbolic links below the resolved project root, including links to internal targets, broken links, and loops.
+The rule MUST apply equally to root-anchored and filesystem inputs at CLI and dependency normalization boundaries.
+Project-root selection MAY resolve symlinks to the root or its ancestors.
 
 Implementations MUST reject inputs that cannot be normalized to a project file path inside the project root.
 

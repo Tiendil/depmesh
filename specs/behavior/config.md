@@ -410,6 +410,13 @@ Root-anchored file source patterns MUST be resolved against the configuration ro
 Relative file source patterns MAY be used and MUST be resolved against the configuration root.
 
 File source results MUST be deterministic for the same filesystem state.
+File sources MUST use shared regular-file enumeration without following symbolic links.
+Discovered file links, directory links, broken links, and cycles MUST be skipped.
+Explicitly addressed symbolic links in file-source patterns MUST use the existing invalid-pattern warning and empty-result behavior.
+Patterns MUST support case-sensitive segment wildcards `*`, `?`, bracket character classes, and a complete `**` segment for recursive matching.
+Hidden files and directories MUST participate in matching like ordinary entries, both with and without an explicit pattern.
+Repeated matches MUST be deduplicated, and results MUST use lexicographic path-component order.
+Shared filesystem enumeration failures MUST propagate as errors.
 
 Example:
 
