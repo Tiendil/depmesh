@@ -12,18 +12,19 @@ from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.core import errors as shared_errors
 from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Err, Result, UnwrapErrError, UnwrapError
-from llm_tool_cli.paths import resolve_project_root
+from llm_tool_cli.paths import PathInput, ProjectConfigPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
+from llm_tool_cli.protocol.logic_cells import ContentCell
 from llm_tool_cli.protocol.tests.helpers import assert_error_cells, cell_payloads
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
 
-from depmesh.cli.application import CommandContext, app, main
+from depmesh.cli.application import app, main
 from depmesh.core import errors as core_errors
 from depmesh.core import warnings
 from depmesh.discovery import errors as discovery_errors
 from depmesh.domain.entities import RelationId
-from depmesh.workspace import Workspace
+from depmesh.runtime import commands
 
 
 def normalize_cell_ids(text: str) -> str:
@@ -174,7 +175,7 @@ class TestCommandContext:
     ) -> None:
         failure = UnwrapError(error=[])
         failure.details["error"] = payload
-        mocker.patch.object(CommandContext, "load_workspace", side_effect=failure)
+        mocker.patch.object(commands, "relations", side_effect=failure)
 
         result = CliRunner().invoke(app, ["--protocol", protocol, "relations"])
 
@@ -188,7 +189,7 @@ class TestCommandContext:
         failure = ProjectFailure(
             message="Problem with {error.context}.", context="project", ways_to_fix=["Check {error.context}."]
         )
-        mocker.patch.object(CommandContext, "load_workspace", return_value=Err([failure]))
+        mocker.patch.object(commands, "relations", return_value=Err([failure]))
 
         result = CliRunner().invoke(app, ["--protocol", protocol, "relations"])
 
@@ -221,13 +222,13 @@ class TestCommandContext:
         if reverse:
             failures.reverse()
 
-        def fail_workspace(_self: CommandContext) -> Result[Workspace]:
-            result: Result[Workspace] = Err(failures)
+        def fail_relations(*, cwd: PathInput, config_path: ProjectConfigPath | None) -> Result[list[ContentCell]]:
+            result: Result[list[ContentCell]] = Err(failures)
             if unwrap_in_helper:
                 result.unwrap()
             return result
 
-        monkeypatch.setattr(CommandContext, "load_workspace", fail_workspace)
+        monkeypatch.setattr(commands, "relations", fail_relations)
 
         result = CliRunner().invoke(app, ["--protocol", protocol, "relations"])
 
@@ -274,10 +275,10 @@ class TestCommandContext:
     def test_error_cells_and_exit_categories(
         self, monkeypatch: pytest.MonkeyPatch, protocol: str, error: shared_errors.EnvironmentError, exit_code: int
     ) -> None:
-        def fail_workspace(_self: CommandContext) -> Result[Workspace]:
+        def fail_relations(*, cwd: PathInput, config_path: ProjectConfigPath | None) -> Result[list[ContentCell]]:
             return Err([error])
 
-        monkeypatch.setattr(CommandContext, "load_workspace", fail_workspace)
+        monkeypatch.setattr(commands, "relations", fail_relations)
 
         result = CliRunner().invoke(app, ["--protocol", protocol, "relations"])
 
@@ -567,7 +568,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         root = tmp_path / "loop"
         root.symlink_to(root)
         failure = resolve_project_root(root)
-        mocker.patch("depmesh.cli.application.resolve_project_root", return_value=failure)
+        mocker.patch("depmesh.runtime.commands.resolve_project_root", return_value=failure)
 
         result = CliRunner().invoke(
             app, ["--config", str(tmp_path / "depmesh.toml"), "-p", protocol, "dependencies", "@/src/a.py"]

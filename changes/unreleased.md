@@ -1,6 +1,8 @@
 
 ### Migration
 
+- Python integrations must call `depmesh.runtime.commands.dependencies`, `relations`, or `initialize` for complete command results as logic cells in shared `Result` values. The local CLI command-context subclass and its `load_workspace` method are removed; CLI contexts now use `llm_tool_cli.cli.context.CommandContext` directly.
+
 - Project file paths no longer follow symbolic links below the resolved project root, including links to internal targets. Use ordinary project paths and directories instead; discovery skips links and explicit inputs reject them.
 
 - Failed commands with multiple diagnostics now exit with the highest declared error code instead of the first error's category. Python integrations must replace `EXIT_CONFIG`, `EXIT_QUERY`, and `EXIT_PROJECT_ERROR` from `depmesh.cli.application` with `llm_tool_cli.core.entities.ExitCode.configuration_error` or `ExitCode.environment_error` as appropriate.
@@ -49,6 +51,8 @@
 - Missing discovered configuration now uses the shared `config_not_found` message and `reason` field, with the search directory in `path`.
 
 ### Changes
+
+- Make logic cells and their ordered collections the primary domain-to-CLI result interface. Move workspace loading, query orchestration, result aggregation, warning snapshots, relation listing, and initialization results into `depmesh.runtime`; preserve output payloads, ordering, diagnostics, and exit behavior.
 
 - Use shared file enumeration for file sources, include hidden entries in glob matches, skip all discovered links, and retain invalid-pattern warnings and shared error diagnostics.
 

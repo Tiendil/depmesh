@@ -39,6 +39,13 @@ The following topics are out of scope:
   - artifact source definitions and evaluation behavior.
   - dependency query results.
   - dependency query evaluation.
+- `./depmesh/runtime/` — module responsible for command-facing domain operations. Contains:
+  - workspace loading through shared configuration mechanics and local workspace construction.
+  - input normalization and relation selection for dependency queries.
+  - aggregation and ordering of dependency results across input artifacts.
+  - warning snapshots and construction of complete result logic cells.
+  - relation listing and configuration initialization with logic-cell results.
+  - no CLI argument parsing, protocol selection, or output writing.
 - `./depmesh/protocol/` — module responsible for projecting project data into output cells. Contains:
   - grouped Markdown dependency content for human and LLM output.
   - structured dependency, relation, warning, and skill cell construction.
@@ -46,10 +53,15 @@ The following topics are out of scope:
   - use of shared content logic cells for protocol-independent payloads and protocol-specific output-cell types inside dependency projections.
 - `./depmesh/skills/` — module responsible for built-in skill document definitions and packaged Markdown resources.
 - `./depmesh/workspace/` — module responsible for workspace management, including:
-  - finding and parsing config.
-  - detecting current project root.
-  - operations with the filesystem.
-- `./depmesh/cli/` — module responsible for the CLI interface of the `depmesh` tool, shared logic-cell rendering and output writing, and local stream and exit policies.
+  - configuration schema and validated workspace entities.
+  - constructing configured relations and dependency rules.
+  - the packaged starter configuration.
+- `./depmesh/cli/` — module responsible for argument parsing, runtime invocation, protocol selection, and writing returned logic cells, with shared error handling and stream and exit policies.
+
+The public `depmesh.runtime.commands` boundary MUST expose command-facing operations returning logic cells or ordered collections of their subclasses through shared results.
+The runtime MUST assemble domain-result cells before returning them to the CLI.
+The CLI MUST NOT query discovery rules, aggregate internal query results, read warning storage, or construct domain-result payloads.
+Internal discovery and workspace APIs MAY retain their own typed results.
 
 Output protocol values, the abstract `OutputCell` and its protocol-specific subtypes, the `LogicCell` base and protocol dispatch, shared content logic cells, rendering contexts, sequence rendering and environment-error cell construction, and text writing MUST be owned by `llm_tool_cli.protocol` and used directly.
 Depmesh MUST own concrete dependency-result logic cells and their protocol-specific projections.

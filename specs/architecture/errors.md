@@ -40,11 +40,14 @@ Non-fatal problems MUST be represented as warning strings, not as exceptions, wh
 
 Lower-level modules MUST NOT print errors, print warnings, write JSON Lines records, or terminate the process.
 
-The CLI layer MUST be responsible for converting project errors and warnings into:
+The CLI layer MUST be responsible for converting fatal project errors into:
 
 - process termination using the shared environment-error exit-code contract.
 - stderr messages.
 - output protocol records.
+
+Command-facing runtime operations MUST capture non-fatal warnings in their result logic cells.
+Warning projection MUST belong to those cells; the CLI MUST write them through shared rendering.
 
 Environment errors MUST expose stable error codes.
 
@@ -133,9 +136,11 @@ Code that adds warnings SHOULD include enough context in the string for the CLI 
 
 Each CLI invocation runs in a separate process. Warning storage MUST start empty with the process; the CLI MUST NOT reset it for test isolation.
 
-The CLI MUST read the core warning storage when rendering command output.
+The runtime MUST snapshot the core warning storage when constructing dependency-result logic cells after query evaluation.
+Later changes to warning storage MUST NOT change an already returned cell.
 
-The CLI MUST render stored warnings according to the selected output protocol.
+Dependency-result logic cells MUST project their captured warnings after dependency output in warning insertion order.
+The CLI MUST render these cells according to the selected output protocol without reading warning storage itself.
 
 Examples of warning-producing situations include:
 

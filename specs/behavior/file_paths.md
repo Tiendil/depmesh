@@ -84,7 +84,7 @@ CLI input parameters that accept project file paths MUST accept:
 - classical relative filesystem paths.
 - classical absolute filesystem paths.
 
-CLI logic MUST normalize every accepted file path input to a canonical root-anchored file path before dependency matching, dependency output construction, or other project file path processing.
+Command execution MUST normalize every accepted file path input to a canonical root-anchored file path before dependency matching, dependency output construction, or other project file path processing.
 
 Classical relative filesystem inputs MUST be resolved against the command's current working directory.
 The CLI MUST reject relative or absolute filesystem inputs that resolve outside the project root.
