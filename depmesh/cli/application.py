@@ -23,7 +23,7 @@ register_version_command(app, distribution="depmesh")
 
 
 def main() -> None:
-    settings.initialize(tool_label=settings.ToolLabel("DEPMESH"))
+    settings.initialize(label=settings.ToolLabel("DEPMESH"))
     app()
 
 
