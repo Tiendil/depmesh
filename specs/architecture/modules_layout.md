@@ -40,11 +40,10 @@ The following topics are out of scope:
   - dependency query results.
   - dependency query evaluation.
 - `./depmesh/runtime/` — module responsible for command-facing domain operations. Contains:
-  - workspace loading through shared configuration mechanics and local workspace construction.
   - input normalization and relation selection for dependency queries.
   - aggregation and ordering of dependency results across input artifacts.
   - warning snapshots and construction of complete result logic cells.
-  - relation listing and configuration initialization with logic-cell results.
+  - relation listing with logic-cell results.
   - no CLI argument parsing, protocol selection, or output writing.
 - `./depmesh/protocol/` — module responsible for projecting project data into output cells. Contains:
   - grouped Markdown dependency content for human and LLM output.
@@ -58,7 +57,7 @@ The following topics are out of scope:
   - the packaged starter configuration.
 - `./depmesh/cli/` — module responsible for argument parsing, runtime invocation, protocol selection, and writing returned logic cells, with shared error handling and stream and exit policies.
 
-The public `depmesh.runtime.commands` boundary MUST expose command-facing operations returning logic cells or ordered collections of their subclasses through shared results.
+The public `depmesh.runtime.commands` boundary MUST expose command-facing operations returning logic cells or ordered collections of their subclasses, using shared results for fallible operations.
 The runtime MUST assemble domain-result cells before returning them to the CLI.
 The CLI MUST NOT query discovery rules, aggregate internal query results, read warning storage, or construct domain-result payloads.
 Internal discovery and workspace APIs MAY retain their own typed results.
@@ -72,6 +71,16 @@ Depmesh MUST NOT maintain renderer wrappers or a parallel formatter family.
 Environment errors MUST use the shared typed error logic cell, which owns their content and metadata projection.
 
 The CLI MUST use `llm_tool_cli.skills` directly for skill-document loading and propagate its returned errors without local adapters.
+
+Depmesh MUST use frozen `StaticConfig` in `llm_tool_cli.core.settings` for application identity and the default `depmesh.toml` filename before parsing, `RuntimeConfig` in `llm_tool_cli.config.runtime` for the effective protocol, and `ProjectConfig` in `llm_tool_cli.config.project` for the active config path and derived project directory.
+Compiled workspaces MUST contain relations and rules without duplicating the project root or active path.
+The CLI MUST use shared `load_project` and `initialize_project` contexts with Depmesh's `Config` schema, retaining them through the framework command context's resource lifecycle.
+Discovery, loading, starter creation and validation, `ProjectConfig` construction, and project binding and restoration MUST belong to the shared library; Depmesh MUST NOT keep local preparation wrappers.
+Initialization MUST supply the `depmesh.workspace` resource package and `base_config.toml` template.
+The workspace module MUST construct compiled workspaces from the validated configuration yielded by shared project loading.
+The CLI MAY construct the shared generic configuration-creation acknowledgement after initialization; domain-result payloads MUST remain runtime-owned.
+Query orchestration MUST receive the compiled workspace explicitly and obtain the project root from the active project configuration; explicit root and working-directory arguments to lower-level discovery operations remain permitted.
+Compiled workspaces MAY remain explicit local values; no additional global configuration binding is required for data without a global consumer.
 
 ## Submodules
 

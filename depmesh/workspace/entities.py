@@ -64,7 +64,6 @@ class Config(BaseEntity):
 class Workspace(BaseEntity):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
-    root: pydantic.DirectoryPath
     relations: tuple[Relation, ...] = ()
     rules: tuple[DependencyRule, ...] = ()
 

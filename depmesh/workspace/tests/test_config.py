@@ -17,9 +17,8 @@ class TestConstructWorkspace:
             {"relations": [{"id": "tests", "description": "Related tests"}, {"id": "imports"}]}
         )
 
-        workspace = construct_workspace(config, root=tmp_path)
+        workspace = construct_workspace(config)
 
-        assert workspace.root == tmp_path
         assert workspace.relations == (
             Relation(id=RelationId("tests"), description=RelationDescription("Related tests")),
             Relation(id=RelationId("imports")),
@@ -39,9 +38,9 @@ class TestConstructWorkspace:
             }
         )
 
-        workspace = construct_workspace(config, root=tmp_path)
+        workspace = construct_workspace(config)
         result = query_dependencies(
-            ProjectRootPath(workspace.root),
+            ProjectRootPath(tmp_path),
             workspace.relations_by_id,
             workspace.rules,
             ArtifactId("@/src/example.py"),
@@ -53,7 +52,7 @@ class TestConstructWorkspace:
         )
 
     def test_empty_config(self, tmp_path: Path) -> None:
-        workspace = construct_workspace(Config(), root=tmp_path)
+        workspace = construct_workspace(Config())
 
         assert not workspace.relations
         assert not workspace.rules
@@ -80,6 +79,6 @@ class TestBaseConfigFixture:
         config_path.write_text(read_base_config_fixture(), encoding="utf-8")
 
         config = load_config(config_path, Config).unwrap()
-        workspace = construct_workspace(config, root=config_path.parent)
+        workspace = construct_workspace(config)
 
         assert tuple(relation.id for relation in workspace.relations) == ("governed_by", "governs")

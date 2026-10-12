@@ -97,7 +97,7 @@ The root command MUST NOT perform a dependency query directly.
 
 ## Application identity
 
-The CLI MUST initialize the tool label `DEPMESH` through `llm_tool_cli` at application startup before command-line parsing.
+The CLI MUST initialize static settings with the tool label `DEPMESH` and default configuration filename `depmesh.toml` through `llm_tool_cli` at application startup before command-line parsing.
 Label storage, initialization checks, and label selection for cell rendering MUST be managed by `llm_tool_cli`.
 
 ## Output behavior
@@ -223,9 +223,12 @@ Additional fields MAY be added in future versions. Consumers MUST ignore unknown
 
 ## Global options
 
-The CLI MUST use global-option registration and parsing, invocation storage, and command-context option retrieval, protocol selection, and cell writing managed by `llm_tool_cli`.
+The CLI MUST use global-option registration and parsing, context-scoped runtime configuration, and command-context protocol selection and cell writing managed by `llm_tool_cli`.
 Depmesh MUST register its commands on the application provided by `llm_tool_cli`.
-Workspace loading, warning lifecycle, and dependency-query behavior MUST remain Depmesh-owned.
+Workspace construction, warning lifecycle, and dependency-query behavior MUST remain Depmesh-owned; project loading and its scope MUST be shared.
+Static configuration MUST own application identity and the default configuration filename before parsing, runtime configuration MUST own the effective protocol, and project configuration MUST own the active config path and derived project directory.
+All three configurations MUST be immutable and complete when bound.
+Project setup MUST finish before query execution; its binding MUST remain available through output and be restored when the command context closes.
 
 ### Help and completion
 
@@ -615,7 +618,9 @@ depmesh init
 depmesh --config ./path/to/depmesh.toml init
 ```
 
-The command MUST delegate complete configuration-file initialization to `llm_tool_cli`, supplying Depmesh's default configuration filename, invocation working directory, optional `--config` path, and packaged starter template.
+The command MUST delegate project initialization to `llm_tool_cli`, supplying Depmesh's schema, invocation working directory, optional `--config` path, and packaged starter template; the default filename MUST come from static settings.
+The shared initializer MUST load and validate the created configuration before binding project settings or emitting success output.
+If validation fails, the created file MUST remain on disk and the command MUST report the shared configuration diagnostic without establishing a project binding.
 Depmesh owns the starter contents described below.
 
 The generated configuration MUST:
@@ -628,6 +633,7 @@ The generated configuration MUST:
 
 The command MUST emit the configuration-creation success cell managed by `llm_tool_cli` to stdout, supplying the created configuration path.
 It MUST honor the selected output protocol.
+Successful creation and validation MUST establish shared project settings before success output, without changing runtime settings; the command MUST retain the shared project scope until its framework context closes.
 
 The command MUST NOT accept artifact arguments, relation options, dependency query options, or skill document arguments.
 
@@ -642,7 +648,7 @@ Skill- and version-command failure handling MUST be managed by `llm_tool_cli`.
 The remaining execution policies apply to tool-owned commands.
 
 The CLI MUST use command error handling and explicit error reporting managed by `llm_tool_cli`, including error cells, stream selection, diagnostic ordering, exit statuses, and exception propagation.
-Depmesh MUST retain workspace loading and command-specific behavior.
+Depmesh MUST retain workspace construction and command-specific behavior.
 
 Configuration selection, loading, and creation MUST propagate the diagnostics provided by `llm_tool_cli` without local translation.
 

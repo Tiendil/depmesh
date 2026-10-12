@@ -27,7 +27,7 @@ class TestRelationConfig:
 class TestWorkspace:
     def test_relations_by_id__indexes_relations_by_id(self, tmp_path: Path) -> None:
         relation = Relation(id=RelationId("tests"))
-        workspace = Workspace(root=tmp_path, relations=(relation,))
+        workspace = Workspace(relations=(relation,))
 
         assert workspace.relations_by_id == {RelationId("tests"): relation}
 

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from llm_tool_cli.cli import errors as cli_errors
-from llm_tool_cli.config import initialize_config, load_config, locate_config
+from llm_tool_cli.config.project import project_config
 from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
-from llm_tool_cli.paths import PathInput, ProjectConfigPath, resolve_project_root
+from llm_tool_cli.paths import PathInput, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
-from llm_tool_cli.protocol.cell_shortcuts import configuration_created
 from llm_tool_cli.protocol.logic_cells import ContentCell
 
 from depmesh.core import warnings
@@ -13,8 +12,7 @@ from depmesh.discovery.entities import QueryResult
 from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
 from depmesh.domain.entities import ArtifactId, Dependency, RelationId
 from depmesh.protocol.cells import DependenciesCell, relation_cells
-from depmesh.workspace import Config, Workspace, construct_workspace
-from depmesh.workspace.config import CONFIG_FILE_NAME
+from depmesh.workspace import Workspace
 
 
 @unwrap_to_error
@@ -22,11 +20,11 @@ def dependencies(
     artifacts: list[ArtifactId],
     relation_filters: list[RelationId],
     *,
+    workspace: Workspace,
     cwd: PathInput,
-    config_path: ProjectConfigPath | None = None,
 ) -> Result[DependenciesCell]:
-    workspace = _load_workspace(cwd=cwd, config_path=config_path).unwrap()
-    project_root = resolve_project_root(PathInput(workspace.root)).unwrap()
+    project_dir = project_config.get().project_dir
+    project_root = resolve_project_root(PathInput(project_dir)).unwrap()
     relation_ids = selected_relation_ids(workspace.relations_by_id, relation_filters).unwrap()
     dependencies: set[Dependency] = set()
 
@@ -60,26 +58,5 @@ def dependencies(
     return Ok(DependenciesCell(result=result, warnings=warnings.read(), relations=workspace.relations))
 
 
-@unwrap_to_error
-def relations(*, cwd: PathInput, config_path: ProjectConfigPath | None = None) -> Result[list[ContentCell]]:
-    workspace = _load_workspace(cwd=cwd, config_path=config_path).unwrap()
-    return Ok(relation_cells(workspace.relations))
-
-
-@unwrap_to_error
-def initialize(*, cwd: PathInput, config_path: ProjectConfigPath | None = None) -> Result[ContentCell]:
-    path = initialize_config(
-        CONFIG_FILE_NAME,
-        package="depmesh.workspace",
-        template="base_config.toml",
-        cwd=cwd,
-        path=config_path,
-    ).unwrap()
-    return Ok(configuration_created(path))
-
-
-@unwrap_to_error
-def _load_workspace(*, cwd: PathInput, config_path: ProjectConfigPath | None) -> Result[Workspace]:
-    path = locate_config(CONFIG_FILE_NAME, path=config_path, cwd=cwd).unwrap()
-    config = load_config(path, Config).unwrap()
-    return Ok(construct_workspace(config, root=path.parent))
+def relations(*, workspace: Workspace) -> list[ContentCell]:
+    return relation_cells(workspace.relations)

@@ -3,18 +3,24 @@ from __future__ import annotations
 import json
 import re
 import sys
+from collections.abc import Iterable
 from importlib import metadata
 from pathlib import Path
 
 import pytest
 from llm_tool_cli.cli import errors as cli_errors
+from llm_tool_cli.cli.context import CommandContext
 from llm_tool_cli.config import errors as config_errors
+from llm_tool_cli.config.project import ProjectConfig, project_config
+from llm_tool_cli.config.runtime import RuntimeConfig, runtime_config
 from llm_tool_cli.core import errors as shared_errors
+from llm_tool_cli.core import settings
 from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Err, Result, UnwrapErrError, UnwrapError
 from llm_tool_cli.paths import PathInput, ProjectConfigPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
-from llm_tool_cli.protocol.logic_cells import ContentCell
+from llm_tool_cli.protocol import Protocol
+from llm_tool_cli.protocol.logic_cells.base import LogicCell
 from llm_tool_cli.protocol.tests.helpers import assert_error_cells, cell_payloads
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
@@ -87,6 +93,52 @@ class ProjectFailure(core_errors.EnvironmentError):
 
 
 class TestCommandContext:
+    @pytest.mark.parametrize("command", ["deps", "relations", "init", "skill", "version"])
+    def test_configuration_lifetimes_through_output(self, mocker: MockerFixture, tmp_path: Path, command: str) -> None:
+        path = tmp_path / "depmesh.toml"
+        if command in ("deps", "relations"):
+            write_project(tmp_path)
+        observed: list[ProjectConfig | None] = []
+        write = CommandContext.write_cells
+
+        def observe(context: CommandContext, cells: Iterable[LogicCell], *, stderr: bool = False) -> None:
+            assert settings.static_config.get().tool_label == "DEPMESH"
+            assert runtime_config.get().protocol == Protocol.automation
+            observed.append(project_config.get() if project_config.is_set() else None)
+            write(context, cells, stderr=stderr)
+
+        mocker.patch.object(CommandContext, "write_cells", autospec=True, side_effect=observe)
+        arguments = ["--config", str(path), "-p", "automation", command]
+        if command == "deps":
+            arguments.append("@/src/a.py")
+        with runtime_config.scope(RuntimeConfig(protocol=Protocol.llm)):
+            result = CliRunner().invoke(app, arguments)
+            assert runtime_config.get().protocol == Protocol.llm
+
+        assert result.exit_code == 0, result.exception
+        expected = None if command in ("skill", "version") else ProjectConfig(config_path=ProjectConfigPath(path))
+        assert observed == [expected]
+        assert not project_config.is_set()
+
+    def test_config_failure_precedes_query_validation(self, tmp_path: Path) -> None:
+        result = CliRunner().invoke(
+            app,
+            [
+                "--config",
+                str(tmp_path / "missing.toml"),
+                "-p",
+                "automation",
+                "deps",
+                "@/../outside",
+                "--relation",
+                "unknown",
+            ],
+        )
+
+        assert result.exit_code == 2
+        assert [record["code"] for record in json_lines(result.stdout)] == ["config_unreadable"]
+        assert not project_config.is_set()
+
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
     @pytest.mark.parametrize("command, code", [("relations", "config_unreadable"), ("init", "config_already_exists")])
     def test_config_path_directory_is_checked_by_configuration_operation(
@@ -189,7 +241,7 @@ class TestCommandContext:
         failure = ProjectFailure(
             message="Problem with {error.context}.", context="project", ways_to_fix=["Check {error.context}."]
         )
-        mocker.patch.object(commands, "relations", return_value=Err([failure]))
+        mocker.patch("llm_tool_cli.config.project.locate_config", return_value=Err([failure]))
 
         result = CliRunner().invoke(app, ["--protocol", protocol, "relations"])
 
@@ -212,7 +264,7 @@ class TestCommandContext:
     @pytest.mark.parametrize("reverse", [False, True])
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
     def test_multiple_errors_keep_order_and_use_highest_code(
-        self, monkeypatch: pytest.MonkeyPatch, unwrap_in_helper: bool, reverse: bool, protocol: str
+        self, mocker: MockerFixture, unwrap_in_helper: bool, reverse: bool, protocol: str
     ) -> None:
         failures: EnvironmentErrors = [
             cli_errors.InvalidArguments(reason="invalid argument"),
@@ -222,13 +274,15 @@ class TestCommandContext:
         if reverse:
             failures.reverse()
 
-        def fail_relations(*, cwd: PathInput, config_path: ProjectConfigPath | None) -> Result[list[ContentCell]]:
-            result: Result[list[ContentCell]] = Err(failures)
+        def fail_selection(
+            filename: str, *, cwd: PathInput, path: ProjectConfigPath | None
+        ) -> Result[ProjectConfigPath]:
+            result: Result[ProjectConfigPath] = Err(failures)
             if unwrap_in_helper:
                 result.unwrap()
             return result
 
-        monkeypatch.setattr(commands, "relations", fail_relations)
+        mocker.patch("llm_tool_cli.config.project.locate_config", side_effect=fail_selection)
 
         result = CliRunner().invoke(app, ["--protocol", protocol, "relations"])
 
@@ -273,12 +327,9 @@ class TestCommandContext:
         ],
     )
     def test_error_cells_and_exit_categories(
-        self, monkeypatch: pytest.MonkeyPatch, protocol: str, error: shared_errors.EnvironmentError, exit_code: int
+        self, mocker: MockerFixture, protocol: str, error: shared_errors.EnvironmentError, exit_code: int
     ) -> None:
-        def fail_relations(*, cwd: PathInput, config_path: ProjectConfigPath | None) -> Result[list[ContentCell]]:
-            return Err([error])
-
-        monkeypatch.setattr(commands, "relations", fail_relations)
+        mocker.patch("llm_tool_cli.config.project.locate_config", return_value=Err([error]))
 
         result = CliRunner().invoke(app, ["--protocol", protocol, "relations"])
 
@@ -1240,6 +1291,25 @@ class TestSkill:
 
 
 class TestInit:
+    @pytest.mark.parametrize(
+        "text, code", [("version =", "config_invalid_toml"), ("version = 2", "config_validation_failed")]
+    )
+    def test_invalid_starter_is_not_published_as_a_project(
+        self, mocker: MockerFixture, tmp_path: Path, text: str, code: str
+    ) -> None:
+        fixtures = tmp_path / "fixtures"
+        fixtures.mkdir()
+        (fixtures / "base_config.toml").write_text(text, encoding="utf-8")
+        mocker.patch("llm_tool_cli.config.files.importlib.resources.files", return_value=tmp_path)
+        path = tmp_path / "depmesh.toml"
+
+        result = CliRunner().invoke(app, ["--config", str(path), "-p", "automation", "init"])
+
+        assert result.exit_code == 2
+        assert [record["code"] for record in json_lines(result.stdout)] == [code]
+        assert path.read_text(encoding="utf-8") == text
+        assert not project_config.is_set()
+
     def test_parent_config_is_not_reused(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         parent_config = tmp_path / "depmesh.toml"
         parent_config.write_text("version = 2", encoding="utf-8")

@@ -1,7 +1,11 @@
 
 ### Migration
 
-- Python integrations must call `depmesh.runtime.commands.dependencies`, `relations`, or `initialize` for complete command results as logic cells in shared `Result` values. The local CLI command-context subclass and its `load_workspace` method are removed; CLI contexts now use `llm_tool_cli.cli.context.CommandContext` directly.
+- Dependency queries now require a shared `ProjectConfig` binding and an explicit compiled `Workspace`. Enter shared `load_project(Config, ...)`, unwrap the yielded configuration, and pass it to `construct_workspace`. The shared context owns the project binding. `Workspace` no longer stores root; pass roots explicitly to low-level discovery operations when needed.
+
+- Python integrations must pass `workspace=` to `depmesh.runtime.commands.dependencies` or `relations` for complete logical-cell results. Dependencies return a shared `Result`; relations return their cell list directly. Use shared `initialize_project(Config, ...)` for creation, validation, and the project scope. The local `workspace.initialization` module is removed. CLI contexts use `llm_tool_cli.cli.context.CommandContext` directly.
+
+- Declare the default `depmesh.toml` filename in shared static settings alongside the tool label; the separate `CONFIG_FILE_NAME` constant is removed.
 
 - Project file paths no longer follow symbolic links below the resolved project root, including links to internal targets. Use ordinary project paths and directories instead; discovery skips links and explicit inputs reject them.
 
@@ -19,7 +23,7 @@
 
 - Pass `llm_tool_cli.paths.ProjectConfigPath` to `initialize_config` in Python integrations.
 
-- Import `GlobalOptions` from `llm_tool_cli.cli.entities`, rename its `config` field to `config_path`, and supply `ProjectConfigPath`. Use `protocol_for(command_name)` for protocol selection; command contexts no longer accept `default_protocol`.
+- Use `llm_tool_cli.config.runtime.runtime_config` for effective settings and `CommandContext.config_input` for unresolved CLI input. Shared command contexts select the effective protocol; they no longer accept `default_protocol`.
 
 - Malformed result-unwrapping payloads now propagate as the original `UnwrapError` without rendering partial diagnostics or failing later during rendering. Recover diagnostics through the shared `UnwrapError.errors` accessor.
 
@@ -52,7 +56,11 @@
 
 ### Changes
 
-- Make logic cells and their ordered collections the primary domain-to-CLI result interface. Move workspace loading, query orchestration, result aggregation, warning snapshots, relation listing, and initialization results into `depmesh.runtime`; preserve output payloads, ordering, diagnostics, and exit behavior.
+- Use independent frozen shared configurations for static application identity and default filename, runtime protocol, and prepared project location. Delegate project preparation and scope management to the library; keep compiled workspaces focused on relations and rules.
+
+- Validate the generated starter configuration before reporting initialization success. Invalid starters remain on disk and produce shared configuration diagnostics without establishing project settings.
+
+- Make logic cells and their ordered collections the primary domain-to-CLI result interface. Keep query orchestration, result aggregation, warning snapshots, and relation listing in `depmesh.runtime`, with workspace construction in `depmesh.workspace` and configuration preparation in the shared library; preserve output payloads, ordering, diagnostics, and exit behavior.
 
 - Use shared file enumeration for file sources, include hidden entries in glob matches, skip all discovered links, and retain invalid-pattern warnings and shared error diagnostics.
 
@@ -72,7 +80,7 @@
 
 - Use the shared configuration-creation success cell for `init`, preserving its message, path metadata, output protocols, and exit behavior.
 
-- Call shared configuration-file initialization directly from `init`, preserving the packaged starter, created-path success metadata, diagnostics, and exit behavior; remove the local initializer module.
+- Prepare initialization through shared configuration-file mechanics, preserving the packaged starter, created-path success metadata, diagnostics, and exit behavior.
 
 - Use the shared invalid-argument diagnostic for artifact validation and preserve existing error messages, cell fields, streams, and exit categories.
 

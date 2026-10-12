@@ -41,9 +41,19 @@ This specification defines configuration semantics that the implementation MUST 
 The canonical configuration file name MUST be `depmesh.toml`.
 
 Depmesh MUST delegate configuration discovery, path resolution, TOML reading, and schema-validation mechanics to `llm_tool_cli`.
-Commands that load configuration MUST supply `depmesh.toml`, the invocation's working directory, and the optional `--config` path to shared configuration selection.
+Static application settings MUST declare `depmesh.toml` as the default configuration filename.
+Commands that load configuration MUST enter shared project loading with Depmesh's schema, the invocation's working directory, and the optional `--config` path.
 The directory containing the selected configuration path MUST be the configuration root.
 Depmesh MUST supply the application schema defined below and propagate the library's configuration diagnostics without local translation.
+
+## Active configuration
+
+Shared immutable static configuration MUST own application identity and the default configuration filename, runtime configuration MUST own the effective protocol, and project configuration MUST own the active configuration path and project directory.
+The project directory MUST be derived from the active configuration path's parent.
+Shared project preparation MUST construct and bind project configuration only after configuration validation succeeds, retaining it through workspace construction, execution, and output and restoring the preceding binding on exit.
+A failed load MUST preserve the preceding project binding.
+Application-specific configuration data MUST remain separate from shared settings.
+Configuration-independent commands MUST NOT load workspace data or establish a project binding.
 
 ## TOML structure
 
