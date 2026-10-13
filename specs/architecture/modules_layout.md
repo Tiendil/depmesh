@@ -114,8 +114,9 @@ The `errors`, `entities`, and `tests` submodules MUST follow the corresponding a
 
 The common Pydantic entity base used by higher-level modules MUST be owned by `llm_tool_cli.core.entities`.
 
-Lexical root-anchored project path normalization, its canonical identifier type, filesystem resolution and containment, symlink rejection, and file enumeration MUST be owned by `llm_tool_cli.paths` and used directly.
-Depmesh MUST retain pattern template substitution and context-specific warning handling.
+Lexical root-anchored project path normalization, its canonical identifier type, filesystem resolution and containment, symlink rejection, glob preparation and matching, capture syntax validation, and file enumeration MUST be owned by `llm_tool_cli.paths` and used directly.
+Glob predicates MUST use shared `match_glob` after template substitution and shared `glob_capture_names` for schema validation, without a local glob compiler or capture parser.
+Depmesh MUST retain pattern template substitution, binding predicate captures to rule outputs, and context-specific warning handling.
 Enumeration failures MUST use the shared `FilesUnreadable` diagnostic without a duplicate project error type.
 
 ### Test submodules

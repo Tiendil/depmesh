@@ -3,7 +3,7 @@ from __future__ import annotations
 from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
 from llm_tool_cli.output import output
 from llm_tool_cli.paths import FileGlobPattern, enumerate_files
-from llm_tool_cli.paths.errors import InvalidProjectPath
+from llm_tool_cli.paths.errors import InvalidGlobPattern, InvalidProjectPath
 from llm_tool_cli.protocol.logic_cells.warning import WarningCell
 
 from depmesh.discovery.artifacts import EvaluationContext
@@ -24,7 +24,7 @@ class FilesSource(ArtifactSourceBase):
             self.config.pattern.substitute(context.captures) if self.config.pattern is not None else "**/*"
         )
         files = enumerate_files(context.root, pattern)
-        if files.is_err(InvalidProjectPath):
+        if files.is_err(InvalidProjectPath) or files.is_err(InvalidGlobPattern):
             output.get().emit(
                 [
                     WarningCell(

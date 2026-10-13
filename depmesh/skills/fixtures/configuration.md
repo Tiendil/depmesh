@@ -164,6 +164,16 @@ input = { type = "glob", pattern = "@/packages/{**package_path}/README.md" }
 ```
 
 `{*name}` captures part of one path segment. `{**name}` captures zero or more path segments.
+Recursive captures can have suffixes: `@/src/{**module_path}.py` captures `core/api` from `@/src/core/api.py`.
+An omitted recursive directory, as in `@/packages/{**package_path}/README.md` matching `@/packages/README.md`, gives an empty capture.
+Names must start with an ASCII letter or underscore, contain only ASCII letters, digits, and underscores, and be unique within a pattern.
+
+Predicates and file sources share case-sensitive glob syntax: `*` and `?` stay within a segment, while `**` crosses directories even in patterns such as `a**.py`.
+`**/` also matches zero directory levels.
+Use bracket classes such as `[ab]` and `[!a]`, or bracket escapes such as `[*]`, `[?]`, and `[[]` for literal wildcard characters.
+Hidden entries participate like ordinary filenames.
+Only the literal prefix before the first wildcard is resolved as a filesystem path; symlinks below the project root are prohibited.
+Predicates can match missing references.
 
 ### regex
 
@@ -234,6 +244,9 @@ output = { type = "files", pattern = "@/tests/test_{module}.py" }
 ```
 
 Without `pattern`, it produces all files under the configuration root.
+File sources select existing regular files and skip symlinks.
+Templates are substituted before glob matching; captures written inside a file-source pattern affect matching but do not create bindings for other sources.
+Invalid patterns produce a warning and no files; filesystem read failures remain errors.
 
 ### command
 

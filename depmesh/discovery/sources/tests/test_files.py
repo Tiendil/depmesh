@@ -101,13 +101,24 @@ class TestFilesSource:
 
         assert source.evaluate(context).unwrap() == [ArtifactId("@/tests/test_a.py")]
 
-    @pytest.mark.parametrize("pattern", ["../tests/*.py", "@/../*.py", "@/a//b", "@/", "@file", "."])
+    @pytest.mark.parametrize(
+        "pattern", ["../tests/*.py", "@/../*.py", "@/a//b", "@/", "@file", ".", "{*bad-name}", "{*x}/{*x}"]
+    )
     def test_evaluate__invalid_pattern_adds_warning(self, tmp_path: Path, pattern: str) -> None:
         source = FilesSource(FilesSourceConfig.model_validate({"type": "files", "pattern": pattern}))
         context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={})
 
         assert source.evaluate(context).unwrap() == []
         assert warning_messages() == [f"relation `tests`: skipped invalid files source pattern `{pattern}`"]
+
+    @pytest.mark.parametrize("pattern", ["@/src/a**.py", "@/src/{**module_path}.py"])
+    def test_evaluate__uses_shared_recursive_matching(self, tmp_path: Path, pattern: str) -> None:
+        touch(tmp_path / "src/a.py")
+        touch(tmp_path / "src/a/nested.py")
+        source = FilesSource(FilesSourceConfig.model_validate({"type": "files", "pattern": pattern}))
+        context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={})
+
+        assert source.evaluate(context).unwrap() == [ArtifactId("@/src/a/nested.py"), ArtifactId("@/src/a.py")]
 
     def test_evaluate__expands_home_in_pattern(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("HOME", str(tmp_path))

@@ -20,6 +20,8 @@ Detailed requirements for individual specifications are out of scope except for 
 
 ## Specification documents
 
+Shared glob preparation, matching, and capture validation, including bracket syntax and recursive captures with suffixes, are covered by `specs/architecture/modules_layout.md`, `specs/behavior/config.md`, and `specs/behavior/file_paths.md`.
+
 Shared configuration-file symlink rejection is covered by `specs/behavior/config.md`; command and dependency-source application of the shared path contract is covered by `specs/behavior/file_paths.md`.
 
 The shared root configuration-version field with Depmesh-owned supported versions and defaults is covered by `specs/architecture/modules_layout.md` and `specs/behavior/config.md`; session-directory configuration remains absent.

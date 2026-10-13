@@ -35,4 +35,5 @@ Template substitution MUST precede path interpretation.
 
 Glob predicates and file sources accept patterns rather than concrete path identifiers.
 Patterns MUST retain project anchoring and containment, using the configuration root as their relative filesystem base.
-Their matching syntax, wildcard behavior, capture syntax, and existence semantics are specified in `specs/behavior/config.md`.
+Pattern preparation, matching syntax, wildcard behavior, and capture validation MUST use the shared glob contract.
+Rule binding, source warnings, and existence semantics are specified in `specs/behavior/config.md`.

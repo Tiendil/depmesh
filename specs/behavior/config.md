@@ -254,6 +254,10 @@ A `one_of` predicate MUST NOT define captures.
 ### Glob Predicate
 
 A `glob` predicate MUST use `/` as the path separator.
+Glob predicates and file sources MUST share the glob grammar and pattern preparation defined in `llm-tool-cli/specs/behavior/paths.md`.
+Only a pattern's literal prefix MUST undergo filesystem resolution; wildcard syntax MUST NOT be resolved as concrete filenames.
+Matching MUST be case-sensitive and MUST treat hidden entries and filename line breaks as ordinary filename content.
+Glob predicates MAY match references to missing files.
 
 A `glob` predicate MUST include:
 
@@ -262,17 +266,21 @@ A `glob` predicate MUST include:
 
 `*` MUST match zero or more characters inside one path segment.
 
-`**` MUST match zero or more path segments.
+`**` MUST match across path separators, including inside a segment such as `a**.py`.
+`**/` MUST also match zero directory levels.
 
 `?` MUST match one character inside one path segment.
+Bracket character classes and bracket escaping MUST have the same meaning in predicates and file sources; for example, `[*]` matches a literal `*`.
 
 A glob predicate MAY define captures with `{*name}` and `{**name}`.
 
 A glob capture name MUST contain only ASCII letters, ASCII digits, and `_`, and MUST NOT start with a digit.
+Capture names MUST be unique within one pattern, and malformed captures MUST fail validation.
 
 `{*name}` MUST match zero or more characters inside one path segment and expose the matched text as capture `name`.
 
-`{**name}` MUST match zero or more path segments and expose the matched text as capture `name`.
+`{**name}` MUST capture across path separators, including before a suffix such as `.py`, and expose the matched text as capture `name`.
+`{**name}/` MUST also allow zero directory levels, exposing an empty string in that case.
 
 If a rule's input glob predicate defines captures, every successful match MUST make those captures available to the output source in the same rule.
 
@@ -425,7 +433,9 @@ File source results MUST be deterministic for the same filesystem state.
 File sources MUST use shared regular-file enumeration without following symbolic links.
 Discovered file links, directory links, broken links, and cycles MUST be skipped.
 Explicitly addressed symbolic links in file-source patterns MUST use the existing invalid-pattern warning and empty-result behavior.
-Patterns MUST support case-sensitive segment wildcards `*`, `?`, bracket character classes, and a complete `**` segment for recursive matching.
+Patterns MUST use the same shared wildcard and capture grammar as glob predicates, after template substitution.
+Captures in file-source patterns MUST constrain matching without introducing bindings for other sources.
+Malformed file-source patterns MUST produce the invalid-pattern warning and an empty result.
 Hidden files and directories MUST participate in matching like ordinary entries, both with and without an explicit pattern.
 Repeated matches MUST be deduplicated, and results MUST use lexicographic path-component order.
 Shared filesystem enumeration failures MUST propagate as errors.
