@@ -20,6 +20,8 @@ Detailed requirements for individual specifications are out of scope except for 
 
 ## Specification documents
 
+Shared configuration-file symlink rejection is covered by `specs/behavior/config.md`; command and dependency-source application of the shared path contract is covered by `specs/behavior/file_paths.md`.
+
 The shared root configuration-version field with Depmesh-owned supported versions and defaults is covered by `specs/architecture/modules_layout.md` and `specs/behavior/config.md`; session-directory configuration remains absent.
 
 Prohibited journaling for dependency-result and generic content cells, and shared emitter ownership, are covered by `specs/architecture/modules_layout.md` and `specs/behavior/cli.md`; terminal-error journaling and delivery-failure recovery are covered by `specs/architecture/errors.md` and `specs/behavior/cli.md`.
@@ -34,7 +36,7 @@ Prohibited journaling for dependency-result and generic content cells, and share
 - `./specs/architecture/tests.md` — specification of project test architecture, including returned error propagation, internal-exception separation, CLI mapping checks, shared automation payload extraction and error-cell assertions, local output parsing, and scoped output capture.
 - `./specs/behavior/cli.md` — specification of the `depmesh` command line interface, including shared static, runtime, and project configuration and configuration path inputs, native environment-error records, ordered error lists, exit categories, direct shared-emitter submission, buffered result cells, and warnings retained on expected failure. Shared project loading and initialization contexts own discovery, validation, and project scopes using a filename from static settings. All cell kinds, including errors, use stdout in every protocol. Shared command execution scopes and complete initialization-command registration are managed by the library.
 - `./specs/behavior/config.md` — specification of the `depmesh.toml` configuration file behavior, including independent immutable shared configuration bindings, discovery and home-relative explicit paths; file discovery uses shared enumeration without symbolic-link traversal. Shared project loading and initialization contexts own discovery, validation, and project scopes using a filename from static settings.
-- `./specs/behavior/file_paths.md` — specification of local project file path syntax, semantics, and resolution behavior; shared file enumeration and rejection of symbolic links below the resolved project root are included.
+- `./specs/behavior/file_paths.md` — application of the `llm_tool_cli` path contract to CLI inputs, configured predicates, dependency sources, and patterns, including directory bases and existence policies.
 - `./specs/behavior/skill_fixtures.md` — specification of built-in skill documentation fixture behavior.
 - `./specs/documentation/changelog.md` — specification of changelog tooling, source files, version record structure, and entry format.
 - `./specs/documentation/readme.md` — specification of the root `README.md` content and purpose.

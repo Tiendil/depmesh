@@ -44,6 +44,7 @@ Depmesh MUST delegate configuration discovery, path resolution, TOML reading, an
 Static application settings MUST declare `depmesh.toml` as the default configuration filename.
 Commands that load configuration MUST enter shared project loading with Depmesh's schema, the invocation's working directory, and the optional `--config` path.
 The directory containing the selected configuration path MUST be the configuration root.
+Configuration selection and initialization MUST use the shared project-path symlink policy, including rejection of a configuration-file symlink.
 Depmesh MUST supply the application schema defined below and propagate the library's configuration diagnostics without local translation.
 
 ## Active configuration
@@ -569,11 +570,7 @@ output = {
 
 Configuration project file paths SHOULD be written with a leading `@/`.
 
-Configuration file paths MUST NOT escape the configuration root.
-
-Path normalization MUST remove redundant `.` path segments.
-
-Path normalization MUST preserve meaningful case on case-sensitive filesystems.
+Configuration project paths MUST use the shared path contract as applied by `specs/behavior/file_paths.md`.
 
 ## Invalid configuration
 

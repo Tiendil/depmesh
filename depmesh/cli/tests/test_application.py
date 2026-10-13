@@ -627,8 +627,9 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
             assert error.format_message() in result.stdout
 
     @pytest.mark.parametrize("explicit", [False, True])
-    def test_config_symlink_selects_expected_root(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, explicit: bool
+    @pytest.mark.parametrize("command", ["dependencies", "init"])
+    def test_config_symlink_is_rejected(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, explicit: bool, command: str
     ) -> None:
         target_root = tmp_path / "target"
         write_project(target_root)
@@ -636,24 +637,16 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         config_path.symlink_to(target_root / "depmesh.toml")
         touch(tmp_path / "src/a.py")
         monkeypatch.chdir(tmp_path)
-        artifact = (target_root if explicit else tmp_path) / "src/a.py"
         arguments = ["--config", str(config_path)] if explicit else []
+        command_arguments = ["@/src/a.py"] if command == "dependencies" else []
 
-        result = CliRunner().invoke(app, [*arguments, "dependencies", str(artifact)])
+        result = CliRunner().invoke(app, [*arguments, "-p", "automation", command, *command_arguments])
 
-        assert result.exit_code == 0
-        assert normalize_cell_ids(result.stdout) == (
-            "----- DEPMESH CELL <id> -----\n"
-            "kind = dependencies\n"
-            "media_type = text/markdown\n"
-            "relation = tests\n"
-            "type = dependencies\n"
-            "\n"
-            "Tests related to the input artifacts.\n"
-            "\n"
-            "- @/tests/test_a.py\n"
-            "\n"
-        )
+        assert result.exit_code == 3
+        assert_error_cells(json_lines(result.stdout), [InvalidProjectPath(path=str(config_path))])
+        assert not result.stderr
+        assert not project_config.is_set()
+        assert config_path.is_symlink()
 
     def test_empty_config_outputs_no_dependencies(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         config_path = tmp_path / "depmesh.toml"
