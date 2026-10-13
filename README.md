@@ -24,7 +24,6 @@ Specifications that apply to the artifact.
 - @/specs/architecture/static_analysis.md
 - @/specs/architecture/tests.md
 - @/specs/behavior/cli.md
-- @/specs/behavior/file_paths.md
 
 ## tested_by
 

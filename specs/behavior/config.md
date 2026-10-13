@@ -40,11 +40,10 @@ This specification defines configuration semantics that the implementation MUST 
 
 The canonical configuration file name MUST be `depmesh.toml`.
 
-Depmesh MUST delegate configuration discovery, path resolution, TOML reading, and schema-validation mechanics to `llm_tool_cli`.
+Depmesh MUST use the configuration-file contract in `specs/behavior/config.md` in the `llm-tool-cli` repository for discovery, path resolution, loading, and initialization.
 Static application settings MUST declare `depmesh.toml` as the default configuration filename.
 Commands that load configuration MUST enter shared project loading with Depmesh's schema, the invocation's working directory, and the optional `--config` path.
 The directory containing the selected configuration path MUST be the configuration root.
-Configuration selection and initialization MUST use the shared project-path symlink policy, including rejection of a configuration-file symlink.
 Depmesh MUST supply the application schema defined below and propagate the library's configuration diagnostics without local translation.
 
 ## Active configuration
@@ -219,15 +218,7 @@ Every template variable referenced by a rule's `output` source MUST be provided 
 
 Configuration loading MUST fail if an `output` source references a template variable that is not provided by the rule's `input` predicate.
 
-Root-anchored artifact paths and glob patterns MUST be resolved against the configuration root.
-
-Relative artifact paths and glob patterns MAY be used by configuration fields that define the configuration root as their base path.
-
-Absolute host filesystem paths MAY be accepted only by fields that explicitly support host path input.
-
-Project configurations SHOULD prefer canonical root-anchored paths that start with `@/`.
-
-For matching, file paths inside the configuration root SHOULD be normalized to canonical root-anchored paths that start with `@/` and use `/` as the separator.
+Configured paths and patterns MUST follow the path interpretation requirements below.
 
 ### One-of Predicate
 
@@ -253,34 +244,13 @@ A `one_of` predicate MUST NOT define captures.
 
 ### Glob Predicate
 
-A `glob` predicate MUST use `/` as the path separator.
-Glob predicates and file sources MUST share the glob grammar and pattern preparation defined in `llm-tool-cli/specs/behavior/paths.md`.
-Only a pattern's literal prefix MUST undergo filesystem resolution; wildcard syntax MUST NOT be resolved as concrete filenames.
-Matching MUST be case-sensitive and MUST treat hidden entries and filename line breaks as ordinary filename content.
-Glob predicates MAY match references to missing files.
-
 A `glob` predicate MUST include:
 
 - `type = "glob"`.
 - `pattern` - glob pattern.
 
-`*` MUST match zero or more characters inside one path segment.
-
-`**` MUST match across path separators, including inside a segment such as `a**.py`.
-`**/` MUST also match zero directory levels.
-
-`?` MUST match one character inside one path segment.
-Bracket character classes and bracket escaping MUST have the same meaning in predicates and file sources; for example, `[*]` matches a literal `*`.
-
-A glob predicate MAY define captures with `{*name}` and `{**name}`.
-
-A glob capture name MUST contain only ASCII letters, ASCII digits, and `_`, and MUST NOT start with a digit.
-Capture names MUST be unique within one pattern, and malformed captures MUST fail validation.
-
-`{*name}` MUST match zero or more characters inside one path segment and expose the matched text as capture `name`.
-
-`{**name}` MUST capture across path separators, including before a suffix such as `.py`, and expose the matched text as capture `name`.
-`{**name}/` MUST also allow zero directory levels, exposing an empty string in that case.
+A glob predicate MUST use shared glob preparation, matching, and capture validation.
+An invalid project path in the pattern MUST produce a non-match; other shared failures MUST propagate.
 
 If a rule's input glob predicate defines captures, every successful match MUST make those captures available to the output source in the same rule.
 
@@ -413,7 +383,7 @@ Template substitution MUST happen before evaluating the artifact source.
 
 ### Files Source
 
-A `files` source MUST produce filesystem paths under the configuration root.
+A `files` source MUST use shared enumeration of existing regular files under the configuration root.
 
 A `files` source MUST include:
 
@@ -425,20 +395,9 @@ A `files` source MAY include:
 
 If `pattern` is omitted, a `files` source MUST produce all files under the configuration root.
 
-Root-anchored file source patterns MUST be resolved against the configuration root.
-
-Relative file source patterns MAY be used and MUST be resolved against the configuration root.
-
-File source results MUST be deterministic for the same filesystem state.
-File sources MUST use shared regular-file enumeration without following symbolic links.
-Discovered file links, directory links, broken links, and cycles MUST be skipped.
-Explicitly addressed symbolic links in file-source patterns MUST use the existing invalid-pattern warning and empty-result behavior.
-Patterns MUST use the same shared wildcard and capture grammar as glob predicates, after template substitution.
 Captures in file-source patterns MUST constrain matching without introducing bindings for other sources.
-Malformed file-source patterns MUST produce the invalid-pattern warning and an empty result.
-Hidden files and directories MUST participate in matching like ordinary entries, both with and without an explicit pattern.
-Repeated matches MUST be deduplicated, and results MUST use lexicographic path-component order.
-Shared filesystem enumeration failures MUST propagate as errors.
+Invalid project paths and malformed glob syntax MUST produce the invalid-pattern warning and an empty result.
+Other shared enumeration failures MUST propagate as errors.
 
 Example:
 
@@ -576,11 +535,12 @@ output = {
 }
 ```
 
-## Path normalization
+## Path interpretation
 
-Configuration project file paths SHOULD be written with a leading `@/`.
-
-Configuration project paths MUST use the shared path contract as applied by `specs/behavior/file_paths.md`.
+Configured paths, glob patterns, and source-produced dependency identifiers MUST use the shared contract in `specs/behavior/paths.md` in the `llm-tool-cli` repository, with the configuration root as their relative filesystem base.
+Template substitution MUST precede path or pattern interpretation.
+Predicates, list sources, and command sources MAY refer to locations that do not yet exist.
+Project configurations SHOULD prefer canonical root-anchored paths unless demonstrating relative or absolute filesystem input compatibility.
 
 ## Invalid configuration
 

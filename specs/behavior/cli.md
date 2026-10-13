@@ -274,9 +274,11 @@ The `dependencies` command MUST accept:
 
 `ARTIFACT...` MUST accept one or more artifact identifiers.
 
-Filesystem artifact inputs MUST expand home markers before normalization and project-root containment checks.
-Root-anchored inputs MUST preserve literal home-marker segments.
-An inability to expand a home marker MUST report `path_resolution_failed` and exit with status `3`.
+Project file inputs MUST use the shared mixed path normalization contract in `specs/behavior/paths.md` in the `llm-tool-cli` repository.
+The project root MUST be the configuration root defined in `specs/behavior/config.md`; relative filesystem inputs MUST use the command's current working directory as their base.
+Command execution MUST normalize accepted inputs before dependency matching or output construction.
+Dependency inputs MAY reference locations that do not yet exist.
+CLI examples and protocol output SHOULD use canonical root-anchored paths unless demonstrating relative or absolute filesystem input compatibility.
 
 The CLI MUST preserve the user-provided artifact spelling in output where that helps identify the original request.
 
