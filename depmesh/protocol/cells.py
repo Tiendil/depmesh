@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from typing import Literal
+
+import pydantic
 from llm_tool_cli.protocol.logic_cells import ContentCell
 from llm_tool_cli.protocol.logic_cells.base import LogicCell
 from llm_tool_cli.protocol.output_cells import AutomationOutputCell, HumanOutputCell, LLMOutputCell
@@ -10,6 +13,7 @@ from depmesh.domain.entities import Relation
 
 
 class DependenciesCell(LogicCell):
+    is_journal: Literal[False] = pydantic.Field(default=False, exclude=True)
     result: QueryResult
     relations: tuple[Relation, ...]
 

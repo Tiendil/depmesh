@@ -66,21 +66,27 @@ Batch-rendering orchestration and stream writing MUST belong to the shared emitt
 Depmesh MUST own concrete dependency-result logic cells and their protocol-specific projections.
 Logic-cell projections MUST return the corresponding shared output-cell subtype.
 Shared command setup MUST bind the emitter, and shared command finalization MUST deliver complete buffered results followed by warnings.
+The CLI MUST use `llm_tool_cli.cli.context.command_context` directly for command setup, error handling, and finalization, without a local lifecycle wrapper.
 Discovery sources MUST submit shared warning cells directly and retain their own typed query results.
 Local warning storage and warning projection implementations MUST NOT duplicate the shared library.
 Protocol-independent content MUST use shared content logic cells without an output-cell class supplied by the CLI.
 Depmesh MUST NOT maintain renderer wrappers or a parallel formatter family.
 Environment errors MUST use the shared typed error logic cell, which owns their content and metadata projection.
+Dependency-result cells MUST prohibit journaling with `is_journal: Literal[False]` and MUST NOT implement journal-record conversion.
+Generic content cells used for relation output MUST retain the shared prohibition on journaling.
+Journal submission, default journal-cell construction, processors, and terminal-error journaling MUST be managed by `llm_tool_cli` without a Depmesh-specific journal service or error wrapper.
 
 The CLI MUST use `llm_tool_cli.skills` directly for skill-document loading and propagate its returned errors without local adapters.
 
 Depmesh MUST use frozen `StaticConfig` in `llm_tool_cli.core.settings` for application identity and the default `depmesh.toml` filename before parsing, `RuntimeConfig` in `llm_tool_cli.config.runtime` for the effective protocol, and `ProjectConfig` in `llm_tool_cli.config.project` for the active config path and derived project directory.
 Compiled workspaces MUST contain relations and rules without duplicating the project root or active path.
-The CLI MUST use shared `load_project` and `initialize_project` contexts with Depmesh's `Config` schema, retaining them through the framework command context's resource lifecycle.
+The CLI MUST use shared `load_project` with Depmesh's `Config` schema, retaining it through the framework command context's resource lifecycle.
+The application MUST register initialization through `llm_tool_cli.cli.commands.initialization.register_init_command`, supplying Depmesh's `Config` schema.
+Shared initialization MUST retain its project context through the framework command context's resource lifecycle.
 Discovery, loading, starter creation and validation, `ProjectConfig` construction, and project binding and restoration MUST belong to the shared library; Depmesh MUST NOT keep local preparation wrappers.
 Initialization MUST supply the `depmesh.workspace` resource package and `base_config.toml` template.
 The workspace module MUST construct compiled workspaces from the validated configuration yielded by shared project loading.
-The CLI MAY construct the shared generic configuration-creation acknowledgement after initialization; domain-result payloads MUST remain runtime-owned.
+The shared initialization command MUST construct and submit the generic configuration-creation acknowledgement; domain-result payloads MUST remain runtime-owned.
 Query orchestration MUST receive the compiled workspace explicitly and obtain the project root from the active project configuration; explicit root and working-directory arguments to lower-level discovery operations remain permitted.
 Compiled workspaces MAY remain explicit local values; no additional global configuration binding is required for data without a global consumer.
 

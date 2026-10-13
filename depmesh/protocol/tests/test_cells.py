@@ -1,3 +1,4 @@
+import pydantic
 import pytest
 from llm_tool_cli.protocol import Protocol
 from llm_tool_cli.protocol.output_cells import AutomationOutputCell, HumanOutputCell, LLMOutputCell
@@ -24,6 +25,12 @@ def payloads(cells: list[OutputCell]) -> list[dict[str, object]]:
 
 
 class TestDependenciesCell:
+    def test_model_validate__rejects_journal_delivery(self) -> None:
+        with pytest.raises(pydantic.ValidationError, match="is_journal"):
+            DependenciesCell.model_validate(
+                {"result": QueryResult(dependencies=()), "relations": (), "is_journal": True}
+            )
+
     @pytest.mark.parametrize("protocol", list(Protocol))
     def test_render__repeated_calls_preserve_payloads_and_input(self, protocol: Protocol) -> None:
         cell = DependenciesCell(

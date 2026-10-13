@@ -139,6 +139,8 @@ Non-fatal problems SHOULD be represented as warnings.
 
 Relation list output MUST order relations alphabetically by relation id.
 
+Dependency-result cells MUST reject construction with journal delivery enabled and remain ordinary buffered output.
+
 ## Output protocols
 
 The CLI MUST support the output modes defined by `llm_tool_cli.protocol`.
@@ -228,6 +230,7 @@ Additional fields MAY be added in future versions. Consumers MUST ignore unknown
 
 The CLI MUST use global-option registration and parsing, context-scoped runtime configuration, command-context protocol selection and output scope setup, and shared emitter delivery managed by `llm_tool_cli`.
 Depmesh MUST register its commands on the application provided by `llm_tool_cli`.
+Tool-owned commands MUST use the shared command execution scope directly for setup, error handling, and output finalization.
 Workspace construction and dependency-query behavior MUST remain Depmesh-owned; project loading, scoped output delivery, and warning lifecycle MUST be shared.
 Static configuration MUST own application identity and the default configuration filename before parsing, runtime configuration MUST own the effective protocol, and project configuration MUST own the active config path and derived project directory.
 All three configurations MUST be immutable and complete when bound.
@@ -621,7 +624,8 @@ depmesh init
 depmesh --config ./path/to/depmesh.toml init
 ```
 
-The command MUST delegate project initialization to `llm_tool_cli`, supplying Depmesh's schema, invocation working directory, optional `--config` path, and packaged starter template; the default filename MUST come from static settings.
+The application MUST register the initialization command managed by `llm_tool_cli`, supplying Depmesh's schema and packaged starter template.
+The shared command MUST supply the invocation working directory and optional `--config` path to project initialization, manage its command scope and success output, and use the default filename from static settings.
 The shared initializer MUST load and validate the created configuration before binding project settings or emitting success output.
 If validation fails, the created file MUST remain on disk and the command MUST report the shared configuration diagnostic without establishing a project binding.
 Depmesh owns the starter contents described below.
@@ -647,11 +651,14 @@ The library owns installed version lookup, help, configuration independence, pro
 
 ## Errors and exit codes
 
-Skill- and version-command failure handling MUST be managed by `llm_tool_cli`.
+Skill-, version-, and initialization-command failure handling MUST be managed by `llm_tool_cli`.
 The remaining execution policies apply to tool-owned commands.
 
 The CLI MUST use command error handling and explicit error reporting managed by `llm_tool_cli`, including error cells on stdout, diagnostic ordering, exit statuses, and exception propagation.
 Depmesh MUST retain workspace construction and command-specific behavior.
+Shared terminal-error journaling MUST preserve one console diagnostic per error and MUST NOT require workspace initialization.
+The default no-op journal processor MUST leave existing error output unchanged.
+When an emitter with external journal delivery is supplied, a delivery failure MUST retain the original diagnostics and be reported without recursive delivery attempts.
 
 Configuration selection, loading, and creation MUST propagate the diagnostics provided by `llm_tool_cli` without local translation.
 

@@ -161,6 +161,8 @@ The CLI MUST delegate failed result unwrapping and explicit environment-error re
 Failure rendering and exit-code selection MUST be centralized at the CLI command boundary.
 Environment errors MUST remain structured values in the shared error logic cell until projection; `llm_tool_cli` MUST manage their content, corrective guidance, and metadata.
 The shared CLI handling boundary MUST manage diagnostic ordering, stdout delivery, exit-code aggregation, and process termination during Depmesh-owned command execution.
+It MUST journal terminal error cells through shared journal-record conversion, without extra console journal cells or dependency on Depmesh workspace state.
+Journal-delivery failures MUST preserve original diagnostics and MUST NOT cause recursive journaling.
 Skill-command failure handling MUST be managed by `llm_tool_cli`.
 Protocol-option parsing MUST use the error presentation and exit behavior managed by `llm_tool_cli` before command execution.
 
