@@ -33,7 +33,8 @@ Allowed development commands:
 - `./bin/dev.sh` — run development utilities inside the container, for example `./bin/dev.sh uv run -- pytest`.
 - `./bin/dev-build-containers.sh` — build base Docker images for development; use only after approved Docker or dependency changes.
 
-Searching, reading, and editing repository files MAY be done on the host machine.
+Code and file searches MUST run on the host using host-installed tools, including `ast-grep` and `rg`, without Docker or development-helper wrappers.
+Reading and editing repository files MAY also be done on the host machine.
 
 ## Restricted Changes And Operations
 
@@ -107,6 +108,8 @@ At the start of each work session, read the `depmesh` usage instructions:
 
 `ast-grep` — a tool for searching and manipulating Abstract Syntax Trees in code. Use it when you work with particular code patterns, structures, or constructs in the codebase.
 
+Run the host-installed executable directly, for example `ast-grep --help`.
+
 You MUST use it to:
 
 - Search for specific code patterns or structures in the codebase.
@@ -123,7 +126,7 @@ Agents MUST NOT use `ast-grep` as the main tool for implementing large features 
 
 ### `rg`
 
-Use `rg` for text and file searches unless a structural code query is needed.
+Use host-installed `rg` directly for text and file searches unless a structural code query is needed.
 
 `ast-grep` has a higher priority than `rg` whenever a structural code query is needed.
 

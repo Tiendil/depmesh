@@ -66,6 +66,7 @@ The top-level configuration MAY contain these fields:
 Unknown top-level fields MUST cause configuration loading to fail.
 
 The initial schema version MUST be `1`.
+Depmesh MUST own the supported schema versions and default; the shared configuration field MUST provide strict integer validation and diagnostic formatting for Depmesh's declared version constraint.
 
 If `version` is omitted, `depmesh` MUST treat the configuration as schema version `1`.
 

@@ -20,6 +20,8 @@ Detailed requirements for individual specifications are out of scope except for 
 
 ## Specification documents
 
+The shared root configuration-version field with Depmesh-owned supported versions and defaults is covered by `specs/architecture/modules_layout.md` and `specs/behavior/config.md`; session-directory configuration remains absent.
+
 Prohibited journaling for dependency-result and generic content cells, and shared emitter ownership, are covered by `specs/architecture/modules_layout.md` and `specs/behavior/cli.md`; terminal-error journaling and delivery-failure recovery are covered by `specs/architecture/errors.md` and `specs/behavior/cli.md`.
 
 - `./specs/intro.md` — this file, contains a list of all specifications and their brief descriptions.

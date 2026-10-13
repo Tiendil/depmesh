@@ -79,6 +79,8 @@ Journal submission, default journal-cell construction, processors, and terminal-
 The CLI MUST use `llm_tool_cli.skills` directly for skill-document loading and propagate its returned errors without local adapters.
 
 Depmesh MUST use frozen `StaticConfig` in `llm_tool_cli.core.settings` for application identity and the default `depmesh.toml` filename before parsing, `RuntimeConfig` in `llm_tool_cli.config.runtime` for the effective protocol, and `ProjectConfig` in `llm_tool_cli.config.project` for the active config path and derived project directory.
+Depmesh's root configuration MUST use `ConfigVersion[Literal[1]]` from `llm_tool_cli.config.fields` and declare its default as `1`; it MUST NOT declare session-directory configuration without session storage behavior.
+Depmesh MUST own its supported schema versions and defaults; shared version validation MUST apply Depmesh's declared constraint.
 Compiled workspaces MUST contain relations and rules without duplicating the project root or active path.
 The CLI MUST use shared `load_project` with Depmesh's `Config` schema, retaining it through the framework command context's resource lifecycle.
 The application MUST register initialization through `llm_tool_cli.cli.commands.initialization.register_init_command`, supplying Depmesh's `Config` schema.

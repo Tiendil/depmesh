@@ -997,7 +997,9 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
     @pytest.mark.parametrize(
         ("text", "reason"),
         [
-            ("version = 2\n", "Input should be 1"),
+            ("version = 2\n", "Unsupported configuration version 2; supported version: 1"),
+            ("version = true\n", "version must be an integer"),
+            ("version = 1.0\n", "version must be an integer"),
             ('[[relations]]\nid = "tests"\n[[relations]]\nid = "tests"\n', "duplicate relation id `tests`"),
         ],
     )

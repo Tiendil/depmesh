@@ -5,6 +5,7 @@ from functools import cached_property
 from typing import Literal
 
 import pydantic
+from llm_tool_cli.config.fields import ConfigVersion
 from llm_tool_cli.core.entities import BaseEntity
 
 from depmesh.discovery.entities import DependencyRule, DependencyRuleConfig
@@ -40,7 +41,7 @@ class RelationConfig(Relation):
 
 
 class Config(BaseEntity):
-    version: Literal[1] = 1
+    version: ConfigVersion[Literal[1]] = 1
     relations: tuple[RelationConfig, ...] = ()
     rules: tuple[DependencyRuleConfig, ...] = ()
 
