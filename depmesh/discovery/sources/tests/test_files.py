@@ -5,11 +5,11 @@ from os import stat_result
 from pathlib import Path
 
 import pytest
+from llm_tool_cli.output.tests.helpers import warning_messages
 from llm_tool_cli.paths import ProjectRootPath
 from llm_tool_cli.paths.errors import FilesUnreadable, PathResolutionFailed
 from pytest_mock import MockerFixture
 
-from depmesh.core import warnings
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext
 from depmesh.discovery.sources.files import FilesSource, FilesSourceConfig
 from depmesh.domain.entities import ArtifactId, RelationId
@@ -107,7 +107,7 @@ class TestFilesSource:
         context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={})
 
         assert source.evaluate(context).unwrap() == []
-        assert warnings.read() == [f"relation `tests`: skipped invalid files source pattern `{pattern}`"]
+        assert warning_messages() == [f"relation `tests`: skipped invalid files source pattern `{pattern}`"]
 
     def test_evaluate__expands_home_in_pattern(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("HOME", str(tmp_path))
@@ -136,7 +136,7 @@ class TestFilesSource:
         )
 
         assert source.evaluate(context).unwrap() == []
-        assert warnings.read() == ["relation `tests`: skipped invalid files source pattern `~/*.py`"]
+        assert warning_messages() == ["relation `tests`: skipped invalid files source pattern `~/*.py`"]
 
     def test_evaluate__home_expansion_failure_is_fatal(self, tmp_path: Path, mocker: MockerFixture) -> None:
         cause = RuntimeError("unknown home")
@@ -150,7 +150,7 @@ class TestFilesSource:
         assert failure.code == "path_resolution_failed"
         assert failure.path == "~/*.py"
         assert failure.cause == cause
-        assert warnings.read() == []
+        assert warning_messages() == []
 
     def test_evaluate__explicit_symlink_pattern_adds_warning(self, tmp_path: Path) -> None:
         link = tmp_path / "loop"
@@ -159,7 +159,7 @@ class TestFilesSource:
         context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={})
 
         assert source.evaluate(context).unwrap() == []
-        assert warnings.read() == ["relation `tests`: skipped invalid files source pattern `@/loop/*.py`"]
+        assert warning_messages() == ["relation `tests`: skipped invalid files source pattern `@/loop/*.py`"]
 
     @pytest.mark.parametrize("pattern", [None, "@/**/*.py"])
     def test_evaluate__includes_hidden_files_and_skips_internal_links(

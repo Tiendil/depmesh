@@ -3,13 +3,11 @@ from __future__ import annotations
 import json
 import re
 import sys
-from collections.abc import Iterable
 from importlib import metadata
 from pathlib import Path
 
 import pytest
 from llm_tool_cli.cli import errors as cli_errors
-from llm_tool_cli.cli.context import CommandContext
 from llm_tool_cli.config import errors as config_errors
 from llm_tool_cli.config.project import ProjectConfig, project_config
 from llm_tool_cli.config.runtime import RuntimeConfig, runtime_config
@@ -17,17 +15,16 @@ from llm_tool_cli.core import errors as shared_errors
 from llm_tool_cli.core import settings
 from llm_tool_cli.core.errors import EnvironmentErrors
 from llm_tool_cli.core.result import Err, Result, UnwrapErrError, UnwrapError
+from llm_tool_cli.output import StreamOutputEmitter
 from llm_tool_cli.paths import PathInput, ProjectConfigPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
 from llm_tool_cli.protocol import Protocol
-from llm_tool_cli.protocol.logic_cells.base import LogicCell
 from llm_tool_cli.protocol.tests.helpers import assert_error_cells, cell_payloads
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
 
 from depmesh.cli.application import app, main
 from depmesh.core import errors as core_errors
-from depmesh.core import warnings
 from depmesh.discovery import errors as discovery_errors
 from depmesh.domain.entities import RelationId
 from depmesh.runtime import commands
@@ -99,15 +96,15 @@ class TestCommandContext:
         if command in ("deps", "relations"):
             write_project(tmp_path)
         observed: list[ProjectConfig | None] = []
-        write = CommandContext.write_cells
+        write = StreamOutputEmitter.flush
 
-        def observe(context: CommandContext, cells: Iterable[LogicCell], *, stderr: bool = False) -> None:
+        def observe(emitter: StreamOutputEmitter) -> None:
             assert settings.static_config.get().tool_label == "DEPMESH"
             assert runtime_config.get().protocol == Protocol.automation
             observed.append(project_config.get() if project_config.is_set() else None)
-            write(context, cells, stderr=stderr)
+            write(emitter)
 
-        mocker.patch.object(CommandContext, "write_cells", autospec=True, side_effect=observe)
+        mocker.patch.object(StreamOutputEmitter, "flush", autospec=True, side_effect=observe)
         arguments = ["--config", str(path), "-p", "automation", command]
         if command == "deps":
             arguments.append("@/src/a.py")
@@ -157,11 +154,11 @@ class TestCommandContext:
             assert records[0]["code"] == code
             assert records[0]["path"] == str(tmp_path)
         else:
-            assert not result.stdout
+            assert not result.stderr
             separator = " = " if protocol == "human" else "="
-            assert f"kind{separator}error\n" in result.stderr
-            assert f"code{separator}{code}\n" in result.stderr
-            assert f"path{separator}{tmp_path}\n" in result.stderr
+            assert f"kind{separator}error\n" in result.stdout
+            assert f"code{separator}{code}\n" in result.stdout
+            assert f"path{separator}{tmp_path}\n" in result.stdout
 
     @pytest.mark.parametrize("command", ["skill", "version"])
     def test_config_path_unused_directory_does_not_prevent_execution(self, tmp_path: Path, command: str) -> None:
@@ -180,7 +177,6 @@ class TestCommandContext:
         runner = CliRunner()
 
         for name in ["first.toml", "second.toml"]:
-            warnings.clear()
             result = runner.invoke(app, ["--config", name, "-p", "automation", "relations"])
 
             assert result.exit_code == 2
@@ -189,7 +185,6 @@ class TestCommandContext:
             assert record["code"] == "config_unreadable"
             assert record["path"] == str(tmp_path / name)
 
-        warnings.clear()
         result = runner.invoke(app, ["relations"])
 
         assert result.exit_code == 0
@@ -205,7 +200,6 @@ class TestCommandContext:
             (["skill"], "--DEPMESH-CELL ", "kind=skill\n"),
         ]
         for arguments, prefix, kind in invocations:
-            warnings.clear()
             result = CliRunner().invoke(app, arguments)
 
             assert result.exit_code == 0
@@ -237,7 +231,7 @@ class TestCommandContext:
         assert not result.stderr
 
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
-    def test_error_cells_include_guidance_and_keep_stream_policy(self, mocker: MockerFixture, protocol: str) -> None:
+    def test_error_cells_include_guidance_on_stdout(self, mocker: MockerFixture, protocol: str) -> None:
         failure = ProjectFailure(
             message="Problem with {error.context}.", context="project", ways_to_fix=["Check {error.context}."]
         )
@@ -257,8 +251,8 @@ class TestCommandContext:
                 }
             ]
         else:
-            assert not result.stdout
-            assert "Problem with project.\nWay to fix: Check project." in result.stderr
+            assert not result.stderr
+            assert "Problem with project.\nWay to fix: Check project." in result.stdout
 
     @pytest.mark.parametrize("unwrap_in_helper", [False, True])
     @pytest.mark.parametrize("reverse", [False, True])
@@ -291,13 +285,13 @@ class TestCommandContext:
             assert_error_cells(json_lines(result.stdout), failures)
             assert not result.stderr
         else:
-            assert not result.stdout
+            assert not result.stderr
             separator = " = " if protocol == "human" else "="
             codes = [f"code{separator}{error.code}\n" for error in failures]
-            assert all(code in result.stderr for code in codes)
-            positions = [result.stderr.index(code) for code in codes]
+            assert all(code in result.stdout for code in codes)
+            positions = [result.stdout.index(code) for code in codes]
             assert positions == sorted(positions)
-            assert "cli_exit_code" not in result.stderr
+            assert "cli_exit_code" not in result.stdout
 
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
     @pytest.mark.parametrize(
@@ -338,13 +332,13 @@ class TestCommandContext:
             assert_error_cells(json_lines(result.stdout), [error])
             assert result.stderr == ""
         else:
-            assert result.stdout == ""
-            assert error.format_message() in result.stderr
+            assert result.stderr == ""
+            assert error.format_message() in result.stdout
             prefix = "----- DEPMESH CELL " if protocol == "human" else "--DEPMESH-CELL "
-            assert result.stderr.startswith(prefix)
+            assert result.stdout.startswith(prefix)
             separator = " = " if protocol == "human" else "="
-            assert f"kind{separator}error\n" in result.stderr
-            assert f"code{separator}{error.code}\n" in result.stderr
+            assert f"kind{separator}error\n" in result.stdout
+            assert f"code{separator}{error.code}\n" in result.stdout
 
     @pytest.mark.parametrize(
         "original",
@@ -403,15 +397,15 @@ class TestApp:
         result = CliRunner().invoke(app, [option, protocol, "dependencies", "./src/a.py"])
 
         assert result.exit_code == 1
-        assert result.stderr.startswith("--DEPMESH-CELL ")
-        assert result.stderr.count(" BEGIN--\n") == 1
-        assert "kind=error\n" in result.stderr
-        assert "code=invalid_arguments\n" in result.stderr
-        assert protocol in result.stderr
-        assert "human" in result.stderr
-        assert "llm" in result.stderr
-        assert "automation" in result.stderr
-        assert result.stdout == ""
+        assert result.stdout.startswith("--DEPMESH-CELL ")
+        assert result.stdout.count(" BEGIN--\n") == 1
+        assert "kind=error\n" in result.stdout
+        assert "code=invalid_arguments\n" in result.stdout
+        assert protocol in result.stdout
+        assert "human" in result.stdout
+        assert "llm" in result.stdout
+        assert "automation" in result.stdout
+        assert result.stderr == ""
 
 
 class TestDependencies:
@@ -461,7 +455,6 @@ class TestDependencies:
         arguments = ["-p", protocol, "dependencies", "@/src/b.py", "@/src/a.py", "@/src/a.py"]
 
         first = CliRunner().invoke(app, arguments)
-        warnings.clear()
         second = CliRunner().invoke(app, arguments)
 
         assert first.exit_code == second.exit_code == 0
@@ -498,7 +491,6 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         monkeypatch.chdir(tmp_path)
 
         result = CliRunner().invoke(app, ["-p", protocol, "dependencies", "@/a.py"])
-        warnings.clear()
         following = CliRunner().invoke(app, ["-p", protocol, "dependencies", "@/other.py"])
 
         assert result.exit_code == following.exit_code == 0
@@ -608,8 +600,8 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
             assert "cause" not in diagnostic
             assert not result.stderr
         else:
-            assert not result.stdout
-            assert str(target) in result.stderr
+            assert not result.stderr
+            assert str(target) in result.stdout
 
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
     def test_root_resolution_failure_uses_shared_diagnostic(
@@ -631,8 +623,8 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
             assert_error_cells(json_lines(result.stdout), [error])
             assert not result.stderr
         else:
-            assert not result.stdout
-            assert error.format_message() in result.stderr
+            assert not result.stderr
+            assert error.format_message() in result.stdout
 
     @pytest.mark.parametrize("explicit", [False, True])
     def test_config_symlink_selects_expected_root(
@@ -798,8 +790,8 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
             }
             assert result.stderr == ""
         else:
-            assert reason in result.stderr
-            assert result.stdout == ""
+            assert reason in result.stdout
+            assert result.stderr == ""
 
     def test_human_query_output_merges_multiple_input_artifacts(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -935,8 +927,8 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         result = CliRunner().invoke(app, ["--config", str(tmp_path / "missing.toml"), "dependencies", "./src/a.py"])
 
         assert result.exit_code == 2
-        assert "missing.toml" in result.stderr
-        assert result.stdout == ""
+        assert "missing.toml" in result.stdout
+        assert result.stderr == ""
 
     def test_query_error_exit_code(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)
@@ -1178,8 +1170,8 @@ class TestRelations:
         result = CliRunner().invoke(app, ["--config", str(tmp_path / "missing.toml"), "relations"])
 
         assert result.exit_code == 2
-        assert "missing.toml" in result.stderr
-        assert result.stdout == ""
+        assert "missing.toml" in result.stdout
+        assert result.stderr == ""
 
 
 class TestSkill:
@@ -1219,11 +1211,11 @@ class TestSkill:
             assert record["content"]
             assert result.stderr == ""
         else:
-            assert result.stdout == ""
+            assert result.stderr == ""
             separator = "=" if protocol == "llm" else " = "
-            assert f"kind{separator}error\n" in result.stderr
-            assert f"code{separator}skill_unreadable\n" in result.stderr
-            assert f"document{separator}usage\n" in result.stderr
+            assert f"kind{separator}error\n" in result.stdout
+            assert f"code{separator}skill_unreadable\n" in result.stdout
+            assert f"document{separator}usage\n" in result.stdout
 
     def test_skill_defaults_to_llm_protocol(self) -> None:
         result = CliRunner().invoke(app, ["skill"])
@@ -1359,12 +1351,12 @@ class TestInit:
             assert record["reason"]
             assert record["content"]
         else:
-            assert not result.stdout
+            assert not result.stderr
             separator = " = " if protocol == "human" else "="
-            assert f"kind{separator}error\n" in result.stderr
-            assert f"code{separator}config_template_unreadable\n" in result.stderr
-            assert f"path{separator}{config_path}\n" in result.stderr
-            assert f"template{separator}base_config.toml\n" in result.stderr
+            assert f"kind{separator}error\n" in result.stdout
+            assert f"code{separator}config_template_unreadable\n" in result.stdout
+            assert f"path{separator}{config_path}\n" in result.stdout
+            assert f"template{separator}base_config.toml\n" in result.stdout
 
     @pytest.mark.parametrize("protocol", ["llm", "automation"])
     def test_success_respects_protocol(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, protocol: str) -> None:
@@ -1435,8 +1427,8 @@ class TestInit:
         result = CliRunner().invoke(app, ["init"])
 
         assert result.exit_code == 2
-        assert "File exists" in result.stderr
-        assert result.stdout == ""
+        assert "File exists" in result.stdout
+        assert result.stderr == ""
         assert config_path.read_text(encoding="utf-8") == "version = 1\n"
 
 
@@ -1511,6 +1503,6 @@ class TestMain:
 
             assert caught.value.code == 1
             captured = capsys.readouterr()
-            assert not captured.out
-            assert captured.err.startswith("--DEPMESH-CELL ")
-            assert "code=invalid_arguments\n" in captured.err
+            assert not captured.err
+            assert captured.out.startswith("--DEPMESH-CELL ")
+            assert "code=invalid_arguments\n" in captured.out

@@ -1,3 +1,3 @@
-from depmesh.core.tests.fixtures import isolated_warnings
+from depmesh.core.tests.fixtures import collected_output
 
-__all__ = ["isolated_warnings"]
+__all__ = ["collected_output"]

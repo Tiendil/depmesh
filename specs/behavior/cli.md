@@ -63,13 +63,13 @@ In the initial implementation this is expected to be a file path, but the CLI MU
 - ISBN values.
 - other identifiers.
 
-The CLI MUST write requested command output to stdout.
+The CLI MUST write all cells, including results, journal events, warnings, and environment errors, to stdout in every protocol.
 
-Environment-error diagnostics MUST use the stream selection managed by `llm_tool_cli`. Other diagnostics that are not part of the requested output MUST be written to stderr.
+Environment-error diagnostics MUST use stdout delivery managed by `llm_tool_cli`. Framework-native parsing diagnostics MAY retain the framework's standard stderr behavior.
 
 For commands that emit cells or fatal errors, `automation` stdout MUST contain only valid JSON Lines records. Help retains its plain-text contract.
 
-Diagnostics written to stderr MAY be plain text and MAY be non-JSONL, including when `--protocol automation` was requested.
+Framework-native diagnostics written to stderr MAY be plain text and MAY be non-JSONL, including when `--protocol automation` was requested.
 
 Cell content, metadata, and output ordering MUST be deterministic for the same:
 
@@ -102,7 +102,9 @@ Label storage, initialization checks, and label selection for cell rendering MUS
 
 ## Output behavior
 
-The CLI MUST use the cell model, cell and environment-error construction and rendering, and text writing provided by `llm_tool_cli.protocol`. Text cell framing MUST use the label `DEPMESH`.
+The CLI MUST use the cell model, cell and environment-error construction, and cell formatting provided by `llm_tool_cli.protocol`.
+The CLI MUST submit cells directly to the active emitter in `llm_tool_cli.output`, which owns batch rendering and text writing.
+Text cell framing MUST use the label `DEPMESH`.
 
 Depmesh MUST own its logic-cell payloads and domain-specific projections, including dependency grouping, relation descriptions, and record metadata. Shared logic-cell projection and rendering MUST manage generic cell framing, sequence rendering contexts, identifier generation, and serialization.
 
@@ -130,7 +132,8 @@ When multiple input artifacts have the same dependency for the same relation, de
 
 Dependency query output MUST NOT group dependencies by input artifact. Users and agents that need per-artifact dependencies SHOULD call `depmesh` separately for each artifact.
 
-Output SHOULD include non-fatal problems discovered while processing the request.
+Output MUST include collected non-fatal problems after ordinary results, or after error diagnostics when the command fails.
+Ordinary output MUST remain buffered until successful command completion and MUST be discarded on failure.
 
 Non-fatal problems SHOULD be represented as warnings.
 
@@ -223,9 +226,9 @@ Additional fields MAY be added in future versions. Consumers MUST ignore unknown
 
 ## Global options
 
-The CLI MUST use global-option registration and parsing, context-scoped runtime configuration, and command-context protocol selection and cell writing managed by `llm_tool_cli`.
+The CLI MUST use global-option registration and parsing, context-scoped runtime configuration, command-context protocol selection and output scope setup, and shared emitter delivery managed by `llm_tool_cli`.
 Depmesh MUST register its commands on the application provided by `llm_tool_cli`.
-Workspace construction, warning lifecycle, and dependency-query behavior MUST remain Depmesh-owned; project loading and its scope MUST be shared.
+Workspace construction and dependency-query behavior MUST remain Depmesh-owned; project loading, scoped output delivery, and warning lifecycle MUST be shared.
 Static configuration MUST own application identity and the default configuration filename before parsing, runtime configuration MUST own the effective protocol, and project configuration MUST own the active config path and derived project directory.
 All three configurations MUST be immutable and complete when bound.
 Project setup MUST finish before query execution; its binding MUST remain available through output and be restored when the command context closes.
@@ -601,7 +604,7 @@ Example output:
 ## Skill Command
 
 The CLI MUST register the skill command managed by `llm_tool_cli`, supplying the `depmesh.skills` resource package and Depmesh's document definitions.
-The library owns argument selection and validation, defaults, help and completion, configuration independence, cell output, and failure streams and exit statuses.
+The library owns argument selection and validation, defaults, help and completion, configuration independence, cell output, and failure delivery and exit statuses.
 
 Depmesh MUST provide these documents:
 
@@ -647,7 +650,7 @@ The library owns installed version lookup, help, configuration independence, pro
 Skill- and version-command failure handling MUST be managed by `llm_tool_cli`.
 The remaining execution policies apply to tool-owned commands.
 
-The CLI MUST use command error handling and explicit error reporting managed by `llm_tool_cli`, including error cells, stream selection, diagnostic ordering, exit statuses, and exception propagation.
+The CLI MUST use command error handling and explicit error reporting managed by `llm_tool_cli`, including error cells on stdout, diagnostic ordering, exit statuses, and exception propagation.
 Depmesh MUST retain workspace construction and command-specific behavior.
 
 Configuration selection, loading, and creation MUST propagate the diagnostics provided by `llm_tool_cli` without local translation.

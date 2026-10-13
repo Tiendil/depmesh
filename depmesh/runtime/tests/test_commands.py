@@ -6,14 +6,17 @@ from llm_tool_cli.cli.errors import InvalidArguments
 from llm_tool_cli.config import load_config
 from llm_tool_cli.config.project import ProjectConfig, project_config
 from llm_tool_cli.core.result import Err
+from llm_tool_cli.output import output
+from llm_tool_cli.output.tests.helpers import CollectingEmitter, warning_messages
 from llm_tool_cli.paths import PathInput, ProjectConfigPath
 from llm_tool_cli.paths.errors import InvalidProjectPath, PathResolutionFailed
 from llm_tool_cli.protocol import Protocol
+from llm_tool_cli.protocol.logic_cells.warning import WarningCell
 from pytest_mock import MockerFixture
 
-from depmesh.core import warnings
 from depmesh.discovery.errors import UnknownRelationFilter
 from depmesh.domain.entities import ArtifactId, Dependency, RelationId
+from depmesh.protocol.cells import DependenciesCell
 from depmesh.runtime import commands
 from depmesh.workspace import Config, Workspace, construct_workspace
 
@@ -50,17 +53,23 @@ def workspace(project: PathInput) -> Iterator[Workspace]:
 
 class TestDependencies:
     def test_merges_inputs_into_complete_cell_without_cli(
-        self, project: PathInput, workspace: Workspace, capsys: pytest.CaptureFixture[str]
+        self,
+        collected_output: CollectingEmitter,
+        project: PathInput,
+        workspace: Workspace,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         cwd = project / "src"
         cwd.mkdir()
 
-        cell = commands.dependencies(
+        commands.dependencies(
             [ArtifactId("b.py"), ArtifactId("@/src/a.py"), ArtifactId("./a.py")],
             [],
             workspace=workspace,
             cwd=PathInput(cwd),
         ).unwrap()
+        cell = collected_output.cells[-1]
+        assert isinstance(cell, DependenciesCell)
 
         assert cell.result.dependencies == (
             Dependency(relation=RelationId("docs"), dependency=ArtifactId("@/README.md")),
@@ -72,61 +81,63 @@ class TestDependencies:
             ("tests", "Related tests."),
             ("docs", None),
         ]
-        assert cell.warnings == []
         assert capsys.readouterr() == ("", "")
 
-    def test_filters_relations(self, project: PathInput, workspace: Workspace) -> None:
-        cell = commands.dependencies(
+    def test_filters_relations(
+        self, collected_output: CollectingEmitter, project: PathInput, workspace: Workspace
+    ) -> None:
+        commands.dependencies(
             [ArtifactId("@/src/a.py")], [RelationId("docs"), RelationId("docs")], workspace=workspace, cwd=project
         ).unwrap()
+        cell = collected_output.cells[-1]
+        assert isinstance(cell, DependenciesCell)
 
         assert cell.result.dependencies == (
             Dependency(relation=RelationId("docs"), dependency=ArtifactId("@/README.md")),
         )
 
     @pytest.mark.parametrize("artifacts", [[], [ArtifactId("@/unmatched")]])
-    def test_empty_result(self, project: PathInput, workspace: Workspace, artifacts: list[ArtifactId]) -> None:
-        cell = commands.dependencies(artifacts, [], workspace=workspace, cwd=project).unwrap()
+    def test_empty_result(
+        self,
+        collected_output: CollectingEmitter,
+        project: PathInput,
+        workspace: Workspace,
+        artifacts: list[ArtifactId],
+    ) -> None:
+        commands.dependencies(artifacts, [], workspace=workspace, cwd=project).unwrap()
+        cell = collected_output.cells[-1]
+        assert isinstance(cell, DependenciesCell)
 
         assert cell.result.dependencies == ()
-        assert cell.warnings == []
         assert cell.render(Protocol.automation) == []
 
-    def test_snapshots_warnings_after_query(self, project: PathInput, workspace: Workspace) -> None:
+    def test_emits_warnings_during_query_and_results_afterwards(
+        self, collected_output: CollectingEmitter, project: PathInput, workspace: Workspace
+    ) -> None:
         with (project / "depmesh.toml").open("a", encoding="utf-8") as config:
             config.write(
                 '\n[[rules]]\nrelation = "tests"\n'
                 'input = { type = "glob", pattern = "@/src/*.py" }\n'
                 'output = { type = "files", pattern = "@/../outside" }\n'
             )
-        warnings.add("earlier warning")
+        output.get().emit([WarningCell(message="earlier warning")]).unwrap()
         workspace = construct_workspace(load_config(project / "depmesh.toml", Config).unwrap())
+        commands.dependencies([ArtifactId("@/src/a.py")], [], workspace=workspace, cwd=project).unwrap()
+        assert warning_messages()[0] == "earlier warning"
+        assert "outside" in warning_messages()[1]
+        assert len(collected_output.cells) == 3
+        assert isinstance(collected_output.cells[-1], DependenciesCell)
 
-        cell = commands.dependencies([ArtifactId("@/src/a.py")], [], workspace=workspace, cwd=project).unwrap()
-
-        assert len(cell.result.dependencies) == 3
-        assert len(cell.warnings) == 2
-        assert cell.warnings[0] == "earlier warning"
-        assert "outside" in cell.warnings[1]
-        assert warnings.read() == cell.warnings
-        snapshot = list(cell.warnings)
-        warnings.clear()
-        warnings.add("later warning")
-        assert cell.warnings == snapshot
-        assert [output.meta["type"] for output in cell.render(Protocol.automation)] == [
-            "dependency",
-            "dependency",
-            "dependency",
-            "warning",
-            "warning",
-        ]
-
-    def test_unknown_relation_precedes_input_validation(self, project: PathInput, workspace: Workspace) -> None:
+    def test_unknown_relation_precedes_input_validation(
+        self, collected_output: CollectingEmitter, project: PathInput, workspace: Workspace
+    ) -> None:
         assert commands.dependencies(
             [ArtifactId("@/../outside")], [RelationId("unknown")], workspace=workspace, cwd=project
         ).unwrap_err() == [UnknownRelationFilter(relation=RelationId("unknown"))]
 
-    def test_invalid_input_becomes_argument_error(self, project: PathInput, workspace: Workspace) -> None:
+    def test_invalid_input_becomes_argument_error(
+        self, collected_output: CollectingEmitter, project: PathInput, workspace: Workspace
+    ) -> None:
         failures = commands.dependencies(
             [ArtifactId("@/../outside")], [], workspace=workspace, cwd=project
         ).unwrap_err()
@@ -135,7 +146,7 @@ class TestDependencies:
         assert isinstance(failures[0], InvalidArguments)
 
     def test_resolution_failure_is_preserved(
-        self, project: PathInput, workspace: Workspace, mocker: MockerFixture
+        self, collected_output: CollectingEmitter, project: PathInput, workspace: Workspace, mocker: MockerFixture
     ) -> None:
         error = PathResolutionFailed(path=str(project), reason="denied")
         mocker.patch.object(commands, "resolve_project_root", return_value=Err([error]))
@@ -143,7 +154,7 @@ class TestDependencies:
         assert commands.dependencies([ArtifactId("@/a")], [], workspace=workspace, cwd=project).unwrap_err() == [error]
 
     def test_input_resolution_failure_is_preserved(
-        self, project: PathInput, workspace: Workspace, mocker: MockerFixture
+        self, collected_output: CollectingEmitter, project: PathInput, workspace: Workspace, mocker: MockerFixture
     ) -> None:
         error = PathResolutionFailed(path="~/a.py", reason="home unavailable")
         mocker.patch.object(commands, "normalize_input_artifacts", return_value=Err([error]))
@@ -153,7 +164,7 @@ class TestDependencies:
         ]
 
     def test_query_failure_is_not_an_argument_error(
-        self, project: PathInput, workspace: Workspace, mocker: MockerFixture
+        self, collected_output: CollectingEmitter, project: PathInput, workspace: Workspace, mocker: MockerFixture
     ) -> None:
         error = InvalidProjectPath(path="@/../dependency")
         mocker.patch.object(commands, "query_dependencies", return_value=Err([error]))
@@ -164,14 +175,18 @@ class TestDependencies:
 
 
 class TestRelations:
-    def test_returns_ordered_cells(self, workspace: Workspace, capsys: pytest.CaptureFixture[str]) -> None:
-        cells = commands.relations(workspace=workspace)
+    def test_returns_ordered_cells(
+        self, collected_output: CollectingEmitter, workspace: Workspace, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        commands.relations(workspace=workspace).unwrap()
+        cells = collected_output.cells
 
-        assert [cell.meta for cell in cells] == [
+        assert [cell.model_dump()["meta"] for cell in cells] == [
             {"type": "relation", "relation": "docs"},
             {"type": "relation", "relation": "tests", "description": "Related tests."},
         ]
         assert capsys.readouterr() == ("", "")
 
-    def test_empty_configuration(self) -> None:
-        assert commands.relations(workspace=Workspace()) == []
+    def test_empty_configuration(self, collected_output: CollectingEmitter) -> None:
+        commands.relations(workspace=Workspace()).unwrap()
+        assert collected_output.cells == []

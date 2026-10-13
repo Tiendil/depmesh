@@ -12,7 +12,6 @@ from depmesh.domain.entities import Relation
 class DependenciesCell(LogicCell):
     result: QueryResult
     relations: tuple[Relation, ...]
-    warnings: list[str]
 
     def render_human(self) -> list[OutputCell]:
         return self._render_text(HumanOutputCell)
@@ -34,7 +33,7 @@ class DependenciesCell(LogicCell):
                 )
             )
 
-        return [*cells, *self._warning_cells(cell_type)]
+        return cells
 
     def render_automation(self) -> list[OutputCell]:
         cells: list[OutputCell] = [
@@ -44,10 +43,7 @@ class DependenciesCell(LogicCell):
             for relation_id, dependencies in self.result.grouped().items()
             for dependency in dependencies
         ]
-        return [*cells, *self._warning_cells(AutomationOutputCell)]
-
-    def _warning_cells(self, cell_type: type[OutputCell]) -> list[OutputCell]:
-        return [cell_type.build_meta(kind="warning", type="warning", message=warning) for warning in self.warnings]
+        return cells
 
 
 def relation_cells(relations: tuple[Relation, ...]) -> list[ContentCell]:

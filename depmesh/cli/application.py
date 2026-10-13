@@ -13,6 +13,7 @@ from llm_tool_cli.cli.handling import handle_command_errors
 from llm_tool_cli.config import initialize_project, load_project
 from llm_tool_cli.config.project import project_config
 from llm_tool_cli.core import settings
+from llm_tool_cli.output import output
 from llm_tool_cli.paths import PathInput
 from llm_tool_cli.protocol.cell_shortcuts import configuration_created
 
@@ -42,13 +43,12 @@ def dependencies(
         cwd = PathInput(Path.cwd())
         config = context.with_resource(load_project(Config, cwd=cwd, path=command.config_input)).unwrap()
         workspace = construct_workspace(config)
-        cell = commands.dependencies(
+        commands.dependencies(
             artifacts or [],
             relation or [],
             workspace=workspace,
             cwd=cwd,
         ).unwrap()
-        command.write_cells([cell])
 
 
 @app.command("relations")
@@ -59,8 +59,7 @@ def relations(context: typer.Context) -> None:
             load_project(Config, cwd=PathInput(Path.cwd()), path=command.config_input)
         ).unwrap()
         workspace = construct_workspace(config)
-        cells = commands.relations(workspace=workspace)
-        command.write_cells(cells)
+        commands.relations(workspace=workspace).unwrap()
 
 
 @app.command("init")
@@ -75,7 +74,7 @@ def init(context: typer.Context) -> None:
                 path=command.config_input,
             )
         ).unwrap()
-        command.write_cells([configuration_created(project_config.get().config_path)])
+        output.get().emit([configuration_created(project_config.get().config_path)]).unwrap()
 
 
 @contextmanager

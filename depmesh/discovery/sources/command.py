@@ -3,9 +3,10 @@ from __future__ import annotations
 import subprocess  # noqa: S404
 
 from llm_tool_cli.core.result import Err, Ok, Result, unwrap_to_error
+from llm_tool_cli.output import output
 from llm_tool_cli.paths import normalize_path
+from llm_tool_cli.protocol.logic_cells.warning import WarningCell
 
-from depmesh.core import warnings
 from depmesh.discovery import errors
 from depmesh.discovery.artifacts import EvaluationContext
 from depmesh.discovery.sources.base import ArtifactSourceBase
@@ -42,12 +43,19 @@ class CommandSource(ArtifactSourceBase):
             )
 
         if completed.stderr.strip():
-            warnings.add(f"relation `{context.relation_id}`: command stderr: {completed.stderr.strip()}")
+            output.get().emit(
+                [WarningCell(message=f"relation `{context.relation_id}`: command stderr: {completed.stderr.strip()}")]
+            ).unwrap()
 
         if completed.returncode != 0:
-            warnings.add(
-                f"relation `{context.relation_id}`: command exited with status {completed.returncode}: {command}"
-            )
+            output.get().emit(
+                [
+                    WarningCell(
+                        message=f"relation `{context.relation_id}`: "
+                        f"command exited with status {completed.returncode}: {command}"
+                    )
+                ]
+            ).unwrap()
 
         return Ok(
             [

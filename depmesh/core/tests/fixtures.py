@@ -1,14 +1,12 @@
 from collections.abc import Iterator
 
 import pytest
-
-from depmesh.core import warnings
+from llm_tool_cli.output import output
+from llm_tool_cli.output.tests.helpers import CollectingEmitter
 
 
 @pytest.fixture(autouse=True)
-def isolated_warnings() -> Iterator[None]:
-    warnings.clear()
-    try:
-        yield
-    finally:
-        warnings.clear()
+def collected_output() -> Iterator[CollectingEmitter]:
+    emitter = CollectingEmitter()
+    with output.scope(emitter):
+        yield emitter

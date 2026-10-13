@@ -198,19 +198,15 @@ CLI tests SHOULD verify that unmapped project and shared environment errors use 
 
 CLI tests for the automation protocol SHOULD verify that fatal errors are rendered as `error` records when possible.
 
-Common automation payload extraction and error-cell assertions are managed by `llm_tool_cli`; tests SHOULD use its shared helpers, keeping JSON Lines parsing, record filtering, and Depmesh's stream and exit policies local.
+Common automation payload extraction and error-cell assertions are managed by `llm_tool_cli`; tests SHOULD use its shared helpers, keeping JSON Lines parsing, record filtering, stdout integration, and Depmesh's exit policies local.
 
-Warning tests SHOULD verify that non-fatal problems add warning strings to the core warning storage.
-
-Warning tests SHOULD verify that the core warning storage preserves warning insertion order.
-
-A function-scoped autouse fixture MUST clear the core warning storage before and after every test, including when a test fails.
-
-Tests that simulate multiple independent CLI invocations in one process MUST explicitly clear the core warning storage between invocations.
+Warning tests SHOULD verify that non-fatal problems submit shared warning cells in insertion order.
+A function-scoped fixture MUST bind a fresh collecting output emitter for tests exercising output-producing domain operations and restore the previous binding on exit.
+CLI tests MUST exercise shared command setup and finalization without resetting application buffers themselves.
 
 CLI warning tests SHOULD verify that warnings do not cause a non-zero exit code when the command otherwise succeeds.
 
-CLI warning tests SHOULD verify that stored warning strings are rendered according to the selected output protocol.
+CLI warning tests SHOULD verify that collected warnings are rendered according to the selected output protocol, including after expected failures.
 
 ## Behavior coverage
 

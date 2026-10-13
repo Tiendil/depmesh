@@ -149,12 +149,13 @@ CLI entities MUST NOT perform command execution.
 ## Command results
 
 Logic cells MUST be the primary interface for successful domain results passed to the CLI layer.
-Command-facing runtime operations MUST return `LogicCell` subclasses or ordered collections of logic cells, wrapped in `Result` when the operation can fail.
+Command-facing domain and runtime operations MAY submit logic cells directly to the shared scoped output emitter and return `Result[None]` when they have no other useful result.
+Operations that compute reusable values MAY retain typed return values, including cells and their ordered collections.
 Cells MAY retain typed domain entities needed for projection; the CLI MUST NOT inspect those entities or assemble domain output payloads from internal results.
 Internal discovery and workspace operations MAY continue to exchange ordinary typed entities.
 
 Cells MUST carry the information needed for their projections without reading runtime state or writing output.
-The CLI MUST select the protocol and stream and pass complete cell batches to shared rendering.
+CLI initialization MUST establish output delivery and the effective protocol; the shared emitter MUST own buffering and delivery of submitted cells.
 Expected failures MUST remain structured errors in failed results until the CLI error-handling boundary.
 Shared CLI utility commands and help retain their specified output contracts.
 

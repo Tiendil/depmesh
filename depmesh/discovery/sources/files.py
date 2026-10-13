@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
+from llm_tool_cli.output import output
 from llm_tool_cli.paths import FileGlobPattern, enumerate_files
 from llm_tool_cli.paths.errors import InvalidProjectPath
+from llm_tool_cli.protocol.logic_cells.warning import WarningCell
 
-from depmesh.core import warnings
 from depmesh.discovery.artifacts import EvaluationContext
 from depmesh.discovery.sources.base import ArtifactSourceBase
 from depmesh.discovery.sources.entities import FilesSourceConfig
@@ -24,7 +25,13 @@ class FilesSource(ArtifactSourceBase):
         )
         files = enumerate_files(context.root, pattern)
         if files.is_err(InvalidProjectPath):
-            warnings.add(f"relation `{context.relation_id}`: skipped invalid files source pattern `{pattern}`")
+            output.get().emit(
+                [
+                    WarningCell(
+                        message=f"relation `{context.relation_id}`: skipped invalid files source pattern `{pattern}`"
+                    )
+                ]
+            ).unwrap()
             return Ok([])
         return Ok([ArtifactId(path) for path in files.unwrap()])
 

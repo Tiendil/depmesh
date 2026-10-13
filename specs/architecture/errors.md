@@ -36,7 +36,7 @@ Operations with expected failures MUST return a result. Operations without expec
 
 Predicate matching and propagation of its evaluation exceptions are exempt from this specification's result-conversion requirements. Matching MUST return captures for a match or `None` for a non-match, and MAY raise evaluation failures. Composite predicates MUST propagate those failures without treating them as non-matches. Result-returning callers MUST recover error values from result-based helpers within their existing propagation scope; unrelated matching exceptions MAY propagate unchanged.
 
-Non-fatal problems MUST be represented as warning strings, not as exceptions, when processing can continue and produce useful output.
+Non-fatal problems MUST be represented as shared warning logic cells when processing can continue and produce useful output.
 
 Lower-level modules MUST NOT print errors, print warnings, write JSON Lines records, or terminate the process.
 
@@ -46,8 +46,8 @@ The CLI layer MUST be responsible for converting fatal project errors into:
 - stderr messages.
 - output protocol records.
 
-Command-facing runtime operations MUST capture non-fatal warnings in their result logic cells.
-Warning projection MUST belong to those cells; the CLI MUST write them through shared rendering.
+Warning producers MUST submit shared warning cells to the scoped output emitter.
+Runtime result cells MUST NOT duplicate warning storage or snapshots.
 
 Environment errors MUST expose stable error codes.
 
@@ -114,33 +114,11 @@ Warnings MUST be used only when processing can continue and the command can stil
 
 Warnings MUST NOT be used for invalid command line arguments, invalid configuration that prevents loading, or dependency query failures that prevent producing a valid query result.
 
-Warnings are plain strings stored in the core warning storage.
-
-Warnings are not exceptions, Pydantic entities, or Python `warnings` module warnings.
-
-The core module MUST provide singleton warning storage.
-
-The core warning storage MUST be accessible to all project modules.
-
-The core warning storage MUST store warnings as strings.
-
-The core warning storage MUST preserve warning insertion order.
-
-The core warning storage MUST provide operations to:
-
-- add a warning string.
-- read currently stored warning strings.
-- clear stored warning strings.
-
-Code that adds warnings SHOULD include enough context in the string for the CLI output to be useful.
-
-Each CLI invocation runs in a separate process. Warning storage MUST start empty with the process; the CLI MUST NOT reset it for test isolation.
-
-The runtime MUST snapshot the core warning storage when constructing dependency-result logic cells after query evaluation.
-Later changes to warning storage MUST NOT change an already returned cell.
-
-Dependency-result logic cells MUST project their captured warnings after dependency output in warning insertion order.
-The CLI MUST render these cells according to the selected output protocol without reading warning storage itself.
+Warnings MUST use shared warning cells submitted to the independently scoped output emitter.
+The emitter MUST preserve insertion order without deduplication and buffer warnings until command finalization.
+Warnings MUST follow ordinary results on success and error diagnostics on expected failure.
+Each command MUST receive fresh output buffers through shared command setup.
+Depmesh MUST NOT maintain singleton warning storage or attach warning snapshots to dependency-result cells.
 
 Examples of warning-producing situations include:
 
@@ -152,13 +130,13 @@ Examples of warning-producing situations include:
 
 Pydantic validation errors MUST NOT be exposed directly across high-level module boundaries for user-provided data.
 
-Modules that create Pydantic entities from external input MUST convert `pydantic.ValidationError` into returned environment errors or warning strings at the nearest exception boundary with useful context. Shared configuration loading MAY own this conversion.
+Modules that create Pydantic entities from external input MUST convert `pydantic.ValidationError` into returned environment errors or warning cells at the nearest exception boundary with useful context. Shared configuration loading MAY own this conversion.
 
 Pydantic validation errors MAY be used directly inside tests for low-level entity validation.
 
 ## Exception boundaries
 
-Modules that call external systems MUST convert relevant low-level failures into returned environment errors or warning strings at the boundary where context is still available.
+Modules that call external systems MUST convert relevant low-level failures into returned environment errors or warning cells at the boundary where context is still available.
 
 External systems include:
 
@@ -182,7 +160,7 @@ The CLI MUST delegate failed result unwrapping and explicit environment-error re
 
 Failure rendering and exit-code selection MUST be centralized at the CLI command boundary.
 Environment errors MUST remain structured values in the shared error logic cell until projection; `llm_tool_cli` MUST manage their content, corrective guidance, and metadata.
-The shared CLI handling boundary MUST manage diagnostic ordering, streams, exit-code aggregation, and process termination during Depmesh-owned command execution.
+The shared CLI handling boundary MUST manage diagnostic ordering, stdout delivery, exit-code aggregation, and process termination during Depmesh-owned command execution.
 Skill-command failure handling MUST be managed by `llm_tool_cli`.
 Protocol-option parsing MUST use the error presentation and exit behavior managed by `llm_tool_cli` before command execution.
 
@@ -194,4 +172,4 @@ When a fatal error is rendered for the automation protocol, the ordinary `error`
 
 When a warning is rendered for the automation protocol, the `warning` record MUST include the warning string as the `message` field.
 
-Human and LLM protocols SHOULD render warnings in the output; environment-error streams MUST follow the shared CLI handling contract.
+All protocols MUST deliver warning and environment-error cells to stdout through the shared CLI handling contract.

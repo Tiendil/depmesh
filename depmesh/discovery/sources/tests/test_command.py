@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from llm_tool_cli.output.tests.helpers import warning_messages
 from llm_tool_cli.paths import ProjectRootPath
 from llm_tool_cli.paths.errors import InvalidProjectPath
 
-from depmesh.core import warnings
 from depmesh.discovery import errors
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext
 from depmesh.discovery.sources.command import CommandSource, CommandSourceConfig
@@ -54,7 +54,7 @@ class TestCommandSource:
         context = EvaluationContext(root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={})
 
         assert source.evaluate(context).unwrap() == [ArtifactId("@/tests/test_a.py")]
-        assert warnings.read() == [
+        assert warning_messages() == [
             "relation `tests`: command stderr: diagnostic",
             "relation `tests`: command exited with status 7: "
             "printf '@/tests/test_a.py\\n'; printf 'diagnostic\\n' >&2; exit 7",

@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from llm_tool_cli.output.tests.helpers import warning_messages
 from llm_tool_cli.paths import PathInput, ProjectRootPath, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
 
-from depmesh.core import warnings
 from depmesh.discovery import errors
 from depmesh.discovery.entities import DependencyRule, DependencyRuleConfig, compile_dependency_rule
 from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
@@ -179,7 +179,7 @@ class TestQueryDependencies:
         ).unwrap()
 
         assert result.grouped() == {}
-        assert warnings.read() == []
+        assert warning_messages() == []
 
     def test_relation_filter_uses_explicit_relation_id(self, tmp_path: Path) -> None:
         touch(tmp_path / "src/a.py")

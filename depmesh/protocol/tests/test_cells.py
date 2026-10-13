@@ -29,7 +29,6 @@ class TestDependenciesCell:
         cell = DependenciesCell(
             result=QueryResult(dependencies=(dependency("tests", "@/a.py"),)),
             relations=(relation("tests", "Tests for café."),),
-            warnings=["first", "second"],
         )
         original = cell.model_dump()
 
@@ -52,9 +51,7 @@ class TestDependenciesCell:
             )
         )
 
-        cells = DependenciesCell(result=result, warnings=[], relations=(relation("tests", "Tests for café."),)).render(
-            protocol
-        )
+        cells = DependenciesCell(result=result, relations=(relation("tests", "Tests for café."),)).render(protocol)
 
         assert payloads(cells) == [
             {
@@ -81,7 +78,7 @@ class TestDependenciesCell:
             )
         )
 
-        cells = DependenciesCell(result=result, warnings=[], relations=()).render(Protocol.automation)
+        cells = DependenciesCell(result=result, relations=()).render(Protocol.automation)
 
         assert payloads(cells) == [
             {
@@ -106,33 +103,12 @@ class TestDependenciesCell:
 
     @pytest.mark.parametrize("protocol", list(Protocol))
     def test_render__empty_result(self, protocol: Protocol) -> None:
-        assert DependenciesCell(result=QueryResult(dependencies=()), warnings=[], relations=()).render(protocol) == []
-
-    @pytest.mark.parametrize("protocol", list(Protocol))
-    @pytest.mark.parametrize("with_dependencies", [False, True])
-    def test_render__warnings_follow_results_in_insertion_order(
-        self, protocol: Protocol, with_dependencies: bool
-    ) -> None:
-        result = QueryResult(dependencies=(dependency("tests", "@/a.py"),) if with_dependencies else ())
-
-        cells = DependenciesCell(result=result, warnings=["first", "café\nsecond"], relations=()).render(protocol)
-
-        assert len(cells) == 2 + int(with_dependencies)
-        assert payloads(cells[-2:]) == [
-            {"kind": "warning", "media_type": None, "content": None, "meta": {"type": "warning", "message": "first"}},
-            {
-                "kind": "warning",
-                "media_type": None,
-                "content": None,
-                "meta": {"type": "warning", "message": "café\nsecond"},
-            },
-        ]
+        assert DependenciesCell(result=QueryResult(dependencies=()), relations=()).render(protocol) == []
 
     @pytest.mark.parametrize("description", [None, "", "Artifacts tested by this artifact."])
     def test_render__optional_description(self, description: str | None) -> None:
         cells = DependenciesCell(
             result=QueryResult(dependencies=(dependency("tested_by", "@/a.py"),)),
-            warnings=[],
             relations=(relation("tested_by", description),),
         ).render(Protocol.llm)
 
@@ -147,18 +123,15 @@ class TestDependenciesCell:
             (Protocol.automation, AutomationOutputCell),
         ],
     )
-    def test_render__results_and_warnings_use_selected_output_type(
-        self, protocol: Protocol, cell_type: type[OutputCell]
-    ) -> None:
+    def test_render__results_use_selected_output_type(self, protocol: Protocol, cell_type: type[OutputCell]) -> None:
         cell = DependenciesCell(
             result=QueryResult(dependencies=(dependency("tests", "@/a.py"),)),
             relations=(),
-            warnings=["warning"],
         )
 
         outputs = cell.render(protocol)
 
-        assert len(outputs) == 2
+        assert len(outputs) == 1
         assert all(isinstance(output, cell_type) for output in outputs)
 
 

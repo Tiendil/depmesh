@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from llm_tool_cli.cli import errors as cli_errors
 from llm_tool_cli.config.project import project_config
-from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
+from llm_tool_cli.core.result import Result, unwrap_to_error
+from llm_tool_cli.output import output
 from llm_tool_cli.paths import PathInput, resolve_project_root
 from llm_tool_cli.paths.errors import InvalidProjectPath
-from llm_tool_cli.protocol.logic_cells import ContentCell
 
-from depmesh.core import warnings
 from depmesh.discovery.entities import QueryResult
 from depmesh.discovery.query import normalize_input_artifacts, query_dependencies, selected_relation_ids
 from depmesh.domain.entities import ArtifactId, Dependency, RelationId
@@ -22,7 +21,7 @@ def dependencies(
     *,
     workspace: Workspace,
     cwd: PathInput,
-) -> Result[DependenciesCell]:
+) -> Result[None]:
     project_dir = project_config.get().project_dir
     project_root = resolve_project_root(PathInput(project_dir)).unwrap()
     relation_ids = selected_relation_ids(workspace.relations_by_id, relation_filters).unwrap()
@@ -55,8 +54,8 @@ def dependencies(
         dependencies.update(result.dependencies)
 
     result = QueryResult(dependencies=tuple(sorted(dependencies, key=lambda item: (item.relation, item.dependency))))
-    return Ok(DependenciesCell(result=result, warnings=warnings.read(), relations=workspace.relations))
+    return output.get().emit([DependenciesCell(result=result, relations=workspace.relations)])
 
 
-def relations(*, workspace: Workspace) -> list[ContentCell]:
-    return relation_cells(workspace.relations)
+def relations(*, workspace: Workspace) -> Result[None]:
+    return output.get().emit(list(relation_cells(workspace.relations)))

@@ -26,7 +26,6 @@ The following topics are out of scope:
 - `./depmesh/` — root module of the project, contains all code related to the `depmesh` tool.
 - `./depmesh/core/` — module responsible for the core functionality not related to domain logic. Contains:
   - shared error base classes.
-  - shared warning storage.
   - domain-independent utilities.
 - `./depmesh/domain/` — module responsible only for universal domain entities and logic required by all or most other modules. Contains:
   - shared domain-specific types.
@@ -42,12 +41,12 @@ The following topics are out of scope:
 - `./depmesh/runtime/` — module responsible for command-facing domain operations. Contains:
   - input normalization and relation selection for dependency queries.
   - aggregation and ordering of dependency results across input artifacts.
-  - warning snapshots and construction of complete result logic cells.
-  - relation listing with logic-cell results.
+  - construction and submission of complete result logic cells to shared output.
+  - relation listing through submitted logic cells.
   - no CLI argument parsing, protocol selection, or output writing.
 - `./depmesh/protocol/` — module responsible for projecting project data into output cells. Contains:
   - grouped Markdown dependency content for human and LLM output.
-  - structured dependency, relation, warning, and skill cell construction.
+  - structured dependency and relation cell construction.
   - dependency-result logic cells built on the shared logic-cell base.
   - use of shared content logic cells for protocol-independent payloads and protocol-specific output-cell types inside dependency projections.
 - `./depmesh/skills/` — module responsible for built-in skill document definitions and packaged Markdown resources.
@@ -55,17 +54,20 @@ The following topics are out of scope:
   - configuration schema and validated workspace entities.
   - constructing configured relations and dependency rules.
   - the packaged starter configuration.
-- `./depmesh/cli/` — module responsible for argument parsing, runtime invocation, protocol selection, and writing returned logic cells, with shared error handling and stream and exit policies.
+- `./depmesh/cli/` — module responsible for argument parsing, runtime invocation, protocol selection, and configuring shared cell delivery, with shared error handling and stream and exit policies.
 
-The public `depmesh.runtime.commands` boundary MUST expose command-facing operations returning logic cells or ordered collections of their subclasses, using shared results for fallible operations.
-The runtime MUST assemble domain-result cells before returning them to the CLI.
+The public `depmesh.runtime.commands` boundary MUST submit command-facing logic cells to shared output and return `Result[None]` when no other useful result exists.
+The runtime MUST assemble domain-result cells before submitting them.
 The CLI MUST NOT query discovery rules, aggregate internal query results, read warning storage, or construct domain-result payloads.
 Internal discovery and workspace APIs MAY retain their own typed results.
 
-Output protocol values, the abstract `OutputCell` and its protocol-specific subtypes, the `LogicCell` base and protocol dispatch, shared content logic cells, rendering contexts, sequence rendering and environment-error cell construction, and text writing MUST be owned by `llm_tool_cli.protocol` and used directly.
+Output protocol values, the abstract `OutputCell` and its protocol-specific subtypes, the `LogicCell` base and protocol dispatch, shared content logic cells, rendering contexts, and environment-error cell construction MUST be owned by `llm_tool_cli.protocol` and used directly.
+Batch-rendering orchestration and stream writing MUST belong to the shared emitter in `llm_tool_cli.output`; individual projections and cell formatting MUST remain in the protocol layer.
 Depmesh MUST own concrete dependency-result logic cells and their protocol-specific projections.
 Logic-cell projections MUST return the corresponding shared output-cell subtype.
-The CLI MUST pass complete logic-cell sequences to shared rendering with the selected protocol and Depmesh's tool label.
+Shared command setup MUST bind the emitter, and shared command finalization MUST deliver complete buffered results followed by warnings.
+Discovery sources MUST submit shared warning cells directly and retain their own typed query results.
+Local warning storage and warning projection implementations MUST NOT duplicate the shared library.
 Protocol-independent content MUST use shared content logic cells without an output-cell class supplied by the CLI.
 Depmesh MUST NOT maintain renderer wrappers or a parallel formatter family.
 Environment errors MUST use the shared typed error logic cell, which owns their content and metadata projection.
