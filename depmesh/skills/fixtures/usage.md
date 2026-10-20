@@ -6,7 +6,7 @@ It hides the project-specific discovery mechanism behind one interface. A relati
 
 An artifact is usually a root-anchored project path such as `@/src/app.py`. Treat artifact ids as strings accepted by the current project's `depmesh.toml`.
 
-`depmesh` is useful only when the project has a proper `depmesh.toml` configuration. If configuration is missing or relation coverage looks incomplete, read `depmesh -p llm skill initialization` and `depmesh -p llm skill configuration`.
+`dependencies` and `relations` require a `depmesh.toml` configuration. For setup and configuration details, read `depmesh -p llm skill initialization` and `depmesh -p llm skill configuration`.
 
 ## Project Root
 
@@ -30,7 +30,7 @@ Use it as the first reference for command usage in a session. Use the other buil
 
 1. List configured relations.
 
-Always do this as the first step in a session or before relying on a relation name:
+List the relation names available for queries:
 
 ```bash
 depmesh -p llm relations
@@ -55,9 +55,9 @@ type=relation
 --DEPMESH-CELL <id-2> END--
 ```
 
-2. Prepare to change a source file.
+2. Query dependencies of a source file.
 
-Query dependencies for that file to see what other files may be affected and should be read first:
+Query all configured relations for one source file:
 
 ```bash
 depmesh -p llm dependencies @/src/app.py
@@ -78,6 +78,8 @@ media_type=text/markdown
 relation=governed_by
 type=dependencies
 
+Specifications that apply to the artifact.
+
 - @/specs/behavior/app.md
 --DEPMESH-CELL <id-1> END--
 --DEPMESH-CELL <id-2> BEGIN--
@@ -85,6 +87,8 @@ kind=dependencies
 media_type=text/markdown
 relation=imported_by
 type=dependencies
+
+Python files that import the artifact.
 
 - @/src/main.py
 --DEPMESH-CELL <id-2> END--
@@ -94,13 +98,15 @@ media_type=text/markdown
 relation=tested_by
 type=dependencies
 
+Tests that verify the artifact.
+
 - @/tests/test_app.py
 --DEPMESH-CELL <id-3> END--
 ```
 
-3. Add a new module.
+3. Query selected relations for a module.
 
-Inspect relation names first, then query a nearby module with the same expected placement. This can reveal governing specifications and test locations to mirror:
+For example, list available relations and query a module's specifications and tests:
 
 ```bash
 depmesh -p llm relations
@@ -116,6 +122,8 @@ media_type=text/markdown
 relation=governed_by
 type=dependencies
 
+Specifications that apply to the artifact.
+
 - @/specs/architecture/modules.md
 --DEPMESH-CELL <id-1> END--
 --DEPMESH-CELL <id-2> BEGIN--
@@ -124,11 +132,13 @@ media_type=text/markdown
 relation=tested_by
 type=dependencies
 
+Tests that verify the artifact.
+
 - @/tests/test_existing_module.py
 --DEPMESH-CELL <id-2> END--
 ```
 
-4. Change a specification.
+4. Query artifacts governed by a specification.
 
 Use a reverse governance relation to find implementation files governed by it:
 
@@ -145,12 +155,14 @@ media_type=text/markdown
 relation=governs
 type=dependencies
 
+Artifacts governed by the specification.
+
 - @/src/config.py
 - @/src/config_loader.py
 --DEPMESH-CELL <id-1> END--
 ```
 
-5. Change shared code.
+5. Query callers and tests.
 
 Combine reverse lookup relations to identify callers and tests:
 
@@ -167,6 +179,8 @@ media_type=text/markdown
 relation=imported_by
 type=dependencies
 
+Python files that import the artifact.
+
 - @/src/app.py
 - @/src/service.py
 --DEPMESH-CELL <id-1> END--
@@ -176,11 +190,13 @@ media_type=text/markdown
 relation=tested_by
 type=dependencies
 
+Tests that verify the artifact.
+
 - @/tests/test_shared.py
 --DEPMESH-CELL <id-2> END--
 ```
 
-6. Edit several artifacts together.
+6. Query several artifacts together.
 
 Query them in one command to get a merged dependency set:
 
@@ -196,6 +212,8 @@ kind=dependencies
 media_type=text/markdown
 relation=tested_by
 type=dependencies
+
+Tests that verify the artifact.
 
 - @/tests/test_app.py
 - @/tests/test_service.py
@@ -353,7 +371,7 @@ Non-fatal problems can be included in command output:
 ```text
 --DEPMESH-CELL <id-1> BEGIN--
 kind=warning
-message=relation `imports`: skipped unresolved dependency `third_party_package`
+message=relation `imports`: command stderr: skipped unresolved dependency `third_party_package`
 type=warning
 --DEPMESH-CELL <id-1> END--
 ```
@@ -364,3 +382,5 @@ A missing configuration file, invalid relation id, invalid arguments, or query f
 depmesh -p llm skill configuration
 depmesh -p llm skill initialization
 ```
+
+Success exits with `0`. Explicit invalid arguments use `1`, configuration errors use `2`, and other environment errors use `3`. When several errors occur, the highest status wins. Framework argument-parsing errors retain status `2` and may use plain-text stderr diagnostics, including under automation.

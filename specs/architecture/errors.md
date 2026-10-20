@@ -144,8 +144,7 @@ After protocol installation, command handling provided by `llm_tool_cli` MUST ow
 
 Depmesh MUST NOT maintain another error-rendering/exit path.
 Errors MUST remain typed shared cells until shared projection of content/guidance/metadata.
-Shared handling MUST journal terminal error cells without extra console journals or workspace dependencies.
-Processor failures MUST NOT recursively journal themselves.
+Shared error handling MUST NOT submit journal records or require workspace setup.
 Non-CLI errors MAY declare shared-core exit overrides; termination MUST remain at the shared CLI boundary.
 
 ## Naming error classes

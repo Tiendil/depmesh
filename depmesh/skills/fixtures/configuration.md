@@ -35,6 +35,8 @@ Top-level fields:
 
 Unknown top-level fields are invalid.
 
+If `version` is omitted, Depmesh uses schema version `1`. It must be an integer: `"1"`, `1.0`, booleans, and unsupported versions are rejected.
+
 ## Relations
 
 Relations define the dependency vocabulary for the project. Each relation id can be listed with `depmesh -p llm relations` and selected with `depmesh -p llm dependencies --relation RELATION_ID`.
@@ -256,7 +258,7 @@ Runs a shell command from the configuration root. The command prints one depende
 output = { type = "command", command = "python ./tools/list_imports.py @/src/{module}.py" }
 ```
 
-Empty stdout lines are ignored. Non-zero exits should produce warnings when query processing can continue.
+Empty stdout lines are ignored. Stderr and non-zero exits produce warnings; valid stdout dependencies still contribute to the result. Execution or output-decoding failures, and invalid paths printed on stdout, fail the query.
 
 ### union
 
@@ -305,3 +307,14 @@ output = {
   predicate = { type = "not", item = { type = "one_of", artifacts = ["@/specs/meta/general.md"] } },
 }
 ```
+
+## Validation
+
+After editing `depmesh.toml`, list relations and query a representative artifact:
+
+```bash
+depmesh -p llm relations
+depmesh -p llm dependencies --relation governed_by @/src/app.py
+```
+
+Use relation names and artifacts from the project. Fix configuration errors first, then check that returned dependencies and warnings match the intended rules.

@@ -94,7 +94,6 @@ Dependency cells MUST prohibit journal delivery in their types and construction,
 - journal submission.
 - default factories.
 - processors.
-- terminal-error journals.
 
 Skill loading MUST directly use `llm_tool_cli.skills`, preserving errors without adapters.
 Skill fixtures MUST live in `depmesh/skills/fixtures/` under the library's resource-loading convention; Depmesh MUST own document definitions and contents.

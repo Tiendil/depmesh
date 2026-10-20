@@ -18,20 +18,20 @@ Run initialization from the directory that should contain `depmesh.toml`.
 
 Without `--config`, `depmesh init` creates `depmesh.toml` in the current working directory. With `--config PATH`, it creates that exact file and treats its parent directory as the project root for later commands.
 
-The project root matters because artifact paths, glob patterns, file sources, and command sources are resolved from the directory containing `depmesh.toml`.
+The project root matters because configured artifact paths, glob patterns, file sources, and command sources are resolved from the directory containing `depmesh.toml`. Relative artifact arguments on the CLI use the command's current working directory.
 
 ## Create The Starter File
 
 Create `depmesh.toml` in the current directory:
 
 ```bash
-depmesh init
+depmesh -p llm init
 ```
 
 Create it at an explicit path:
 
 ```bash
-depmesh --config ./path/to/depmesh.toml init
+depmesh -p llm --config ./path/to/depmesh.toml init
 ```
 
 `init` does not overwrite an existing file.
@@ -193,13 +193,18 @@ depmesh -p llm relations
 Example output:
 
 ```text
-## governed_by
-
-Specifications that apply to the artifact.
-
-## tested_by
-
-Tests that verify the artifact.
+--DEPMESH-CELL <id-1> BEGIN--
+kind=relation
+description=Specifications that apply to the artifact.
+relation=governed_by
+type=relation
+--DEPMESH-CELL <id-1> END--
+--DEPMESH-CELL <id-2> BEGIN--
+kind=relation
+description=Tests that verify the artifact.
+relation=tested_by
+type=relation
+--DEPMESH-CELL <id-2> END--
 ```
 
 Then query representative artifacts:
@@ -211,13 +216,26 @@ depmesh -p llm dependencies --relation governed_by --relation tested_by @/src/ap
 Example output:
 
 ```text
-## governed_by
+--DEPMESH-CELL <id-1> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=governed_by
+type=dependencies
+
+Specifications that apply to the artifact.
 
 - @/specs/behavior/app.md
+--DEPMESH-CELL <id-1> END--
+--DEPMESH-CELL <id-2> BEGIN--
+kind=dependencies
+media_type=text/markdown
+relation=tested_by
+type=dependencies
 
-## tested_by
+Tests that verify the artifact.
 
 - @/tests/test_app.py
+--DEPMESH-CELL <id-2> END--
 ```
 
 When a query returns too many dependencies, narrow the rule predicate or output source. When it returns none, check path spelling, leading `@/`, capture names, and whether the output source is `files` and the files exist.
