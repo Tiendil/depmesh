@@ -10,10 +10,14 @@ Agents and developers can then query those relations through a single stable int
 
 Before changing a CLI module, ask `depmesh` for the specifications and tests connected to it:
 
-```bash
-> depmesh -p llm dependencies -r governed_by -r tested_by ./depmesh/cli/application.py
+The human protocol is the default:
 
-## governed_by
+```bash
+depmesh dependencies -r governed_by -r tested_by @/depmesh/cli/application.py
+```
+
+```text
+relation: governed_by
 
 Specifications that apply to the artifact.
 
@@ -24,13 +28,15 @@ Specifications that apply to the artifact.
 - @/specs/architecture/tests.md
 - @/specs/behavior/cli.md
 
-## tested_by
+relation: tested_by
 
 Tests that verify the artifact.
 
 - @/depmesh/cli/tests/test_application.py
 
 ```
+
+For more structured output, use `depmesh -p llm dependencies ...` or `depmesh -p automation dependencies ...`.
 
 ## Rationale
 
@@ -52,8 +58,8 @@ For example, a project can define relations such as:
 
 ## Features
 
-- Unified interface for discovering project dependencies.
-- Configurable ways to detect dependencies behind the scenes: path patterns, fixed lists, calling CLI commands, or running project-specific scripts.
+- **Unified queries** — One interface for discovering project dependencies.
+- **Configurable discovery** — Use path patterns, fixed lists, CLI commands, or project-specific scripts behind the scenes.
 
 ## Quick Usage
 
@@ -75,6 +81,15 @@ Query selected relations:
 depmesh dependencies --relation governed_by --relation tested_by ./src/app.py
 ```
 
+Query several artifacts together:
+
+```bash
+depmesh dependencies @/src/app.py @/src/service.py
+```
+
+Results are merged across inputs, deduplicated within each relation, and sorted by relation and dependency.
+Run separate queries when you need to know which input produced each dependency.
+
 Initialize a starter configuration:
 
 ```bash
@@ -93,6 +108,30 @@ Other built-in docs:
 depmesh skill configuration
 depmesh skill initialization
 ```
+
+The [CLI specification](./specs/behavior/cli.md) describes the complete command interface.
+
+### Output protocols
+
+Select the output protocol with the global `-p` option before the subcommand:
+
+- `human` — Compact terminal text for people.
+- `llm` — Framed cells for coding agents.
+- `automation` — JSON Lines for programs.
+
+For example:
+
+```bash
+depmesh -p llm dependencies @/src/app.py
+```
+
+Without `-p`, `skill` uses `llm` and other commands use `human`.
+Human and LLM dependency output groups paths by relation; automation emits one record per dependency.
+
+Ordinary results appear after successful command completion.
+Warnings appear after results or reported errors.
+Expected failures discard pending results and exit nonzero.
+All output cells, including errors, go to stdout; framework argument-parsing diagnostics may still use stderr.
 
 ## Installation
 
@@ -134,6 +173,14 @@ This repository uses `depmesh` for its own dependency mapping. See [depmesh.toml
 
 `depmesh` is useful only when the project has a meaningful `depmesh.toml`.
 
+Without `--config`, Depmesh searches upward from the current working directory for `depmesh.toml`.
+The directory containing the selected file is the project root.
+Use a global `--config PATH` to select a file explicitly:
+
+```bash
+depmesh --config /path/to/project/depmesh.toml relations
+```
+
 The configuration declares:
 
 - relations that can be queried.
@@ -157,6 +204,9 @@ output = { type = "files", pattern = "./src/{package_path}/tests/test_{module}.p
 
 This defines one relation named `tested_by`. The rule matches source files like `./src/cli/app.py`, captures `cli` as `package_path` and `app` as `module`, and looks for `./src/cli/tests/test_app.py` as the dependency.
 
+Configured relative paths and patterns use the configuration directory as their base; relative CLI artifact paths use the invocation's current working directory.
+Prefer root-anchored paths such as `@/src/app.py` when a reference should be independent of the current directory.
+
 Run `depmesh skill configuration` for the agent-oriented configuration guide.
 
 For the full configuration contract, see [the configuration specification](./specs/behavior/config.md).
@@ -170,7 +220,7 @@ Project behavior and architecture are specified in [./specs](./specs). Start wit
 Development commands run through Docker:
 
 ```bash
-./bin/dev.sh uv run -- pytest
+./bin/dev-tests.sh
 ./bin/dev.sh uv run -- depmesh relations
 ```
 

@@ -60,7 +60,11 @@ The README MUST explain:
 - This repository uses Depmesh; its `depmesh.toml` is a real example.
 - `depmesh init` creates starter configuration that should be reviewed and edited.
 - Coding agents can help fill `depmesh.toml`.
-- `human` is the terminal default; `--protocol llm` is for coding agents.
+- protocol audiences, command-specific defaults, and placement of global options before subcommands.
+- buffered result delivery and final warnings.
+- stdout output cells and nonzero exits for expected failures, distinguished from framework parsing diagnostics on stderr.
+- configuration discovery, explicit selection, and the bases for configured paths and CLI inputs.
+- merged, deduplicated multi-artifact queries, with grouped text output and individual dependency records for automation.
 - Development uses Docker-backed `./bin/dev.sh` and `./bin/dev-tests.sh`.
 
 The README MUST:
@@ -72,6 +76,9 @@ The README MUST:
 - include PyPI installation examples with both `uv` and `pip`.
 - include a short `AGENTS.md` snippet directing agents to use Depmesh.
 
+The `Example` section MUST show only a dependency query with default human output, omitting the protocol option.
+It MUST mention `-p llm` and `-p automation` for more structured output.
+
 It MUST mention and illustrate these primary workflows:
 
 - List relations — command example: `depmesh relations`.
@@ -80,6 +87,8 @@ It MUST mention and illustrate these primary workflows:
 - Read built-in skills — command example: `depmesh skill usage`.
 
 Human-facing examples SHOULD use command defaults.
+Captured output MUST identify its protocol and follow the selected protocol's current formatting.
+Examples showing generated ids MUST explain their placeholders or variability.
 
 ## Style
 
