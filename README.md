@@ -21,7 +21,6 @@ Specifications that apply to the artifact.
 - @/specs/architecture/errors.md
 - @/specs/architecture/modules_layout.md
 - @/specs/architecture/naming.md
-- @/specs/architecture/static_analysis.md
 - @/specs/architecture/tests.md
 - @/specs/behavior/cli.md
 

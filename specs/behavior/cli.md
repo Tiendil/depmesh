@@ -2,547 +2,213 @@
 
 ## Goal of the document
 
-This document describes how `depmesh` behaves as a command line interface, including:
-
-- how users and tools invoke it.
-- which commands and arguments are accepted.
-- which output protocols are supported.
-- what output shape each relation list and dependency query produces.
+This document describes Depmesh's command-line interface.
 
 ## Scope
 
-The scope of this specification is limited to CLI behavior.
+This specification covers CLI behavior.
+The following are out of scope:
 
-The following topics are out of scope:
+- discovery rules.
+- relation properties/semantics.
+- configuration semantics.
+- exact skill prose.
 
-- dependency discovery rules.
-- relation properties.
-- relation semantics.
-- configuration file semantics.
+The following concepts appear only to specify input/output boundaries:
 
-This specification may refer to the following concepts only to describe how the CLI accepts arguments and renders output:
-
-- configured relations.
-- relation ids.
-- relation descriptions.
+- relations.
+- ids.
+- descriptions.
 - configuration paths.
-
-The exact Markdown text emitted by `depmesh skill` is out of scope.
 
 ## General behavior
 
-`depmesh` is a command line tool that provides a generalized interface for discovering dependencies between files in a project. It supports multiple dependency discovery mechanisms, from glob pattern templates to third-party commands, so agents and developers can use one interface without needing to know exactly how each dependency relation is discovered.
+Depmesh exposes configured artifact dependencies through one CLI, independent of discovery mechanisms.
+Its primary workflows query dependencies and list relations.
+The root MUST expose a command group, never a direct query.
+Global options MUST precede subcommands:
+`depmesh [GLOBAL_OPTIONS] COMMAND [COMMAND_OPTIONS]`.
 
-The CLI has two primary workflows:
-
-- `depmesh dependencies ...` — query dependencies for one or more artifacts.
-- `depmesh relations` — list available relation types and their descriptions.
-
-The root command MUST be a command group constructed through the application setup managed by `llm_tool_cli`.
-
-Dependency queries MUST use the `dependencies` command or its `deps` alias:
-
-```bash
-depmesh dependencies [OPTIONS] ARTIFACT...
-depmesh deps [OPTIONS] ARTIFACT...
-```
-
-Global options, when present, MUST be provided before the subcommand:
-
-```bash
-depmesh [GLOBAL_OPTIONS] COMMAND [COMMAND_OPTIONS]
-```
-
-`ARTIFACT` is an artifact identifier accepted by the configured dependency rules.
-
-In the initial implementation this is expected to be a file path, but the CLI MUST NOT reserve syntax that would prevent later support for:
+Artifacts initially represent file paths, but CLI syntax MUST NOT prevent future use of:
 
 - directories.
 - URLs.
-- DOI values.
-- ISBN values.
+- DOIs.
+- ISBNs.
 - other identifiers.
 
-The CLI MUST write all cells, including results, journal events, warnings, and environment errors, to stdout in every protocol.
+All cells MUST use stdout in every protocol, with environment-error delivery following the Command error handling contract in `specs/behavior/cli.md` in `llm-tool-cli`.
+Automation cell/error stdout MUST contain only JSON Lines; help remains plain text.
+Framework parsing MAY use ordinary non-JSON stderr diagnostics even under automation.
 
-Environment-error diagnostics MUST use stdout delivery managed by `llm_tool_cli`. Framework-native parsing diagnostics MAY retain the framework's standard stderr behavior.
-
-For commands that emit cells or fatal errors, `automation` stdout MUST contain only valid JSON Lines records. Help retains its plain-text contract.
-
-Framework-native diagnostics written to stderr MAY be plain text and MAY be non-JSONL, including when `--protocol automation` was requested.
-
-Cell content, metadata, and output ordering MUST be deterministic for the same:
+Payloads and order MUST be deterministic for the same:
 
 - input.
 - configuration.
-- working directory.
-- project state.
+- cwd.
+- state.
 
-Cell identifiers MAY vary between invocations and MUST use the shared library's generated identifiers.
+Cell ids MUST follow `specs/behavior/protocol.md` in `llm-tool-cli` and MAY vary per invocation.
+Configuration-dependent commands MUST select configuration before command behavior.
+Skill, init, and version MUST NOT require existing configuration.
 
 ## Commands
 
-The CLI MUST support these commands and command forms:
+These forms MUST be supported, with optional global options before commands:
 
-- `depmesh [GLOBAL_OPTIONS] dependencies [OPTIONS] ARTIFACT...` — query dependencies for one or more artifacts.
-- `depmesh [GLOBAL_OPTIONS] deps [OPTIONS] ARTIFACT...` — alias for `dependencies`.
-- `depmesh [GLOBAL_OPTIONS] relations` — list configured relations.
-- `depmesh [GLOBAL_OPTIONS] rels` — alias for `relations`.
-- `depmesh [GLOBAL_OPTIONS] skill [DOCUMENT]` — print built-in agent-oriented documentation for using `depmesh`.
-- `depmesh [GLOBAL_OPTIONS] init` — create a starter configuration file.
-- `depmesh [GLOBAL_OPTIONS] version` — print the tool version.
-- `depmesh --help` — print root help information.
-
-The root command MUST NOT perform a dependency query directly.
+- `dependencies [OPTIONS] ARTIFACT...`, `deps [OPTIONS] ARTIFACT...` — Query one or more artifacts.
+- `relations`, `rels` — List relations.
+- `skill [DOCUMENT]` — Built-in documentation.
+- `init` — Starter configuration.
+- `version` — Tool version.
+- `--help` — Root help.
 
 ## Application identity
 
-The CLI MUST initialize static settings with the tool label `DEPMESH` and default configuration filename `depmesh.toml` through `llm_tool_cli` at application startup before command-line parsing.
-Label storage, initialization checks, and label selection for cell rendering MUST be managed by `llm_tool_cli`.
+Human and LLM cell framing MUST use `DEPMESH`, including error cells produced during argument parsing.
+The default configuration filename MUST be `depmesh.toml`.
 
 ## Output behavior
 
-The CLI MUST use the cell model, cell and environment-error construction, and cell formatting provided by `llm_tool_cli.protocol`.
-The CLI MUST submit cells directly to the active emitter in `llm_tool_cli.output`, which owns batch rendering and text writing.
-Text cell framing MUST use the label `DEPMESH`.
+Depmesh output MUST follow the cell formatting and delivery contracts in `specs/behavior/protocol.md` in `llm-tool-cli`.
+Environment errors MUST follow that specification's Environment-error cells contract.
+Output MUST NOT contain color, styling, or control sequences.
+Expected output-delivery failures MUST be reported as command failures; unexpected failures MUST propagate.
 
-Depmesh MUST own its logic-cell payloads and domain-specific projections, including dependency grouping, relation descriptions, and record metadata. Shared logic-cell projection and rendering MUST manage generic cell framing, sequence rendering contexts, identifier generation, and serialization.
+Queries MUST treat input artifacts as relation left sides and return right-side artifacts.
+Reverse queries MUST use separately configured relations/rules.
+Results MUST merge all inputs, group by producing relation, and deduplicate within each relation.
+Groups and their dependencies MUST each sort alphabetically.
+Results MUST NOT group by input; callers needing that SHOULD query separately.
+Relation lists MUST sort alphabetically.
 
-Output MUST NOT contain:
-
-- terminal color.
-- styling.
-- other control sequences.
-
-Dependency query output MUST group dependencies by relation id.
-
-Dependency query output MUST order relation groups alphabetically by relation id.
-
-Dependency query output MUST order dependencies alphabetically inside each relation group.
-
-The `dependencies` command MUST always treat each input artifact as the left side of selected relations and MUST output artifacts found on the right side of those relations.
-
-Relations are single-directional. Reverse lookups MUST be represented by separate configured relations and rules.
-
-Dependency query output MUST group dependencies under the selected relation id that produced them.
-
-When multiple artifact identifiers are provided, dependency query output MUST contain merged dependencies for all input artifacts.
-
-When multiple input artifacts have the same dependency for the same relation, dependency query output MUST contain that dependency once.
-
-Dependency query output MUST NOT group dependencies by input artifact. Users and agents that need per-artifact dependencies SHOULD call `depmesh` separately for each artifact.
-
-Output MUST include collected non-fatal problems after ordinary results, or after error diagnostics when the command fails.
-Ordinary output MUST remain buffered until successful command completion and MUST be discarded on failure.
-
-Non-fatal problems SHOULD be represented as warnings.
-
-Relation list output MUST order relations alphabetically by relation id.
-
-Dependency-result cells MUST reject construction with journal delivery enabled and remain ordinary buffered output.
+Ordinary output MUST appear only after successful command completion; failure MUST suppress pending ordinary results.
+Collected non-fatal problems MUST follow results or fatal diagnostics and SHOULD be warnings.
+Dependency-result cells MUST remain ordinary output and MUST NOT be forwarded as journal events.
 
 ## Output protocols
 
-The CLI MUST support the output modes defined by `llm_tool_cli.protocol`.
-
-Depmesh interprets these modes as follows:
-
-- `human` — text protocol for terminal users.
-- `llm` — text protocol optimized for coding agents that invoke `depmesh` as a tool.
-- `automation` — protocol optimized for programs; output is serialized as JSON Lines.
-
-Human output SHOULD be compact and easy to scan.
-
-LLM output SHOULD be:
-
-- explicit.
-- stable.
-- self-contained for coding agents that receive the output as a tool result.
+Depmesh MUST support the `human`, `llm`, and `automation` protocols defined in `specs/behavior/protocol.md` in `llm-tool-cli`.
+Human text SHOULD be compact/scannable; LLM text SHOULD be explicit, stable, and self-contained.
 
 ### Output cells
 
-For a given protocol, the same domain data MUST produce equivalent cell payloads regardless of generated identifiers.
+Equivalent data MUST produce equivalent payloads independent of ids.
+The following projections MUST apply:
 
-- Human and LLM dependency output MUST contain one Markdown cell of kind `dependencies` per nonempty relation group, with `type = dependencies` and `relation` metadata. Its content MUST contain the optional description followed by a Markdown list of dependencies.
-- Automation dependency output MUST contain one metadata-only cell of kind `dependency` per merged dependency, with `type = dependency`, `relation`, and `dependency` metadata.
-- Each warning MUST be a metadata-only cell of kind `warning`, with `type = warning` and `message` metadata. Warning cells MUST follow dependency cells in warning insertion order.
-- Each relation MUST be a metadata-only cell of kind `relation`, with `type = relation`, `relation`, and optional `description` metadata.
+- Dependency group, human/LLM:
+
+  - Kind: `dependencies`.
+  - Metadata: `type = dependencies`, `relation`.
+  - Content: one Markdown cell per nonempty group, with optional description then dependency list.
+
+- Dependency, automation:
+
+  - Kind: `dependency`.
+  - Metadata: `type = dependency`, `relation`, `dependency`.
+  - Content: metadata-only, one per merged entry.
+
+- Warning, all protocols:
+
+  - Kind: `warning`.
+  - Metadata: `type = warning`, `message`.
+  - Content: metadata-only, after dependencies in insertion order.
+
+- Relation, all protocols:
+
+  - Kind: `relation`.
+  - Metadata: `type = relation`, `relation`, optional `description`.
+  - Content: metadata-only.
 
 Empty dependency results without warnings and empty relation lists MUST emit no cells.
+Output records MUST follow these field meanings:
 
-Cell `id` MUST refer to the generated cell identifier. Relation names MUST use `relation`, never `id`. Document text MUST use cell `content`, never a separate `text` field. Metadata-only automation cells MUST retain the shared absent-content representation.
+- `id` means generated cell id.
+- relation names use `relation`.
+- document text uses `content`.
+- metadata-only automation retains the protocol contract's absent-content representation.
 
-The `type` metadata MUST preserve the machine-readable record type because shared cell serialization does not automatically include the cell kind.
-
-Cell identifiers in examples are placeholders; actual identifiers MAY differ on each invocation.
+`type` metadata MUST preserve record type because the protocol contract does not add kind.
+Example ids are placeholders.
 
 ### Human output
 
-Human output SHOULD use concise labels.
-
-Human output SHOULD prefer canonical root-anchored paths when the input and dependency are inside the project.
-
-Human output MUST use shared human cell formatting with Depmesh-owned metadata.
+Human output SHOULD use concise labels and canonical root-anchored paths for project inputs/dependencies.
+It MUST follow the Human and LLM cells contract in `specs/behavior/protocol.md` in `llm-tool-cli`, with Depmesh metadata.
 
 ### LLM output
 
-The `llm` protocol MUST be used only when a coding agent invokes `depmesh` as a tool.
-
-LLM output MUST use plain Markdown-compatible text.
-
-LLM output SHOULD be concise and SHOULD avoid redundant information.
-
-LLM output SHOULD prefer stable identifiers and explicit paths over compact visual formatting.
-
-Human and LLM dependency cells MUST identify the relation in metadata and include its configured description before the dependency list when the description is not `None`.
-
-A dependency cell MUST NOT display a description, placeholder, or blank description paragraph when the relation description is `None`.
+Agents invoking Depmesh as a tool MUST use `llm`.
+LLM output MUST be plain Markdown-compatible text.
+It SHOULD be concise, nonredundant, and prefer stable ids/explicit paths over compact formatting.
+Human/LLM dependency cells MUST identify relations in metadata and put configured descriptions before lists.
+Absent descriptions MUST NOT produce placeholders or blank description paragraphs.
 
 ### Automation output
 
-Automation JSON Lines serialization MUST be provided by `llm_tool_cli.protocol`.
+Automation MUST follow the JSON Lines contract in `specs/behavior/protocol.md` in `llm-tool-cli`, with stable fields and deterministic record order.
+Warnings/errors SHOULD appear as records when part of output.
+Records MUST have `type` identifying their semantic role.
+Dependency, relation, and warning records MUST follow the output-cell contract above; utility-command and error records MUST follow the referenced library protocol contract.
 
-Automation output MUST use stable field names.
-
-Automation output MUST emit records in deterministic order.
-
-Automation output SHOULD represent warnings and errors as records when they are part of command output.
-
-The common JSONL record fields MUST be:
-
-```json
-{"type":"record type"}
-```
-
-Known record types MUST include:
-
-- `dependency` — one merged dependency entry.
-- `relation` — one configured relation entry.
-- `warning` — non-fatal problem.
-- `skill` — record emitted by `depmesh --protocol automation skill`; record content is outside this specification.
-- `version` — record emitted by the version command managed by `llm_tool_cli`.
-- `operation_succeeded` — successful initialization.
-- `error` — fatal problem, emitted as an ordinary shared error cell before a non-zero exit when possible, with the formatted message in `content`, native `code`, and diagnostic context in metadata.
-
-Additional fields MAY be added in future versions. Consumers MUST ignore unknown fields.
+Future fields MAY be added; consumers MUST ignore unknown fields.
 
 ## Global options
 
-The CLI MUST use global-option registration and parsing, context-scoped runtime configuration, command-context protocol selection and output scope setup, and shared emitter delivery managed by `llm_tool_cli`.
-Depmesh MUST register its commands on the application provided by `llm_tool_cli`.
-Tool-owned commands MUST use the shared command execution scope directly for setup, error handling, and output finalization.
-Workspace construction and dependency-query behavior MUST remain Depmesh-owned; project loading, scoped output delivery, and warning lifecycle MUST be shared.
-Static configuration MUST own application identity and the default configuration filename before parsing, runtime configuration MUST own the effective protocol, and project configuration MUST own the active config path and derived project directory.
-All three configurations MUST be immutable and complete when bound.
-Project setup MUST finish before query execution; its binding MUST remain available through output and be restored when the command context closes.
+Global options MUST follow the configuration-option and protocol-option contracts in `specs/behavior/cli.md` in `llm-tool-cli`.
+Each command's output MUST honor its effective protocol and selected project without inheriting another command's pending output.
+Queries MUST use successfully validated configuration consistently through execution and output.
 
 ### Help and completion
 
-The CLI MUST use help aliases and shell completion options managed by `llm_tool_cli`.
+Help aliases and completion MUST follow the Application setup contract in `specs/behavior/cli.md` in `llm-tool-cli`.
 
 ### `-p`, `--protocol PROTOCOL`
 
-The CLI MUST use protocol-option parsing and invalid-value diagnostics managed by `llm_tool_cli`.
-
-Subcommands that render protocol-specific output MUST use the selected protocol.
-
-Subcommands that do not render protocol-specific output MAY ignore this option.
+Parsing, defaults, and invalid-value diagnostics MUST follow the Protocol option and Protocol selection contracts in `specs/behavior/cli.md` in `llm-tool-cli`.
+Cells/journals MUST honor the selected protocol.
 
 ### `--config PATH`
 
-The CLI MUST use the configuration-option parsing managed by `llm_tool_cli`, including its deferred filesystem validation.
-
-Subcommands that load configuration MUST pass this option to the configuration selection managed by `llm_tool_cli`.
-Depmesh's configuration filename, schema, and configuration-root rules are defined in `specs/behavior/config.md`.
+Parsing MUST defer filesystem validation as specified by the Configuration option contract in `specs/behavior/cli.md` in `llm-tool-cli`.
+Configuration-using commands MUST select configuration using the option; filename/schema/root rules are in `specs/behavior/config.md`.
 
 ## Dependencies Command
 
-The `dependencies` command MUST query dependencies for one or more artifacts.
-
-```bash
-depmesh dependencies [OPTIONS] ARTIFACT...
-depmesh deps [OPTIONS] ARTIFACT...
-```
-
-The `deps` command MUST be an alias for `dependencies`.
-
-The `dependencies` command MUST accept:
-
-- `-r`, `--relation RELATION_ID`.
+`dependencies` and alias `deps` MUST query one or more artifacts and accept `-r`/`--relation RELATION_ID`.
 
 ### Argument `ARTIFACT...`
 
-`ARTIFACT...` MUST accept one or more artifact identifiers.
-
-Project file inputs MUST use the shared mixed path normalization contract in `specs/behavior/paths.md` in the `llm-tool-cli` repository.
-The project root MUST be the configuration root defined in `specs/behavior/config.md`; relative filesystem inputs MUST use the command's current working directory as their base.
-Command execution MUST normalize accepted inputs before dependency matching or output construction.
-Dependency inputs MAY reference locations that do not yet exist.
-CLI examples and protocol output SHOULD use canonical root-anchored paths unless demonstrating relative or absolute filesystem input compatibility.
-
-The CLI MUST preserve the user-provided artifact spelling in output where that helps identify the original request.
-
-The CLI MAY also include normalized or resolved artifact identifiers when useful.
+The command MUST accept one or more artifact identifiers and require at least one.
+Project-file inputs MUST follow the Mixed path normalization contract in `specs/behavior/paths.md` in `llm-tool-cli`, using configuration root and invocation cwd for relative inputs.
+Normalization MUST precede matching/output; missing targets MAY be referenced.
+Examples/output SHOULD prefer canonical root-anchored ids except when demonstrating other forms.
+Original spelling MUST remain in output where it helps identify the request; normalized/resolved ids MAY also appear.
 
 ### Option `-r`, `--relation RELATION_ID`
 
-`-r RELATION_ID` and `--relation RELATION_ID` MUST limit output to the specified relation.
-
-`RELATION_ID` MUST match a configured relation id.
-
-When `RELATION_ID` matches a configured relation id, the command MUST use configured dependency rules for that relation.
-
-This option MAY be repeated to include multiple relations.
-
-When this option is repeated, output MUST include dependencies whose relation matches any specified `RELATION_ID`.
-
-Example:
-
-```bash
-depmesh dependencies -r imports -r tests @/src/do_smth.py
-```
-
-If omitted, all configured relation ids MUST be included.
+Filters MUST name configured relations and use their configured rules.
+The option MAY repeat; output MUST include matches for any selected relation, or all relations when omitted.
+**Example:** `depmesh deps -r imports -r tests @/src/main.py` includes both relations.
 
 ## Relations Command
 
-The `relations` command MUST list configured relations.
-
-```bash
-depmesh relations
-depmesh rels
-```
-
-The `rels` command MUST be an alias for `relations`.
-
-The command MUST NOT accept artifact arguments or dependency query options.
-
-The command MUST render all configured relations in deterministic order by relation id.
-
-For human and LLM output, each relation MUST use the shared cell formatting with its relation name and optional description in metadata.
-
-For automation output, each relation MUST be rendered as one cell record:
+`relations` and alias `rels` MUST list all configured relations sorted by id, without artifact/query arguments.
+Text protocols MUST use cells with relation/optional description metadata under `specs/behavior/protocol.md` in `llm-tool-cli`; automation MUST emit one cell per relation.
+Absent descriptions MUST be omitted.
 
 ```json
 {"content":null,"description":"Tests related to the input artifacts.","id":"<id-1>","relation":"tests","type":"relation"}
 ```
 
-The `description` field MUST be omitted when the relation has no description.
-
-### Example: relations human output
-
-Command:
-
-```bash
-depmesh --protocol human relations
-```
-
-Example output:
-
-```text
------ DEPMESH CELL <id-1> -----
-kind = relation
-description = Python files imported by the input Python file.
-relation = imports
-type = relation
-
------ DEPMESH CELL <id-2> -----
-kind = relation
-description = Tests related to the input artifacts.
-relation = tests
-type = relation
-
-```
-
-### Example: human output
-
-Command:
-
-```bash
-depmesh --protocol human dependencies @/src/do_smth.py
-```
-
-Example output:
-
-```text
------ DEPMESH CELL <id-1> -----
-kind = dependencies
-media_type = text/markdown
-relation = imports
-type = dependencies
-
-- @/src/another_module.py
-- @/src/some_module.py
-
------ DEPMESH CELL <id-2> -----
-kind = dependencies
-media_type = text/markdown
-relation = specs
-type = dependencies
-
-- @/specs/architecture.md
-- @/specs/top_level_behavior.md
-- @/specs/types.md
-
------ DEPMESH CELL <id-3> -----
-kind = dependencies
-media_type = text/markdown
-relation = tests
-type = dependencies
-
-- @/src/tests/test_do_smth.py
-
-```
-
 ### Example: multiple artifacts
 
-Command:
-
-```bash
-depmesh --protocol human dependencies @/src/do_smth.py @/src/another_module.py
-```
-
-Example output:
-
-```text
------ DEPMESH CELL <id-1> -----
-kind = dependencies
-media_type = text/markdown
-relation = imports
-type = dependencies
-
-- @/src/another_module.py
-- @/src/some_module.py
-- @/src/types.py
-
------ DEPMESH CELL <id-2> -----
-kind = dependencies
-media_type = text/markdown
-relation = tests
-type = dependencies
-
-- @/src/tests/test_another_module.py
-- @/src/tests/test_do_smth.py
-
-```
-
-### Example: relation filter
-
-Command:
-
-```bash
-depmesh --protocol human dependencies --relation tests @/src/do_smth.py
-```
-
-Example output:
-
-```text
------ DEPMESH CELL <id-1> -----
-kind = dependencies
-media_type = text/markdown
-relation = tests
-type = dependencies
-
-- @/src/tests/test_do_smth.py
-
-```
-
-### Example: reverse relation
-
-Command:
-
-```bash
-depmesh --protocol human dependencies --relation imported_by @/src/some_module.py
-```
-
-Example output:
-
-```text
------ DEPMESH CELL <id-1> -----
-kind = dependencies
-media_type = text/markdown
-relation = imported_by
-type = dependencies
-
-- @/src/do_smth.py
-- @/src/feature.py
-
-```
-
-### Example: LLM output
-
-Command:
-
-```bash
-depmesh --protocol llm dependencies @/src/do_smth.py
-```
-
-Example output:
-
-```text
---DEPMESH-CELL <id-1> BEGIN--
-kind=dependencies
-media_type=text/markdown
-relation=imports
-type=dependencies
-
-Files imported by the input artifacts.
-
-- @/src/another_module.py
-- @/src/some_module.py
---DEPMESH-CELL <id-1> END--
---DEPMESH-CELL <id-2> BEGIN--
-kind=dependencies
-media_type=text/markdown
-relation=specs
-type=dependencies
-
-Specifications related to the input artifacts.
-
-- @/specs/architecture.md
-- @/specs/top_level_behavior.md
-- @/specs/types.md
---DEPMESH-CELL <id-2> END--
---DEPMESH-CELL <id-3> BEGIN--
-kind=dependencies
-media_type=text/markdown
-relation=tests
-type=dependencies
-
-Tests related to the input artifacts.
-
-- @/src/tests/test_do_smth.py
---DEPMESH-CELL <id-3> END--
-```
-
-### Example: automation output
-
-Command:
-
-```bash
-depmesh --protocol automation dependencies @/src/do_smth.py
-```
-
-Example output:
-
-```jsonl
-{"content":null,"dependency":"@/src/another_module.py","id":"<id-1>","relation":"imports","type":"dependency"}
-{"content":null,"dependency":"@/src/some_module.py","id":"<id-2>","relation":"imports","type":"dependency"}
-{"content":null,"dependency":"@/specs/architecture.md","id":"<id-3>","relation":"specs","type":"dependency"}
-{"content":null,"dependency":"@/specs/top_level_behavior.md","id":"<id-4>","relation":"specs","type":"dependency"}
-{"content":null,"dependency":"@/specs/types.md","id":"<id-5>","relation":"specs","type":"dependency"}
-{"content":null,"dependency":"@/src/tests/test_do_smth.py","id":"<id-6>","relation":"tests","type":"dependency"}
-```
+If two inputs both depend on `@/src/shared.py` through `imports`, querying them together emits it once under `imports`, not once per input.
+A separately configured `imported_by` relation queries the reverse direction.
 
 ### Example: human output with warnings
 
-Command:
-
-```bash
-depmesh --protocol human dependencies @/src/do_smth.py
-```
-
-Example output:
+For `depmesh --protocol human deps @/src/main.py`:
 
 ```text
 ----- DEPMESH CELL <id-1> -----
@@ -551,25 +217,18 @@ media_type = text/markdown
 relation = imports
 type = dependencies
 
-- @/src/another_module.py
-- @/src/some_module.py
+- @/src/shared.py
 
 ----- DEPMESH CELL <id-2> -----
 kind = warning
-message = relation `imports`: skipped unresolved dependency `third_party_package`
+message = skipped unresolved dependency
 type = warning
 
 ```
 
 ### Example: LLM output with warnings
 
-Command:
-
-```bash
-depmesh --protocol llm dependencies @/src/do_smth.py
-```
-
-Example output:
+For the same query with `--protocol llm` and a configured relation description:
 
 ```text
 --DEPMESH-CELL <id-1> BEGIN--
@@ -580,113 +239,79 @@ type=dependencies
 
 Files imported by the input artifacts.
 
-- @/src/another_module.py
-- @/src/some_module.py
+- @/src/shared.py
 --DEPMESH-CELL <id-1> END--
 --DEPMESH-CELL <id-2> BEGIN--
 kind=warning
-message=relation `imports`: skipped unresolved dependency `third_party_package`
+message=skipped unresolved dependency
 type=warning
 --DEPMESH-CELL <id-2> END--
 ```
 
 ### Example: automation output with warnings
 
-Command:
-
-```bash
-depmesh --protocol automation dependencies @/src/do_smth.py
-```
-
-Example output:
+For the same query with `--protocol automation`:
 
 ```jsonl
-{"content":null,"dependency":"@/src/another_module.py","id":"<id-1>","relation":"imports","type":"dependency"}
-{"content":null,"dependency":"@/src/some_module.py","id":"<id-2>","relation":"imports","type":"dependency"}
-{"content":null,"id":"<id-3>","message":"relation `imports`: skipped unresolved dependency `third_party_package`","type":"warning"}
+{"content":null,"dependency":"@/src/shared.py","id":"<id-1>","relation":"imports","type":"dependency"}
+{"content":null,"id":"<id-2>","message":"skipped unresolved dependency","type":"warning"}
 ```
 
 ## Skill Command
 
-The CLI MUST register the skill command managed by `llm_tool_cli`, supplying the `depmesh.skills` resource package and Depmesh's document definitions.
-The library owns argument selection and validation, defaults, help and completion, configuration independence, cell output, and failure delivery and exit statuses.
-
-Depmesh MUST provide these documents:
-
-- `usage` — general command usage documentation.
-- `configuration` — configuration documentation.
-- `initialization` — project initialization documentation.
+The command MUST follow the Skill command contract in `specs/behavior/cli.md` in `llm-tool-cli` and offer documents `usage`, `configuration`, and `initialization`.
+Document content MUST follow Depmesh's `specs/behavior/skill_fixtures.md`.
 
 ## Init Command
 
-The `init` command MUST create a starter configuration file.
+Init MUST follow the Initialization command contract in `specs/behavior/cli.md` in `llm-tool-cli`, using invocation cwd, optional `--config`, and default filename `depmesh.toml`.
+The created file MUST pass Depmesh configuration validation before success is reported.
+Failed validation MUST leave the file and report the contract's diagnostics without reporting success.
 
-```bash
-depmesh init
-depmesh --config ./path/to/depmesh.toml init
-```
+Generated TOML MUST:
 
-The application MUST register the initialization command managed by `llm_tool_cli`, supplying Depmesh's schema and packaged starter template.
-The shared command MUST supply the invocation working directory and optional `--config` path to project initialization, manage its command scope and success output, and use the default filename from static settings.
-The shared initializer MUST load and validate the created configuration before binding project settings or emitting success output.
-If validation fails, the created file MUST remain on disk and the command MUST report the shared configuration diagnostic without establishing a project binding.
-Depmesh owns the starter contents described below.
+- be valid.
+- use version `1`.
+- define `governed_by` and `governs`.
+- include commented rule examples.
 
-The generated configuration MUST:
+Success MUST emit the contract's creation acknowledgement with the created configuration path to stdout under the selected protocol.
+The following arguments MUST NOT be accepted:
 
-- be valid TOML.
-- use schema version `1`.
-- include the `governed_by` relation.
-- include the `governs` relation.
-- include commented examples of relation rules.
+- artifact arguments.
+- relation arguments.
+- query arguments.
+- skill arguments.
 
-The command MUST emit the configuration-creation success cell managed by `llm_tool_cli` to stdout, supplying the created configuration path.
-It MUST honor the selected output protocol.
-Successful creation and validation MUST establish shared project settings before success output, without changing runtime settings; the command MUST retain the shared project scope until its framework context closes.
-
-The command MUST NOT accept artifact arguments, relation options, dependency query options, or skill document arguments.
+**Example:** `depmesh --config ./path/to/depmesh.toml init` selects an explicit target.
 
 ## Version Command
 
-The CLI MUST register the version command managed by `llm_tool_cli`, supplying the distribution name `depmesh`.
-The library owns installed version lookup, help, configuration independence, protocol selection, version-cell output, and exit and failure behavior.
+The command MUST report the installed version of distribution `depmesh` under the Version command contract in `specs/behavior/cli.md` in `llm-tool-cli`.
 
 ## Errors and exit codes
 
-Skill-, version-, and initialization-command failure handling MUST be managed by `llm_tool_cli`.
-The remaining execution policies apply to tool-owned commands.
+Commands MUST follow the Command error handling and Exit statuses contracts in `specs/behavior/cli.md` in `llm-tool-cli`.
+Terminal-error journaling MUST preserve one console diagnostic per error without workspace setup.
+Default no-op processing MUST leave error output unchanged; supplied external processors MUST preserve original diagnostics and report delivery failures without recursion.
+Configuration diagnostics MUST propagate without translation.
+Explicit argument checks before command initialization MUST report using human fallback; protocol-option parsing MUST retain the distinct diagnostics and fallback protocol required by that CLI contract.
 
-The CLI MUST use command error handling and explicit error reporting managed by `llm_tool_cli`, including error cells on stdout, diagnostic ordering, exit statuses, and exception propagation.
-Depmesh MUST retain workspace construction and command-specific behavior.
-Shared terminal-error journaling MUST preserve one console diagnostic per error and MUST NOT require workspace initialization.
-The default no-op journal processor MUST leave existing error output unchanged.
-When an emitter with external journal delivery is supplied, a delivery failure MUST retain the original diagnostics and be reported without recursive delivery attempts.
-
-Configuration selection, loading, and creation MUST propagate the diagnostics provided by `llm_tool_cli` without local translation.
-
-Depmesh-owned argument validation before command initialization MUST supply the human fallback protocol to the shared error reporter.
-Protocol-option parsing MUST use the diagnostics managed by `llm_tool_cli`.
-
-Example automation fatal error:
+**Example:** An automation missing-configuration error retains native fields:
 
 ```jsonl
-{"code":"config_not_found","content":"/project: depmesh.toml was not found in this directory or its parents","id":"<cell-id>","path":"/project","reason":"depmesh.toml was not found in this directory or its parents","type":"error"}
+{"code":"<diagnostic-code>","content":"/project: depmesh.toml was not found in this directory or its parents","id":"<cell-id>","path":"/project","reason":"depmesh.toml was not found in this directory or its parents","type":"error"}
 ```
 
 ## Compatibility rules
 
-The CLI SHOULD preserve backward compatibility for:
+Compatibility SHOULD preserve:
 
-- Command names.
-- Option names.
-- Output protocol names.
-- JSONL record `type` values.
-- JSONL field meanings.
+- command names.
+- options.
+- protocols.
+- JSONL types.
+- field meanings.
 
-Backward-compatible additions MAY include:
-
-- new options.
-- new JSONL fields.
-- new JSONL record types.
-
-Backward-incompatible changes MUST be documented in this specification before implementation.
+New options, JSONL fields, and record types MAY be compatible additions.
+Breaking changes MUST be specified before implementation.

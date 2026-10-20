@@ -2,176 +2,174 @@
 
 ## Goal of the document
 
-This document describes how project modules represent fatal errors and warnings, and how those values move from lower layers to the CLI, separating expected operational failures from internal exceptions.
+This document describes the architecture of failure handling.
 
 ## Scope
 
-The scope of this specification is limited to error and warning architecture inside the Python implementation.
+This specification covers Python error/warning architecture.
+The following are out of scope:
 
-The following topics are out of scope:
-
-- exact wording of user-facing messages.
-- complete lists of future error codes.
+- exact messages.
+- code inventories.
 - terminal formatting.
-- dependency discovery algorithms.
-- test coverage requirements.
+- discovery algorithms.
+- coverage requirements.
 
 ## Dictionary
 
-- `fatal error` - a problem that prevents the requested command from completing successfully.
-- `non-fatal problem` - a problem discovered while processing a command that does not prevent the command from producing useful output.
-- `error code` - a stable machine-readable identifier for a fatal error.
-- `module error category` - an environment-error model in a module's `errors` submodule that classifies expected failures owned by that module.
-- `exception boundary` - a module boundary where known low-level failures are converted into returned environment errors or warnings.
+- `fatal error` — prevents successful command completion.
+- `non-fatal problem` — permits useful requested output.
+- `error code` — a machine-readable fatal-error identifier.
+- `module error category` — an `errors` model classifying its module's expected failures.
+- `exception boundary` — converts known low-level failures to returned errors or warnings.
 
 ## General principles
 
-Expected fatal failures MUST be represented as shared `EnvironmentError` values returned through `Result[T]` before they cross module boundaries. The result error payload MUST be `EnvironmentErrors`; only the success value type is parameterized.
+Expected failures MUST cross boundaries as shared `Result[T]` environment-error values, except predicate matching as described below.
+Depmesh MUST use `llm_tool_cli` results/error foundations and preserve shared errors unless translation adds domain meaning or recovery.
+Package ownership alone MUST NOT trigger translation; raised shared exceptions MUST NOT become expected failures.
+Internal errors MUST be raised and MUST NOT become cells in normal CLI handling.
 
-Project modules MUST use `Result`, `Ok`, `Err`, `EnvironmentError`, and `EnvironmentErrors` from `llm_tool_cli` directly. Project-local result implementations or compatibility re-exports MUST NOT duplicate them.
+Predicate matching is exempt from result conversion: it MUST return captures or `None`, MAY raise evaluation failures, and composites MUST propagate failures rather than treating them as non-matches.
+Result-returning callers MUST recover helper error values within their propagation scope; unrelated matching exceptions MAY propagate unchanged.
 
-Documented public environment errors from `llm_tool_cli` are part of the application error contract and MUST propagate as returned values without translation solely because of their package ownership.
+Non-fatal problems MUST use warning cells submitted to scoped output, both provided by `llm_tool_cli`.
+Lower modules MUST NOT print diagnostics/JSON Lines or terminate.
+The CLI MUST own fatal-error protocol delivery and shared exit-based termination.
 
-Operations with expected failures MUST return a result. Operations without expected failures SHOULD keep their ordinary return values. Successful absence, a predicate that does not match, and a warning with useful output MUST NOT become fatal errors merely to fit the result interface.
-
-Predicate matching and propagation of its evaluation exceptions are exempt from this specification's result-conversion requirements. Matching MUST return captures for a match or `None` for a non-match, and MAY raise evaluation failures. Composite predicates MUST propagate those failures without treating them as non-matches. Result-returning callers MUST recover error values from result-based helpers within their existing propagation scope; unrelated matching exceptions MAY propagate unchanged.
-
-Non-fatal problems MUST be represented as shared warning logic cells when processing can continue and produce useful output.
-
-Lower-level modules MUST NOT print errors, print warnings, write JSON Lines records, or terminate the process.
-
-The CLI layer MUST be responsible for converting fatal project errors into:
-
-- process termination using the shared environment-error exit-code contract.
-- stderr messages.
-- output protocol records.
-
-Warning producers MUST submit shared warning cells to the scoped output emitter.
-Runtime result cells MUST NOT duplicate warning storage or snapshots.
-
-Environment errors MUST expose stable error codes.
-
-Project-owned error codes MUST use lowercase ASCII letters, ASCII digits, and `_`. Adopted shared error codes MUST retain their native spelling.
-
-User-facing messages SHOULD be clear enough to diagnose the problem without exposing implementation stack details.
+Errors MUST expose machine-readable codes identifying failure kinds independently of message text.
+Project codes MUST use lowercase ASCII letters, ASCII digits, and `_`; adopted shared codes MUST retain native spelling.
+Messages SHOULD diagnose problems without stack details.
 
 ## Error ownership
 
-Each module MAY define an `errors` submodule for errors owned by that module.
+Depmesh bases MUST belong to `depmesh.core.errors`.
+Shared errors MUST retain their:
 
-Shared base result and error types MUST be owned by a common lower-level module that does not depend on CLI behavior.
+- hierarchy.
+- codes.
+- messages.
+- records.
 
-Module-specific error types MUST be defined in the module that can add the most useful context.
-
-Production errors MUST NOT be defined in test modules.
-
-Test-only error classes MAY be defined in test modules when they are required to verify error handling behavior.
+Top-level error owners SHOULD define `errors` hierarchies with an `InternalError` root inheriting Depmesh's core internal base and an `EnvironmentError` root inheriting Depmesh's core environment base.
+Category roots MUST explicitly use `EnvironmentError`/`InternalError`, not an ambiguous `Error` or boundary-only name.
+Specific errors MUST belong where useful context can be added.
+Unique cases SHOULD have subclasses.
+Owners MUST export `errors` from their package initializer.
+Production errors MUST NOT live in tests; test-only errors MAY verify handling.
 
 ## Error models and internal exceptions
 
-Expected operational errors MUST be Pydantic models inheriting from the shared `EnvironmentError`, not exceptions.
+Depmesh's environment-error base MUST inherit shared `EnvironmentError`, identify Depmesh-owned failures for policy, and inherit the shared default exit status without overriding it.
+Errors MUST remain presentation-independent Pydantic models, define `code`/`message`, and MUST NOT inherit `Exception`.
+They MAY add guidance and typed context.
+Leaf classes SHOULD declare messages/guidance; call sites SHOULD supply only varying context.
+Messages and guidance MAY use `{error.<field>}` formatting.
+Diagnostic data MUST follow the shared contract in `specs/architecture/errors.md` in `llm-tool-cli`.
+Core error bases MUST NOT depend on cells, formatters, or CLI output.
 
-Environment errors MUST carry a stable code and message, and MAY include corrective guidance and typed context fields owned by the concrete error.
+Project technical exceptions MUST inherit `depmesh.core.errors.InternalError`, itself inheriting `llm_tool_cli.core.errors.InternalError`.
+They MUST NOT become environment errors merely through common ancestry or dependency origin.
+Models and exceptions MUST remain separate.
+Internal errors MUST NOT provide environment codes or diagnostic serialization.
 
-A module MAY define an environment-error classification model when callers need to distinguish that module's failures.
-Error classes MUST use the inherited class-level exit-code contract managed by `llm_tool_cli` and MAY declare overrides through the shared core enum.
+## Results
 
-Internal and technical exceptions defined by the project MUST inherit from the project's core `InternalError`, which inherits from the shared exception `InternalError`.
+Fallible functions SHOULD return `Result[T]`; failures MUST use shared `EnvironmentErrors`, which MAY mix shared/Depmesh values.
+Success MUST use `Ok(value)`; failure MUST use `Err(errors)`.
+Independent validation failures SHOULD be collected in one result.
+Compatible propagation SHOULD preserve the original result/list without rewrapping.
+Functions SHOULD NOT be duplicated solely by handling strategy.
+Changing a function to return errors MUST update callers to handle/propagate/render according to their layer.
 
-Internal exceptions MUST NOT be converted into environment errors merely because they share a base class or originate in a dependency.
+## Callback boundaries
 
-Environment-error model definitions and internal exception definitions MUST remain distinct. Category roots MUST explicitly use `EnvironmentError` or `InternalError` names instead of an ambiguous `Error` root. Internal exceptions MUST NOT provide environment-error codes or diagnostic-record serialization.
+Fallible callbacks/interchangeable components MUST expose result-aware interfaces.
+Framework callbacks MAY adapt results when ordinary values/control-flow exceptions are required.
+Pydantic validators MAY raise required validation exceptions internally; external-input boundaries MUST convert resulting failures to returned errors.
 
-## Result propagation
+## `unwrap_to_error`
 
-A successful result MUST contain the requested value. A failed result MUST contain a non-empty `EnvironmentErrors` in diagnostic order.
-
-The project MUST preserve returned error values when propagation does not add application-specific meaning or implement recovery.
-
-Fallible callbacks and interchangeable components MUST expose result-aware interfaces so expected errors can reach their callers.
-
-Framework callbacks that require ordinary return values or framework control-flow exceptions MAY adapt results at that framework boundary.
-
-Pydantic validators MAY raise validation exceptions required by Pydantic internally; the external-input boundary MUST convert the resulting validation failure into a returned environment error.
-
-The shared propagation decorator MAY translate its own result-unwrapping exception into a failed result within the decorated call. The CLI command boundary MAY recover environment errors from that same propagation exception for rendering and exit-code selection. Result unwrapping for propagation MUST stay inside one of these scopes; deferred iterators and callbacks MUST NOT let the unwrapping exception escape it.
-
-An unguarded unwrap of a failed result outside a propagation scope is an internal error, not an expected operational failure.
-
-## Error data
-
-Environment-error context MUST use typed fields that can be rendered deterministically.
-
-Error records MUST preserve native codes, formatted messages, and structured context. Callers MUST NOT parse message text to determine the error category.
-
-Known low-level exceptions SHOULD be retained as private causes when useful for debugging. Causes MUST NOT become serialized diagnostic fields.
+For simpler composition of result-returning functions, `unwrap_to_error` SHOULD be preferred over repeated manual failure checks, particularly for functions mainly composing other results.
+Decorated functions MAY unwrap intermediate values.
+The decorator MUST convert `UnwrapError` back to `Err` with its payload and MUST NOT hide internal/arbitrary exceptions.
+Propagation unwraps MUST execute inside a recovery scope, including those in deferred iterators and callbacks.
+Creating an iterator or callback inside that scope MUST NOT substitute for executing its fallible work there.
+An unguarded failed unwrap is an internal error.
 
 ## Warnings
 
-Warnings represent non-fatal problems discovered while processing a request.
+Warnings MUST represent only non-fatal problems allowing useful output.
+They MUST NOT represent:
 
-Warnings MUST be used only when processing can continue and the command can still produce useful requested output.
+- invalid arguments.
+- unloadable configuration.
+- dependency query failures preventing valid results.
 
-Warnings MUST NOT be used for invalid command line arguments, invalid configuration that prevents loading, or dependency query failures that prevent producing a valid query result.
+They MUST use warning cells and scoped delivery provided by `llm_tool_cli`, buffered until finalization after results or reported errors.
 
-Warnings MUST use shared warning cells submitted to the independently scoped output emitter.
-The emitter MUST preserve insertion order without deduplication and buffer warnings until command finalization.
-Warnings MUST follow ordinary results on success and error diagnostics on expected failure.
-Each command MUST receive fresh output buffers through shared command setup.
-Depmesh MUST NOT maintain singleton warning storage or attach warning snapshots to dependency-result cells.
-
-Examples of warning-producing situations include:
-
-- a files source pattern that cannot be resolved inside the project.
-- a command source that writes stderr output but still produces usable dependencies.
-- a command source that exits with a non-zero status when other artifact sources can still produce useful output.
+Examples include unresolvable files patterns and command-source stderr or non-zero exits when usable dependencies remain available.
 
 ## Pydantic validation errors
 
-Pydantic validation errors MUST NOT be exposed directly across high-level module boundaries for user-provided data.
-
-Modules that create Pydantic entities from external input MUST convert `pydantic.ValidationError` into returned environment errors or warning cells at the nearest exception boundary with useful context. Shared configuration loading MAY own this conversion.
-
-Pydantic validation errors MAY be used directly inside tests for low-level entity validation.
+Raw external-input Pydantic errors MUST NOT cross high-level boundaries.
+The nearest useful boundary MUST convert `pydantic.ValidationError` into returned errors or warning cells; shared loading MAY own conversion.
+Low-level entity tests MAY assert Pydantic errors directly.
 
 ## Exception boundaries
 
-Modules that call external systems MUST convert relevant low-level failures into returned environment errors or warning cells at the boundary where context is still available.
-
-External systems include:
+External-system callers MUST convert relevant known failures at useful boundaries, including:
 
 - filesystem operations.
 - TOML parsing.
-- Pydantic model validation for external input.
-- regular expression compilation.
-- shell command execution.
+- external-input model validation.
+- regex compilation.
+- shell execution.
 
-Unexpected programming errors MUST remain exceptions. Code that handles expected user or environment failures MUST convert only the relevant known failures into returned environment errors.
-
-Raw filesystem, parser, or validation exceptions representing expected failures MUST NOT cross high-level boundaries unchanged. Blanket exception-to-result conversion MUST NOT hide programming errors.
-
-Translation of an expected error SHOULD occur only when it adds application-specific meaning or implements recovery.
-
-When converting an exception, the original exception SHOULD be preserved as the environment error's cause when it helps debugging.
+Expected raw filesystem/parser/validation failures MUST NOT escape high-level boundaries.
+Unexpected bugs MUST remain exceptions; blanket conversion MUST NOT hide them.
+Translation SHOULD add application meaning or recovery and SHOULD retain useful private causes.
 
 ## CLI mapping
 
-The CLI MUST delegate failed result unwrapping and explicit environment-error reporting to the CLI handling boundary managed by `llm_tool_cli`.
+`llm_tool_cli` MUST own skill failures and protocol-option validation/diagnostics.
+Before result-based execution, Typer parsing MAY use standard invalid-argument behavior, including `typer.BadParameter`, `click.UsageError`, or `typer.Exit`.
 
-Failure rendering and exit-code selection MUST be centralized at the CLI command boundary.
-Environment errors MUST remain structured values in the shared error logic cell until projection; `llm_tool_cli` MUST manage their content, corrective guidance, and metadata.
-The shared CLI handling boundary MUST manage diagnostic ordering, stdout delivery, exit-code aggregation, and process termination during Depmesh-owned command execution.
-It MUST journal terminal error cells through shared journal-record conversion, without extra console journal cells or dependency on Depmesh workspace state.
-Journal-delivery failures MUST preserve original diagnostics and MUST NOT cause recursive journaling.
-Skill-command failure handling MUST be managed by `llm_tool_cli`.
-Protocol-option parsing MUST use the error presentation and exit behavior managed by `llm_tool_cli` before command execution.
+After protocol installation, command handling provided by `llm_tool_cli` MUST own every environment error's:
 
-The CLI MUST render every error in a failed result in list order. Technical exceptions MUST NOT be rendered as expected environment errors.
+- order.
+- presentation.
+- stdout delivery.
+- exit.
 
-The CLI MUST NOT return a non-zero exit code only because warnings were produced.
+Depmesh MUST NOT maintain another error-rendering/exit path.
+Errors MUST remain typed shared cells until shared projection of content/guidance/metadata.
+Shared handling MUST journal terminal error cells without extra console journals or workspace dependencies.
+Processor failures MUST NOT recursively journal themselves.
+Non-CLI errors MAY declare shared-core exit overrides; termination MUST remain at the shared CLI boundary.
 
-When a fatal error is rendered for the automation protocol, the ordinary `error` cell MUST use the shared library's identifier and content contract, retaining the native code and diagnostic context as metadata. Adopted shared errors MUST NOT be remapped to legacy project diagnostics.
+## Naming error classes
 
-When a warning is rendered for the automation protocol, the `warning` record MUST include the warning string as the `message` field.
+Names SHOULD be short/descriptive.
+When clear, leaf names SHOULD omit these redundant suffixes:
 
-All protocols MUST deliver warning and environment-error cells to stdout through the shared CLI handling contract.
+- `Error`.
+- `Exception`.
+- `Failure`.
+- `Internal`.
+- `Environment`.
+
+Roots MUST retain the explicit categories required above.
+
+## Asserts
+
+Assertions MAY aid typing/lint when prior flow guarantees invariants.
+They MUST NOT validate external input or handle recoverable query failures, which MUST use environment errors.
+Impossible states needing explicit handling SHOULD use internal errors.
+
+## Other exception types
+
+Production SHOULD use `InternalError` unless Python/third-party protocols require alternatives.
+Such interfaces, Pydantic validators, and Typer/click parsing MAY use required exception types.
+Shared technical result exceptions MAY implement controlled propagation but MUST NOT be mistaken for environment-error values.
+Temporary `NotImplementedError` MAY appear during implementation and SHOULD be replaced before completion with implemented behavior or project internal errors.
