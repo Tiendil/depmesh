@@ -32,7 +32,7 @@ from depmesh.runtime import commands
 
 def normalize_cell_ids(text: str) -> str:
     return re.sub(
-        r"(?m)^(--DEPMESH-CELL |----- DEPMESH CELL )[A-Za-z0-9_-]{22}( BEGIN--| END--| -----)$",
+        r"(?m)^(--DEPMESH-CELL )[A-Za-z0-9_-]{22}( BEGIN--| END--)$",
         r"\1<id>\2",
         text,
     )
@@ -155,8 +155,8 @@ class TestCommandContext:
             assert records[0]["path"] == str(tmp_path)
         else:
             assert not result.stderr
-            separator = " = " if protocol == "human" else "="
-            assert f"kind{separator}error\n" in result.stdout
+            separator = ": " if protocol == "human" else "="
+            assert ("Error: " if protocol == "human" else "kind=error\n") in result.stdout
             assert f"code{separator}{code}\n" in result.stdout
             assert f"path{separator}{tmp_path}\n" in result.stdout
 
@@ -189,14 +189,14 @@ class TestCommandContext:
 
         assert result.exit_code == 0
         assert not result.stderr
-        assert result.stdout.startswith("----- DEPMESH CELL ")
-        assert "relation = tests" in result.stdout
+        assert result.stdout.startswith("relation: tested_by\n")
+        assert "relation: tests" in result.stdout
 
     def test_protocol_defaults_are_selected_for_each_invocation(self) -> None:
         invocations = [
             (["skill"], "--DEPMESH-CELL ", "kind=skill\n"),
-            (["version"], "----- DEPMESH CELL ", "kind = version\n"),
-            (["-p", "human", "skill"], "----- DEPMESH CELL ", "kind = skill\n"),
+            (["version"], "version: ", "version: "),
+            (["-p", "human", "skill"], "document: usage\n", "# `depmesh` Usage\n"),
             (["skill"], "--DEPMESH-CELL ", "kind=skill\n"),
         ]
         for arguments, prefix, kind in invocations:
@@ -286,7 +286,7 @@ class TestCommandContext:
             assert not result.stderr
         else:
             assert not result.stderr
-            separator = " = " if protocol == "human" else "="
+            separator = ": " if protocol == "human" else "="
             codes = [f"code{separator}{error.code}\n" for error in failures]
             assert all(code in result.stdout for code in codes)
             positions = [result.stdout.index(code) for code in codes]
@@ -334,10 +334,10 @@ class TestCommandContext:
         else:
             assert result.stderr == ""
             assert error.format_message() in result.stdout
-            prefix = "----- DEPMESH CELL " if protocol == "human" else "--DEPMESH-CELL "
+            prefix = "Error: " if protocol == "human" else "--DEPMESH-CELL "
             assert result.stdout.startswith(prefix)
-            separator = " = " if protocol == "human" else "="
-            assert f"kind{separator}error\n" in result.stdout
+            separator = ": " if protocol == "human" else "="
+            assert ("Error: " if protocol == "human" else "kind=error\n") in result.stdout
             assert f"code{separator}{error.code}\n" in result.stdout
 
     @pytest.mark.parametrize(
@@ -459,7 +459,10 @@ class TestDependencies:
 
         assert first.exit_code == second.exit_code == 0
         assert first.stderr == second.stderr == ""
-        assert first.stdout != second.stdout
+        if protocol == "human":
+            assert first.stdout == second.stdout
+        else:
+            assert first.stdout != second.stdout
         if protocol == "automation":
             assert (
                 cell_payloads(json_lines(first.stdout))
@@ -504,7 +507,8 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
             ]
         else:
             assert result.stdout.index("@/café.py") < result.stdout.index(message)
-            assert result.stdout.startswith("----- DEPMESH CELL" if protocol == "human" else "--DEPMESH-CELL")
+            assert result.stdout.startswith("relation: tests\n" if protocol == "human" else "--DEPMESH-CELL")
+            assert (f"Warning: {message}" if protocol == "human" else "kind=warning") in result.stdout
 
     def test_home_relative_input(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)
@@ -666,16 +670,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
 
         assert result.exit_code == 0
         assert normalize_cell_ids(result.output) == (
-            "----- DEPMESH CELL <id> -----\n"
-            "kind = dependencies\n"
-            "media_type = text/markdown\n"
-            "relation = tests\n"
-            "type = dependencies\n"
-            "\n"
-            "Tests related to the input artifacts.\n"
-            "\n"
-            "- @/tests/test_a.py\n"
-            "\n"
+            "relation: tests\n\nTests related to the input artifacts.\n\n- @/tests/test_a.py\n\n"
         )
 
     @pytest.mark.parametrize("artifact", ["@/src/a.py", "@/src/../src/./a.py"])
@@ -689,16 +684,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
 
         assert result.exit_code == 0
         assert normalize_cell_ids(result.output) == (
-            "----- DEPMESH CELL <id> -----\n"
-            "kind = dependencies\n"
-            "media_type = text/markdown\n"
-            "relation = tests\n"
-            "type = dependencies\n"
-            "\n"
-            "Tests related to the input artifacts.\n"
-            "\n"
-            "- @/tests/test_a.py\n"
-            "\n"
+            "relation: tests\n\nTests related to the input artifacts.\n\n- @/tests/test_a.py\n\n"
         )
 
     def test_invalid_root_anchored_input_keeps_argument_error(
@@ -726,16 +712,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
 
         assert result.exit_code == 0
         assert normalize_cell_ids(result.output) == (
-            "----- DEPMESH CELL <id> -----\n"
-            "kind = dependencies\n"
-            "media_type = text/markdown\n"
-            "relation = tests\n"
-            "type = dependencies\n"
-            "\n"
-            "Tests related to the input artifacts.\n"
-            "\n"
-            "- @/tests/test_a.py\n"
-            "\n"
+            "relation: tests\n\nTests related to the input artifacts.\n\n- @/tests/test_a.py\n\n"
         )
 
     def test_human_query_accepts_relative_input_from_working_directory(
@@ -748,16 +725,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
 
         assert result.exit_code == 0
         assert normalize_cell_ids(result.output) == (
-            "----- DEPMESH CELL <id> -----\n"
-            "kind = dependencies\n"
-            "media_type = text/markdown\n"
-            "relation = tests\n"
-            "type = dependencies\n"
-            "\n"
-            "Tests related to the input artifacts.\n"
-            "\n"
-            "- @/tests/test_a.py\n"
-            "\n"
+            "relation: tests\n\nTests related to the input artifacts.\n\n- @/tests/test_a.py\n\n"
         )
 
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
@@ -796,11 +764,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
 
         assert result.exit_code == 0
         assert normalize_cell_ids(result.output) == (
-            "----- DEPMESH CELL <id> -----\n"
-            "kind = dependencies\n"
-            "media_type = text/markdown\n"
-            "relation = tests\n"
-            "type = dependencies\n"
+            "relation: tests\n"
             "\n"
             "Tests related to the input artifacts.\n"
             "\n"
@@ -850,16 +814,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
 
         assert result.exit_code == 0
         assert normalize_cell_ids(result.output) == (
-            "----- DEPMESH CELL <id> -----\n"
-            "kind = dependencies\n"
-            "media_type = text/markdown\n"
-            "relation = tested_by\n"
-            "type = dependencies\n"
-            "\n"
-            "Artifacts tested by the input artifacts.\n"
-            "\n"
-            "- @/src/a.py\n"
-            "\n"
+            "relation: tested_by\n\nArtifacts tested by the input artifacts.\n\n- @/src/a.py\n\n"
         )
 
     def test_default_query_output_includes_reverse_relations_when_configured(
@@ -872,16 +827,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
 
         assert result.exit_code == 0
         assert normalize_cell_ids(result.output) == (
-            "----- DEPMESH CELL <id> -----\n"
-            "kind = dependencies\n"
-            "media_type = text/markdown\n"
-            "relation = tested_by\n"
-            "type = dependencies\n"
-            "\n"
-            "Artifacts tested by the input artifacts.\n"
-            "\n"
-            "- @/src/a.py\n"
-            "\n"
+            "relation: tested_by\n\nArtifacts tested by the input artifacts.\n\n- @/src/a.py\n\n"
         )
 
     def test_short_alias(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -892,16 +838,7 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
 
         assert result.exit_code == 0
         assert normalize_cell_ids(result.output) == (
-            "----- DEPMESH CELL <id> -----\n"
-            "kind = dependencies\n"
-            "media_type = text/markdown\n"
-            "relation = tests\n"
-            "type = dependencies\n"
-            "\n"
-            "Tests related to the input artifacts.\n"
-            "\n"
-            "- @/tests/test_a.py\n"
-            "\n"
+            "relation: tests\n\nTests related to the input artifacts.\n\n- @/tests/test_a.py\n\n"
         )
 
     def test_protocol_is_not_a_dependencies_option(self) -> None:
@@ -1020,6 +957,29 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
 
 
 class TestRelations:
+    @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
+    def test_absent_description_omits_content_and_media_type(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, protocol: str
+    ) -> None:
+        (tmp_path / "depmesh.toml").write_text('[[relations]]\nid = "imports"\n', encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+
+        result = CliRunner().invoke(app, ["-p", protocol, "relations"])
+
+        assert result.exit_code == 0
+        assert not result.stderr
+        if protocol == "automation":
+            assert cell_payloads(json_lines(result.stdout)) == [
+                {"type": "relation", "relation": "imports", "content": None}
+            ]
+        elif protocol == "llm":
+            assert normalize_cell_ids(result.stdout) == (
+                "--DEPMESH-CELL <id> BEGIN--\nkind=relation\nrelation=imports\ntype=relation\n"
+                "--DEPMESH-CELL <id> END--\n"
+            )
+        else:
+            assert result.stdout == "relation: imports\n\n"
+
     def test_discovers_nearest_config(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)
         nested_root = tmp_path / "nested"
@@ -1031,9 +991,7 @@ class TestRelations:
         result = CliRunner().invoke(app, ["relations"])
 
         assert result.exit_code == 0
-        assert normalize_cell_ids(result.stdout) == (
-            "----- DEPMESH CELL <id> -----\n" "kind = relation\n" "relation = nearest\n" "type = relation\n" "\n"
-        )
+        assert result.stdout == "relation: nearest\n\n"
 
     @pytest.mark.parametrize("config_path", ["home/depmesh.toml", "~/depmesh.toml"])
     def test_explicit_relative_and_home_paths(
@@ -1049,9 +1007,7 @@ class TestRelations:
         result = CliRunner().invoke(app, ["--config", config_path, "relations"])
 
         assert result.exit_code == 0
-        assert normalize_cell_ids(result.stdout) == (
-            "----- DEPMESH CELL <id> -----\n" "kind = relation\n" "relation = selected\n" "type = relation\n" "\n"
-        )
+        assert result.stdout == "relation: selected\n\n"
 
     def test_missing_discovered_config_uses_shared_error(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1094,17 +1050,13 @@ class TestRelations:
 
         assert result.exit_code == 0
         assert normalize_cell_ids(result.output) == (
-            "----- DEPMESH CELL <id> -----\n"
-            "kind = relation\n"
-            "description = Artifacts tested by the input artifacts.\n"
-            "relation = tested_by\n"
-            "type = relation\n"
+            "relation: tested_by\n"
             "\n"
-            "----- DEPMESH CELL <id> -----\n"
-            "kind = relation\n"
-            "description = Tests related to the input artifacts.\n"
-            "relation = tests\n"
-            "type = relation\n"
+            "Artifacts tested by the input artifacts.\n"
+            "\n"
+            "relation: tests\n"
+            "\n"
+            "Tests related to the input artifacts.\n"
             "\n"
         )
 
@@ -1115,7 +1067,7 @@ class TestRelations:
         result = CliRunner().invoke(app, ["rels"])
 
         assert result.exit_code == 0
-        assert "relation = tests\n" in result.output
+        assert "relation: tests\n" in result.output
 
     def test_llm_output(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         write_project(tmp_path)
@@ -1127,15 +1079,19 @@ class TestRelations:
         assert normalize_cell_ids(result.output) == (
             "--DEPMESH-CELL <id> BEGIN--\n"
             "kind=relation\n"
-            "description=Artifacts tested by the input artifacts.\n"
+            "media_type=text/markdown\n"
             "relation=tested_by\n"
             "type=relation\n"
+            "\n"
+            "Artifacts tested by the input artifacts.\n"
             "--DEPMESH-CELL <id> END--\n"
             "--DEPMESH-CELL <id> BEGIN--\n"
             "kind=relation\n"
-            "description=Tests related to the input artifacts.\n"
+            "media_type=text/markdown\n"
             "relation=tests\n"
             "type=relation\n"
+            "\n"
+            "Tests related to the input artifacts.\n"
             "--DEPMESH-CELL <id> END--\n"
         )
 
@@ -1149,15 +1105,13 @@ class TestRelations:
         assert cell_payloads(json_lines(result.output)) == [
             {
                 "type": "relation",
-                "description": "Artifacts tested by the input artifacts.",
                 "relation": "tested_by",
-                "content": None,
+                "content": "Artifacts tested by the input artifacts.",
             },
             {
                 "type": "relation",
-                "description": "Tests related to the input artifacts.",
                 "relation": "tests",
-                "content": None,
+                "content": "Tests related to the input artifacts.",
             },
         ]
 
@@ -1175,10 +1129,7 @@ class TestSkill:
 
         assert result.exit_code == 0
         assert result.stderr == ""
-        assert result.stdout.startswith("----- DEPMESH CELL ")
-        assert "kind = skill\n" in result.stdout
-        assert "type = skill\n" in result.stdout
-        assert "document = usage\n" in result.stdout
+        assert result.stdout.startswith("document: usage\n\n")
         assert "# `depmesh` Usage\n" in result.stdout
 
     @pytest.mark.parametrize("protocol", ["human", "llm", "automation"])
@@ -1207,8 +1158,8 @@ class TestSkill:
             assert result.stderr == ""
         else:
             assert result.stderr == ""
-            separator = "=" if protocol == "llm" else " = "
-            assert f"kind{separator}error\n" in result.stdout
+            separator = "=" if protocol == "llm" else ": "
+            assert ("kind=error\n" if protocol == "llm" else "Error: ") in result.stdout
             assert f"code{separator}skill_unreadable\n" in result.stdout
             assert f"document{separator}usage\n" in result.stdout
 
@@ -1347,8 +1298,8 @@ class TestInit:
             assert record["content"]
         else:
             assert not result.stderr
-            separator = " = " if protocol == "human" else "="
-            assert f"kind{separator}error\n" in result.stdout
+            separator = ": " if protocol == "human" else "="
+            assert ("Error: " if protocol == "human" else "kind=error\n") in result.stdout
             assert f"code{separator}config_template_unreadable\n" in result.stdout
             assert f"path{separator}{config_path}\n" in result.stdout
             assert f"template{separator}base_config.toml\n" in result.stdout
@@ -1386,8 +1337,7 @@ class TestInit:
         result = CliRunner().invoke(app, ["--config", "~/custom.toml", "init"])
 
         assert result.exit_code == 0
-        assert "kind = operation_succeeded\n" in result.stdout
-        assert f"path = {home_dir / 'custom.toml'}\n" in result.stdout
+        assert f"path: {home_dir / 'custom.toml'}\n" in result.stdout
         assert "Configuration created.\n" in result.stdout
         assert (home_dir / "custom.toml").is_file()
 
@@ -1398,9 +1348,7 @@ class TestInit:
 
         config_path = tmp_path / "depmesh.toml"
         assert result.exit_code == 0
-        assert "kind = operation_succeeded\n" in result.output
-        assert "type = operation_succeeded\n" in result.output
-        assert f"path = {config_path}\n" in result.output
+        assert f"path: {config_path}\n" in result.output
         assert "Configuration created.\n" in result.output
         assert 'id = "governed_by"' in config_path.read_text(encoding="utf-8")
         assert 'id = "governs"' in config_path.read_text(encoding="utf-8")
@@ -1412,7 +1360,7 @@ class TestInit:
 
         assert result.exit_code == 0
         assert (tmp_path / "custom.toml").is_file()
-        assert f"path = {tmp_path / 'custom.toml'}\n" in result.stdout
+        assert f"path: {tmp_path / 'custom.toml'}\n" in result.stdout
 
     def test_does_not_overwrite_existing_config(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.chdir(tmp_path)
@@ -1448,9 +1396,7 @@ class TestVersion:
                 "--DEPMESH-CELL <id> END--\n"
             )
         else:
-            assert normalize_cell_ids(result.stdout) == (
-                f"----- DEPMESH CELL <id> -----\nkind = version\ntype = version\nversion = {version}\n\n"
-            )
+            assert result.stdout == f"version: {version}\n\n"
 
     @pytest.mark.parametrize("content", [None, "not valid TOML"])
     def test_global_options_are_accepted(self, tmp_path: Path, content: str | None) -> None:
@@ -1484,10 +1430,7 @@ class TestMain:
         assert exit_info.value.code == 0
         captured = capsys.readouterr()
         assert not captured.err
-        assert normalize_cell_ids(captured.out) == (
-            "----- DEPMESH CELL <id> -----\nkind = version\ntype = version\n"
-            f"version = {metadata.version('depmesh')}\n\n"
-        )
+        assert captured.out == f"version: {metadata.version('depmesh')}\n\n"
 
     def test_initializes_label_before_parsing(self, mocker: MockerFixture, capsys: pytest.CaptureFixture[str]) -> None:
         mocker.patch.object(sys, "argv", ["depmesh", "--protocol", "invalid", "version"])

@@ -183,8 +183,9 @@ class TestRelations:
 
         assert [cell.model_dump()["meta"] for cell in cells] == [
             {"type": "relation", "relation": "docs"},
-            {"type": "relation", "relation": "tests", "description": "Related tests."},
+            {"type": "relation", "relation": "tests"},
         ]
+        assert [cell.model_dump()["content"] for cell in cells] == [None, "Related tests."]
         assert capsys.readouterr() == ("", "")
 
     def test_empty_configuration(self, collected_output: CollectingEmitter) -> None:

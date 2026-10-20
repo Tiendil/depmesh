@@ -43,15 +43,19 @@ Example output:
 ```text
 --DEPMESH-CELL <id-1> BEGIN--
 kind=relation
-description=Specifications that apply to the artifact.
+media_type=text/markdown
 relation=governed_by
 type=relation
+
+Specifications that apply to the artifact.
 --DEPMESH-CELL <id-1> END--
 --DEPMESH-CELL <id-2> BEGIN--
 kind=relation
-description=Tests that verify the artifact.
+media_type=text/markdown
 relation=tested_by
 type=relation
+
+Tests that verify the artifact.
 --DEPMESH-CELL <id-2> END--
 ```
 
@@ -224,9 +228,9 @@ Run separate queries when you need to know which requested artifact produced eac
 
 ## Output Protocols
 
-Dependency results, relation lists, warnings, skill documents, versions, and initialization confirmations use shared output cells. Human and LLM cells use `DEPMESH` framing. Cell content, metadata, and ordering are deterministic; generated cell IDs may differ. IDs in the examples are placeholders.
+Dependency results, relation lists, warnings, skill documents, versions, and initialization confirmations use shared output cells. LLM cells use `DEPMESH` framing; human output shows readable metadata and content without cell borders or generated IDs. Cell content, metadata, and ordering are deterministic; generated cell IDs in LLM and automation output may differ. IDs in the examples are placeholders.
 
-Human and LLM dependency output groups paths into one cell per relation. Automation emits one cell per dependency, retaining `type`, `relation`, and `dependency`. Relation cells use `relation` for the relation name; `id` identifies the cell. Skill documents use `content` for their text. Warnings use `type = warning` and `message`. Fatal errors use ordinary cells with `type = error`, a native `code`, diagnostic metadata, and the formatted message in `content`. They retain nonzero exits; all cells, including errors, go to stdout in every protocol.
+Human and LLM dependency output groups paths into one cell per relation. Automation emits one cell per dependency, retaining `type`, `relation`, and `dependency`. Relation cells use `relation` for the relation name and `content` for the optional description; `id` identifies the cell. Skill documents use `content` for their text. Human warnings start with `Warning:`; LLM and automation warnings use `type = warning` and `message`. Human errors show `Error:` followed by the message and guidance, then diagnostic fields; LLM and automation errors use `type = error`, a native `code`, diagnostic metadata, and the formatted message in `content`. They retain nonzero exits; all cells, including errors, go to stdout in every protocol.
 
 `depmesh version` emits one cell with `type = version` and the installed package version in `version` metadata. Automation output has null `content`. The command does not require project configuration.
 
@@ -283,15 +287,19 @@ Example output:
 ```text
 --DEPMESH-CELL <id-1> BEGIN--
 kind=relation
-description=Python files imported by the artifact.
+media_type=text/markdown
 relation=imports
 type=relation
+
+Python files imported by the artifact.
 --DEPMESH-CELL <id-1> END--
 --DEPMESH-CELL <id-2> BEGIN--
 kind=relation
-description=Tests that verify the artifact.
+media_type=text/markdown
 relation=tests
 type=relation
+
+Tests that verify the artifact.
 --DEPMESH-CELL <id-2> END--
 ```
 

@@ -195,15 +195,19 @@ Example output:
 ```text
 --DEPMESH-CELL <id-1> BEGIN--
 kind=relation
-description=Specifications that apply to the artifact.
+media_type=text/markdown
 relation=governed_by
 type=relation
+
+Specifications that apply to the artifact.
 --DEPMESH-CELL <id-1> END--
 --DEPMESH-CELL <id-2> BEGIN--
 kind=relation
-description=Tests that verify the artifact.
+media_type=text/markdown
 relation=tested_by
 type=relation
+
+Tests that verify the artifact.
 --DEPMESH-CELL <id-2> END--
 ```
 

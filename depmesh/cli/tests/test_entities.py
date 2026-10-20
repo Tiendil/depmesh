@@ -32,8 +32,8 @@ class TestValidateArtifacts:
         assert caught.value.exit_code == 1
         captured = capsys.readouterr()
         assert not captured.err
-        assert captured.out.startswith("----- DEPMESH CELL ")
-        assert "code = invalid_arguments\n" in captured.out
+        assert captured.out.startswith("Error: ")
+        assert "code: invalid_arguments\n" in captured.out
         assert "at least one artifact is required" in captured.out
 
 

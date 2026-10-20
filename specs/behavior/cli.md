@@ -65,7 +65,7 @@ These forms MUST be supported, with optional global options before commands:
 
 ## Application identity
 
-Human and LLM cell framing MUST use `DEPMESH`, including error cells produced during argument parsing.
+LLM cell framing MUST use `DEPMESH`, including error cells produced during argument parsing.
 The default configuration filename MUST be `depmesh.toml`.
 
 ## Output behavior
@@ -117,8 +117,8 @@ The following projections MUST apply:
 - Relation, all protocols:
 
   - Kind: `relation`.
-  - Metadata: `type = relation`, `relation`, optional `description`.
-  - Content: metadata-only.
+  - Metadata: `type = relation`, `relation`.
+  - Content: the optional description, using Markdown when present.
 
 Empty dependency results without warnings and empty relation lists MUST emit no cells.
 Output records MUST follow these field meanings:
@@ -134,7 +134,7 @@ Example ids are placeholders.
 ### Human output
 
 Human output SHOULD use concise labels and canonical root-anchored paths for project inputs/dependencies.
-It MUST follow the Human and LLM cells contract in `specs/behavior/protocol.md` in `llm-tool-cli`, with Depmesh metadata.
+It MUST follow the Human cells contract in `specs/behavior/protocol.md` in `llm-tool-cli`, with Depmesh metadata and without cell borders or generated ids.
 
 ### LLM output
 
@@ -194,11 +194,11 @@ The option MAY repeat; output MUST include matches for any selected relation, or
 ## Relations Command
 
 `relations` and alias `rels` MUST list all configured relations sorted by id, without artifact/query arguments.
-Text protocols MUST use cells with relation/optional description metadata under `specs/behavior/protocol.md` in `llm-tool-cli`; automation MUST emit one cell per relation.
-Absent descriptions MUST be omitted.
+Every protocol MUST emit one cell per relation under `specs/behavior/protocol.md` in `llm-tool-cli`, with the relation id in metadata and its optional description in content rather than a `description` field.
+Absent descriptions MUST produce no content or media type; automation MUST represent absent or empty content as null.
 
 ```json
-{"content":null,"description":"Tests related to the input artifacts.","id":"<id-1>","relation":"tests","type":"relation"}
+{"content":"Tests related to the input artifacts.","id":"<id-1>","relation":"tests","type":"relation"}
 ```
 
 ### Example: multiple artifacts
@@ -211,18 +211,11 @@ A separately configured `imported_by` relation queries the reverse direction.
 For `depmesh --protocol human deps @/src/main.py`:
 
 ```text
------ DEPMESH CELL <id-1> -----
-kind = dependencies
-media_type = text/markdown
-relation = imports
-type = dependencies
+relation: imports
 
 - @/src/shared.py
 
------ DEPMESH CELL <id-2> -----
-kind = warning
-message = skipped unresolved dependency
-type = warning
+Warning: skipped unresolved dependency
 
 ```
 

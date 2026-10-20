@@ -6,7 +6,7 @@ import pydantic
 from llm_tool_cli.protocol.logic_cells import ContentCell
 from llm_tool_cli.protocol.logic_cells.base import LogicCell
 from llm_tool_cli.protocol.output_cells import AutomationOutputCell, HumanOutputCell, LLMOutputCell
-from llm_tool_cli.protocol.output_cells.base import MetaValue, OutputCell
+from llm_tool_cli.protocol.output_cells.base import OutputCell
 
 from depmesh.discovery.entities import QueryResult
 from depmesh.domain.entities import Relation
@@ -53,8 +53,12 @@ class DependenciesCell(LogicCell):
 def relation_cells(relations: tuple[Relation, ...]) -> list[ContentCell]:
     cells: list[ContentCell] = []
     for relation in sorted(relations, key=lambda item: item.id):
-        meta: dict[str, MetaValue] = {"type": "relation", "relation": relation.id}
-        if relation.description is not None:
-            meta["description"] = relation.description
-        cells.append(ContentCell(kind="relation", meta=meta))
+        cells.append(
+            ContentCell(
+                kind="relation",
+                media_type="text/markdown" if relation.description is not None else None,
+                content=relation.description,
+                meta={"type": "relation", "relation": relation.id},
+            )
+        )
     return cells

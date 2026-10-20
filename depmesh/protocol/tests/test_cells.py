@@ -143,7 +143,7 @@ class TestDependenciesCell:
 
 
 class TestRelationCells:
-    def test_sorted_metadata_preserves_description_and_relation_identity(self) -> None:
+    def test_sorted_cells_use_description_as_content_and_preserve_relation_identity(self) -> None:
         cells = relation_cells((relation("tests", "Tests for café."), relation("imports")))
 
         assert [cell.model_dump() for cell in cells] == [
@@ -155,9 +155,9 @@ class TestRelationCells:
             },
             {
                 "kind": "relation",
-                "media_type": None,
-                "content": None,
-                "meta": {"type": "relation", "relation": "tests", "description": "Tests for café."},
+                "media_type": "text/markdown",
+                "content": "Tests for café.",
+                "meta": {"type": "relation", "relation": "tests"},
             },
         ]
 
@@ -165,4 +165,7 @@ class TestRelationCells:
         assert relation_cells(()) == []
 
     def test_empty_description_is_preserved(self) -> None:
-        assert relation_cells((relation("tests", ""),))[0].meta["description"] == ""
+        cell = relation_cells((relation("tests", ""),))[0]
+        assert cell.content == ""
+        assert cell.media_type == "text/markdown"
+        assert "description" not in cell.meta
