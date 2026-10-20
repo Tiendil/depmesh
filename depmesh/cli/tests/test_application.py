@@ -847,11 +847,15 @@ output = {type = "command", command = "printf '@/café.py'; printf 'notice' >&2"
         assert result.exit_code != 0
         assert "--protocol" in result.output
 
-    def test_invalid_arguments_exit_code(self) -> None:
-        result = CliRunner().invoke(app, ["dependencies"])
+    @pytest.mark.parametrize("command", ["dependencies", "deps"])
+    @pytest.mark.parametrize("protocol", [None, "human", "llm", "automation"])
+    def test_requires_artifacts(self, tmp_path: Path, command: str, protocol: str | None) -> None:
+        options = [] if protocol is None else ["-p", protocol]
+        result = CliRunner().invoke(app, [*options, "--config", str(tmp_path / "missing.toml"), command])
 
-        assert result.exit_code == 1
-        assert "at least one artifact is required" in result.output
+        assert result.exit_code == 2
+        assert not result.stdout
+        assert "ARTIFACT" in result.stderr
 
     def test_config_error_exit_code(self, tmp_path: Path) -> None:
         result = CliRunner().invoke(app, ["--config", str(tmp_path / "missing.toml"), "dependencies", "./src/a.py"])

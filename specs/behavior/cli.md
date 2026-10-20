@@ -286,7 +286,7 @@ The command MUST report the installed version of distribution `depmesh` under th
 
 Commands MUST follow the Command error handling and Exit statuses contracts in `specs/behavior/cli.md` in `llm-tool-cli`.
 Configuration diagnostics MUST propagate without translation.
-Explicit argument checks before command initialization MUST report using human fallback; protocol-option parsing MUST retain the distinct diagnostics and fallback protocol required by that CLI contract.
+Protocol-option parsing MUST retain the distinct diagnostics and fallback protocol required by that CLI contract.
 
 **Example:** An automation missing-configuration error retains native fields:
 

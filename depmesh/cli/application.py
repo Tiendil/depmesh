@@ -32,7 +32,7 @@ def main() -> None:
 @app.command("deps")
 def dependencies(
     context: typer.Context,
-    artifacts: ArtifactsArgument = None,
+    artifacts: ArtifactsArgument,
     relation: RelationOption = None,
 ) -> None:
     with command_context(context) as command:
@@ -40,7 +40,7 @@ def dependencies(
         config = context.with_resource(load_project(Config, cwd=cwd, path=command.config_input)).unwrap()
         workspace = construct_workspace(config)
         commands.dependencies(
-            artifacts or [],
+            artifacts,
             relation or [],
             workspace=workspace,
             cwd=cwd,
