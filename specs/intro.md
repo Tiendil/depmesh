@@ -2,36 +2,52 @@
 
 ## Goal of the document
 
-This document lists all specification documents and specification directories in the project and briefly describes their purpose.
+This document indexes the project's specifications and their purposes.
 
 ## Scope
 
-The scope of this specification is limited to the specification index.
+The specification index and its maintenance; detailed product requirements are out of scope.
 
-Detailed requirements for individual specifications are out of scope except for brief descriptions needed to keep the index useful.
+## Index requirements
+
+The index MUST list every specification with its path and a brief description.
+Each description MUST identify the specification's stable subject or purpose rather than enumerate its contents.
+Descriptions MUST NOT list individual requirements or current implementation details.
+Descriptions SHOULD remain accurate when details change within the specification's existing scope.
+The index MUST be kept complete and accurate when specifications are added, removed, or change scope.
+
+**Example:** Describe a configuration specification as “The project configuration contract,” without listing its current configuration fields.
 
 ## Specification directories
 
-- `./specs/` — directory with all specifications.
-- `./specs/architecture/` — specifications related to the architecture of the system.
-- `./specs/behavior/` — specifications related to the behavior of the system.
-- `./specs/documentation/` — specifications related to project documentation artifacts.
-- `./specs/meta/` — specifications related to requirements for specification documents.
+- `./specs/` — all specifications.
+- `./specs/architecture/` — system architecture.
+- `./specs/behavior/` — observable tool behavior.
+- `./specs/documentation/` — documentation artifacts.
+- `./specs/meta/` — specification-writing requirements.
 
 ## Specification documents
 
-- `./specs/intro.md` — this file, contains a list of all specifications and their brief descriptions.
-- `./specs/dictionary.md` — dictionary of project-specific terms shared by multiple specifications.
-- `./specs/architecture/entities.md` — specification of project entity and data structure architecture.
-- `./specs/architecture/errors.md` — specification of project error and diagnostic architecture.
-- `./specs/architecture/modules_layout.md` — specification of the project module structure.
-- `./specs/architecture/naming.md` — specification of project code naming conventions.
-- `./specs/architecture/static_analysis.md` — specification of static analysis, formatting, linting, spelling, and type-checking expectations.
-- `./specs/architecture/tests.md` — specification of project test architecture.
-- `./specs/behavior/cli.md` — specification of the `depmesh` command line interface.
-- `./specs/behavior/config.md` — specification of the `depmesh.toml` configuration file behavior.
-- `./specs/behavior/file_paths.md` — specification of local project file path syntax, semantics, and resolution behavior.
-- `./specs/behavior/skill_fixtures.md` — specification of built-in skill documentation fixture behavior.
-- `./specs/documentation/changelog.md` — specification of changelog tooling, source files, version record structure, and entry format.
-- `./specs/documentation/readme.md` — specification of the root `README.md` content and purpose.
-- `./specs/meta/general.md` — general requirements for specification documents.
+- `./specs/intro.md` — Index of project specifications.
+- `./specs/dictionary.md` — Shared project terminology.
+- `./specs/architecture/entities.md` — Conventions for modeling project data.
+- `./specs/architecture/errors.md` — Conventions for representing and propagating diagnostics.
+- `./specs/architecture/modules_layout.md` — Ownership boundaries between project modules.
+- `./specs/architecture/naming.md` — Code naming conventions.
+- `./specs/architecture/tests.md` — Requirements for project tests.
+- `./specs/behavior/cli.md` — The tool's command-line interface contract.
+- `./specs/behavior/config.md` — The dependency-discovery configuration contract.
+- `./specs/behavior/skill_fixtures.md` — Requirements for built-in skill documentation.
+- `./specs/documentation/changelog.md` — Requirements for maintaining the project changelog.
+- `./specs/documentation/readme.md` — Requirements for the root README.
+- `./specs/meta/general.md` — Requirements for specification content and presentation.
+- `./specs/meta/behavior.md` — Rules for expressing observable behavior in specifications.
+
+The corresponding specifications in `llm-tool-cli` own the generic contracts for:
+
+- configuration.
+- paths.
+- globs.
+- output.
+
+Depmesh's specs define their application and tool-specific behavior.

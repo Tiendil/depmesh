@@ -35,6 +35,8 @@ Top-level fields:
 
 Unknown top-level fields are invalid.
 
+If `version` is omitted, Depmesh uses schema version `1`. It must be an integer: `"1"`, `1.0`, booleans, and unsupported versions are rejected.
+
 ## Relations
 
 Relations define the dependency vocabulary for the project. Each relation id can be listed with `depmesh -p llm relations` and selected with `depmesh -p llm dependencies --relation RELATION_ID`.
@@ -164,6 +166,16 @@ input = { type = "glob", pattern = "@/packages/{**package_path}/README.md" }
 ```
 
 `{*name}` captures part of one path segment. `{**name}` captures zero or more path segments.
+Recursive captures can have suffixes: `@/src/{**module_path}.py` captures `core/api` from `@/src/core/api.py`.
+An omitted recursive directory, as in `@/packages/{**package_path}/README.md` matching `@/packages/README.md`, gives an empty capture.
+Names must start with an ASCII letter or underscore, contain only ASCII letters, digits, and underscores, and be unique within a pattern.
+
+Predicates and file sources share case-sensitive glob syntax: `*` and `?` stay within a segment, while `**` crosses directories even in patterns such as `a**.py`.
+`**/` also matches zero directory levels.
+Use bracket classes such as `[ab]` and `[!a]`, or bracket escapes such as `[*]`, `[?]`, and `[[]` for literal wildcard characters.
+Hidden entries participate like ordinary filenames.
+Only the literal prefix before the first wildcard is resolved as a filesystem path; symlinks below the project root are prohibited.
+Predicates can match missing references.
 
 ### regex
 
@@ -234,6 +246,9 @@ output = { type = "files", pattern = "@/tests/test_{module}.py" }
 ```
 
 Without `pattern`, it produces all files under the configuration root.
+File sources select existing regular files and skip symlinks.
+Templates are substituted before glob matching; captures written inside a file-source pattern affect matching but do not create bindings for other sources.
+Invalid patterns produce a warning and no files; filesystem read failures remain errors.
 
 ### command
 
@@ -243,7 +258,7 @@ Runs a shell command from the configuration root. The command prints one depende
 output = { type = "command", command = "python ./tools/list_imports.py @/src/{module}.py" }
 ```
 
-Empty stdout lines are ignored. Non-zero exits should produce warnings when query processing can continue.
+Empty stdout lines are ignored. Stderr and non-zero exits produce warnings; valid stdout dependencies still contribute to the result. Execution or output-decoding failures, and invalid paths printed on stdout, fail the query.
 
 ### union
 
@@ -292,3 +307,14 @@ output = {
   predicate = { type = "not", item = { type = "one_of", artifacts = ["@/specs/meta/general.md"] } },
 }
 ```
+
+## Validation
+
+After editing `depmesh.toml`, list relations and query a representative artifact:
+
+```bash
+depmesh -p llm relations
+depmesh -p llm dependencies --relation governed_by @/src/app.py
+```
+
+Use relation names and artifacts from the project. Fix configuration errors first, then check that returned dependencies and warnings match the intended rules.

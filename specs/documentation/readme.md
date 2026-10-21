@@ -2,42 +2,40 @@
 
 ## Goal of the document
 
-This document describes the expected content, structure, and tone of the project `README.md`.
+This document describes the root README's content, structure, and tone.
 
 ## Scope
 
-The scope of this specification is limited to the repository root `README.md`.
+This specification covers the root `README.md`.
+The following are out of scope:
 
-The following topics are out of scope:
-
-- package metadata.
-- generated command help.
-- detailed CLI behavior.
-- detailed configuration syntax.
-- development environment rules for agents.
-- documentation files other than the root `README.md`.
+- publishing.
+- generated help.
+- detailed CLI/configuration syntax.
+- agent development rules.
+- other documentation.
 
 ## Audience
 
-`README.md` MUST be written primarily for humans who are discovering the project.
+The README MUST primarily address humans discovering Depmesh.
+It MAY discuss coding agents but MUST NOT duplicate the full built-in agent skills.
+It SHOULD quickly explain:
 
-`README.md` MAY mention coding agents because `depmesh` is designed for agent workflows, but it MUST NOT duplicate the full built-in agent skill documentation.
-
-`README.md` SHOULD help readers quickly understand:
-
-- what problem `depmesh` solves.
-- what `depmesh` does.
-- how to try the main commands.
+- the problem and Depmesh's role.
+- how to try main commands.
 - where to find detailed usage and configuration documentation.
-- how to work on the project.
+- how to develop the project.
+
+## Source Material
+
+The README MUST reflect current `./specs/` behavior and architecture.
+It MAY use `pyproject.toml` for package identity, repository links, and installation context.
+Existing prose MUST NOT override conflicting specs or metadata.
 
 ## Structure
 
-`README.md` MUST start with a single h1 heading containing the project name.
-
-The first paragraphs after the h1 heading SHOULD explain the core value proposition in plain language.
-
-`README.md` MUST use the following h2 sections in this order:
+The README MUST start with one project-name h1, followed by introductory paragraphs that SHOULD explain its value plainly.
+These h2 sections MUST follow in order:
 
 1. `Example`
 2. `Rationale`
@@ -48,62 +46,59 @@ The first paragraphs after the h1 heading SHOULD explain the core value proposit
 7. `Specifications`
 8. `Development`
 
-The `Example` section MUST be the first h2 section after the introductory paragraphs.
-
-Additional h2 sections MUST NOT be added without updating this specification first. Lower-level subsections MAY be added under the required h2 sections when they help human readers.
-
-`README.md` SHOULD avoid deep implementation details.
+`Example` MUST be the first h2.
+`Features` MUST use compact bullets with bold feature names and short descriptions.
+Additional h2 sections MUST NOT appear without updating this specification.
+Helpful lower-level subsections MAY appear; deep implementation details SHOULD be avoided.
 
 ## Content Requirements
 
-`README.md` MUST mention that `depmesh` is a CLI tool.
+The README MUST explain:
 
-`README.md` MUST explain that `depmesh` discovers dependencies between project artifacts.
+- Depmesh is a CLI discovering dependencies between project artifacts.
+- Useful results require useful project-specific `depmesh.toml` configuration.
+- This repository uses Depmesh; its `depmesh.toml` is a real example.
+- `depmesh init` creates starter configuration that should be reviewed and edited.
+- Coding agents can help fill `depmesh.toml`.
+- protocol audiences, command-specific defaults, and placement of global options before subcommands.
+- buffered result delivery and final warnings.
+- stdout output cells and nonzero exits for expected failures, distinguished from framework parsing diagnostics on stderr.
+- configuration discovery, explicit selection, and the bases for configured paths and CLI inputs.
+- merged, deduplicated multi-artifact queries, with grouped text output and individual dependency records for automation.
+- Development uses Docker-backed `./bin/dev.sh` and `./bin/dev-tests.sh`.
 
-`README.md` MUST explain that the project must have a useful `depmesh.toml` configuration for `depmesh` to be useful.
+The README MUST:
 
-`README.md` MUST link to the configuration behavior specification when describing configuration.
+- link configuration descriptions to the configuration behavior spec.
+- link command descriptions to the CLI behavior spec.
+- link detailed-documentation guidance to the skill fixture spec or mention built-in skills.
+- identify `./specs/` as the behavior and architecture source.
+- include PyPI installation examples with both `uv` and `pip`.
+- include a short `AGENTS.md` snippet directing agents to use Depmesh.
 
-`README.md` MUST mention that this repository uses `depmesh` and that its `depmesh.toml` can be used as a real configuration example.
+The `Example` section MUST show only a dependency query with default human output, omitting the protocol option.
+It MUST mention `-p llm` and `-p automation` for more structured output.
 
-`README.md` MUST explain how to initialize a starter configuration with `depmesh init`.
+It MUST mention and illustrate these primary workflows:
 
-`README.md` MUST include installation examples for installing `depmesh` from PyPI with `uv` and `pip`.
+- List relations — command example: `depmesh relations`.
+- Query dependencies — command example: `depmesh dependencies ...`.
+- Initialize configuration — command example: `depmesh init`.
+- Read built-in skills — command example: `depmesh skill usage`.
 
-`README.md` MUST explain that the generated starter configuration should be edited for the project.
-
-`README.md` MUST mention that a user can ask a coding agent to help fill `depmesh.toml`.
-
-`README.md` MUST include a short `AGENTS.md` instruction snippet that tells agents to use `depmesh`.
-
-`README.md` MUST mention the primary workflows:
-
-- listing relations.
-- querying dependencies.
-- initializing a starter configuration.
-- reading built-in skill-style documentation.
-
-`README.md` MUST include command examples for:
-
-- `depmesh relations`.
-- `depmesh dependencies ...`.
-- `depmesh init`.
-- `depmesh skill usage`.
-
-Human-facing command examples SHOULD use command defaults.
-
-`README.md` MUST point readers to `./specs/` as the source of project behavior and architecture.
-
-`README.md` MUST describe development commands through `./bin/dev.sh`.
+Human-facing examples SHOULD use command defaults.
+Captured output MUST identify its protocol and follow the selected protocol's current formatting.
+Examples showing generated ids MUST explain their placeholders or variability.
 
 ## Style
 
-`README.md` SHOULD be concise and practical.
+The README SHOULD be:
 
-`README.md` SHOULD prefer short explanations, bullet lists, and command examples.
+- concise.
+- practical.
+- confident.
+- accurate.
 
-`README.md` SHOULD use a confident but accurate tone.
+It SHOULD use short explanations, bullets, and commands.
 
-`README.md` SHOULD avoid promising behavior that is only planned or not implemented.
-
-`README.md` SHOULD not be an exhaustive user manual; detailed command and configuration guidance belongs in built-in skill documentation and specifications.
+It SHOULD avoid promises of unimplemented behavior and exhaustive manual content; detailed guidance belongs in skills and specs.

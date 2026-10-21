@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from llm_tool_cli.paths import ProjectRootPath
+
 from depmesh.discovery.predicates.base import ArtifactPredicateBase
 from depmesh.discovery.predicates.entities import AnyPredicateConfig
-from depmesh.domain.entities import ArtifactId, ProjectRootPath
+from depmesh.domain.entities import ArtifactId
 
 
 class AnyPredicate(ArtifactPredicateBase):

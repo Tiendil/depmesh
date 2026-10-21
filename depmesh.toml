@@ -98,6 +98,17 @@ relation = "governs"
 input = { type = "one_of", artifacts = ["./specs/meta/general.md"] }
 output = { type = "files", pattern = "./specs/**/*.md" }
 
+# Behavior specifications are also governed by the behavior specification rules.
+[[rules]]
+relation = "governed_by"
+input = { type = "glob", pattern = "./specs/behavior/**/*.md" }
+output = { type = "list", artifacts = ["./specs/meta/behavior.md"] }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["./specs/meta/behavior.md"] }
+output = { type = "files", pattern = "./specs/behavior/**/*.md" }
+
 # Python files are governed by every architecture spec.
 [[rules]]
 relation = "governed_by"
@@ -122,11 +133,12 @@ relation = "governs"
 input = { type = "one_of", artifacts = ["./specs/architecture/modules_layout.md"] }
 output = { type = "list", artifacts = ["./tach.toml"] }
 
-# CLI, protocol, and skill-facing code is governed by the CLI behavior spec.
+# CLI, runtime, protocol, and skill-facing code is governed by the CLI behavior spec.
 [[rules]]
 relation = "governed_by"
 input = { type = "any", items = [
   { type = "glob", pattern = "./depmesh/cli/**/*.py" },
+  { type = "glob", pattern = "./depmesh/runtime/**/*.py" },
   { type = "glob", pattern = "./depmesh/protocol/**/*.py" },
   { type = "glob", pattern = "./depmesh/skills/**/*.py" },
   { type = "glob", pattern = "./depmesh/skills/**/*.md" },
@@ -140,12 +152,13 @@ input = { type = "any", items = [
 ] }
 output = { type = "list", artifacts = ["./specs/behavior/cli.md"] }
 
-# The CLI behavior spec governs CLI, protocol, skill, and entrypoint code.
+# The CLI behavior spec governs CLI, runtime, protocol, skill, and entrypoint code.
 [[rules]]
 relation = "governs"
 input = { type = "one_of", artifacts = ["./specs/behavior/cli.md"] }
 output = { type = "union", items = [
   { type = "files", pattern = "./depmesh/cli/**/*.py" },
+  { type = "files", pattern = "./depmesh/runtime/**/*.py" },
   { type = "files", pattern = "./depmesh/protocol/**/*.py" },
   { type = "files", pattern = "./depmesh/skills/**/*.py" },
   { type = "files", pattern = "./depmesh/skills/**/*.md" },
@@ -206,7 +219,7 @@ output = { type = "union", items = [
   { type = "files", pattern = "./changes/*.md" },
 ] }
 
-# Configuration behavior governs the config file, helper scripts, config/discovery code,
+# Configuration behavior governs the config file, helper scripts, config/discovery/runtime code,
 # and skill fixtures that document configuration behavior.
 [[rules]]
 relation = "governed_by"
@@ -215,12 +228,13 @@ input = { type = "any", items = [
   { type = "glob", pattern = "./bin/depmesh/**" },
   { type = "glob", pattern = "./depmesh/skills/fixtures/*.md" },
   { type = "glob", pattern = "./depmesh/workspace/**/*.py" },
+  { type = "glob", pattern = "./depmesh/runtime/**/*.py" },
   { type = "glob", pattern = "./depmesh/workspace/fixtures/*.toml" },
   { type = "glob", pattern = "./depmesh/discovery/**/*.py" },
 ] }
 output = { type = "list", artifacts = ["./specs/behavior/config.md"] }
 
-# The configuration spec governs the config file, helper scripts, config/discovery code,
+# The configuration spec governs the config file, helper scripts, config/discovery/runtime code,
 # and skill fixtures that document configuration behavior.
 [[rules]]
 relation = "governs"
@@ -230,25 +244,8 @@ output = { type = "union", items = [
   { type = "files", pattern = "./bin/depmesh/**/*" },
   { type = "files", pattern = "./depmesh/skills/fixtures/*.md" },
   { type = "files", pattern = "./depmesh/workspace/**/*.py" },
+  { type = "files", pattern = "./depmesh/runtime/**/*.py" },
   { type = "files", pattern = "./depmesh/workspace/fixtures/*.toml" },
-  { type = "files", pattern = "./depmesh/discovery/**/*.py" },
-] }
-
-# File path behavior governs project file path normalization, CLI path inputs, and sources that produce file paths.
-[[rules]]
-relation = "governed_by"
-input = { type = "any", items = [
-  { type = "glob", pattern = "./depmesh/cli/**/*.py" },
-  { type = "glob", pattern = "./depmesh/discovery/**/*.py" },
-] }
-output = { type = "list", artifacts = ["./specs/behavior/file_paths.md"] }
-
-# The file path behavior spec governs path normalization, CLI path inputs, and sources that produce file paths.
-[[rules]]
-relation = "governs"
-input = { type = "one_of", artifacts = ["./specs/behavior/file_paths.md"] }
-output = { type = "union", items = [
-  { type = "files", pattern = "./depmesh/cli/**/*.py" },
   { type = "files", pattern = "./depmesh/discovery/**/*.py" },
 ] }
 

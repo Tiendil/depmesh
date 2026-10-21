@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from llm_tool_cli.core.result import Ok, Result, unwrap_to_error
+
 from depmesh.discovery.artifacts import EvaluationContext
 from depmesh.discovery.sources.base import ArtifactSourceBase
 from depmesh.discovery.sources.entities import UnionSourceConfig
@@ -13,13 +15,14 @@ class UnionSource(ArtifactSourceBase):
         self.config = config
         self.items = items
 
-    def evaluate(self, context: EvaluationContext) -> list[ArtifactId]:
+    @unwrap_to_error
+    def evaluate(self, context: EvaluationContext) -> Result[list[ArtifactId]]:
         artifacts: set[ArtifactId] = set()
 
         for item in self.items:
-            artifacts.update(item.evaluate(context))
+            artifacts.update(item.evaluate(context).unwrap())
 
-        return sorted(artifacts)
+        return Ok(sorted(artifacts))
 
 
 __all__ = ["UnionSource", "UnionSourceConfig"]

@@ -1,13 +1,23 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
+
+import pytest
+from llm_tool_cli.paths import ProjectRootPath
 
 from depmesh.discovery.artifacts import CaptureName
 from depmesh.discovery.predicates.regex import RegexPredicate, RegexPredicateConfig
-from depmesh.domain.entities import ArtifactId, ProjectRootPath
+from depmesh.domain.entities import ArtifactId
 
 
 class TestRegexPredicate:
+    def test_match__invalid_substituted_pattern_raises(self, tmp_path: Path) -> None:
+        predicate = RegexPredicate(RegexPredicateConfig(type="regex", pattern="^{pattern}$"))
+
+        with pytest.raises(re.error):
+            predicate.match(ArtifactId("@/a.py"), ProjectRootPath(tmp_path), {"pattern": "["})
+
     def test_variables__extracts_template_variables(self) -> None:
         predicate = RegexPredicateConfig(type="regex", pattern=r"^@/src/{package}/(?P<module>[a-z]+)\.py$")
 

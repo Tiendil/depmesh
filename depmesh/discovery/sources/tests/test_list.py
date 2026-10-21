@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from llm_tool_cli.paths import ProjectRootPath
+
 from depmesh.discovery.artifacts import CaptureName, EvaluationContext
 from depmesh.discovery.sources.list import ListSource, ListSourceConfig
-from depmesh.domain.entities import ArtifactId, ProjectRootPath, RelationId
+from depmesh.domain.entities import ArtifactId, RelationId
 
 
 class TestListSource:
@@ -19,4 +21,4 @@ class TestListSource:
             root=ProjectRootPath(tmp_path), relation_id=RelationId("tests"), captures={"module": "a"}
         )
 
-        assert source.evaluate(context) == [ArtifactId("@/tests/test_a.py")]
+        assert source.evaluate(context).unwrap() == [ArtifactId("@/tests/test_a.py")]

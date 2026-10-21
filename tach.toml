@@ -14,6 +14,7 @@ exclude = [
 
 layers = [
     "cli",
+    "runtime",
     "protocol",
     "workspace",
     "discovery",
@@ -39,9 +40,22 @@ depends_on = [
     "depmesh.discovery",
     "depmesh.domain",
     "depmesh.protocol",
+    "depmesh.runtime",
+    "depmesh.skills",
     "depmesh.workspace",
 ]
 layer = "cli"
+
+[[modules]]
+path = "depmesh.runtime"
+depends_on = [
+    "depmesh.core",
+    "depmesh.discovery",
+    "depmesh.domain",
+    "depmesh.protocol",
+    "depmesh.workspace",
+]
+layer = "runtime"
 
 [[modules]]
 path = "depmesh.core"
@@ -58,7 +72,7 @@ layer = "discovery"
 
 [[modules]]
 path = "depmesh.domain"
-depends_on = ["depmesh.core"]
+depends_on = []
 layer = "domain"
 
 [[modules]]

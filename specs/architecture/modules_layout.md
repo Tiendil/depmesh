@@ -2,85 +2,199 @@
 
 ## Goal of the document
 
-This document describes the module structure of the project.
+This document describes module ownership and public boundaries.
 
 ## Scope
 
-The scope of this specification is limited to the list of project modules and their intended responsibilities.
+This specification covers project modules and responsibilities.
+The following are out of scope:
 
-The following topics are out of scope:
-
-- detailed implementation design.
+- implementation design.
 - dependency rules.
 - runtime behavior.
-- entity, error, and test conventions beyond module placement.
+- entity/error/test conventions beyond placement.
 
 ## Dictionary
 
-- `module` — a Python package or module that owns a coherent area of project functionality.
-- `submodule` — a Python package or module inside another module that owns a narrower part of its parent module's functionality.
-- `test submodule` — a module or file containing tests for a corresponding parent module or submodule.
+- `module` — a Python package/module owning coherent functionality.
+- `submodule` — a narrower responsibility within a module.
+- `test submodule` — tests of a parent module/submodule.
 
 ## Modules
 
-- `./depmesh/` — root module of the project, contains all code related to the `depmesh` tool.
-- `./depmesh/core/` — module responsible for the core functionality not related to domain logic. Contains:
-  - shared entity base classes.
-  - shared error base classes.
-  - shared warning storage.
-  - domain-independent utilities.
-- `./depmesh/domain/` — module responsible only for universal domain entities and logic required by all or most other modules. Contains:
-  - shared domain-specific types.
-  - shared domain data structures.
-  - pure domain logic that is independent of more specific subsystems.
-  - no subsystem-specific rule evaluation, protocol rendering, workspace loading, or CLI behavior.
-- `./depmesh/discovery/` — module responsible for dependency discovery logic. Contains:
-  - dependency discovery rules.
-  - artifact predicate definitions and matching behavior.
-  - artifact source definitions and evaluation behavior.
-  - dependency query results.
-  - dependency query evaluation.
-- `./depmesh/protocol/` — module responsible for output protocol types and rendering. Contains:
-  - protocol enums.
-  - renderer selection.
-  - protocol-specific renderers.
-  - serialized record construction for external output protocols.
-- `./depmesh/skills/` — module responsible for built-in skill text loaded by the CLI and renderers.
-- `./depmesh/workspace/` — module responsible for workspace management, including:
-  - finding and parsing config.
-  - detecting current project root.
-  - operations with the filesystem.
-- `./depmesh/cli/` — module responsible for the CLI interface of the `depmesh` tool.
+All Depmesh code belongs under `depmesh/`:
+
+- `core` — Error bases and domain-independent utilities.
+- `domain` — Universal types, structures, and pure logic used by all/most modules; excludes:
+
+  - Subsystem rules.
+  - Rendering.
+  - Workspace loading.
+  - CLI behavior.
+
+- `discovery`:
+
+  - Rules.
+  - Predicates/matching.
+  - Sources/evaluation.
+  - Query results/evaluation.
+
+- `runtime` — No CLI parsing, protocol selection, or output writing; owns:
+
+  - Input normalization.
+  - Relation selection.
+  - Cross-input aggregation/order.
+  - Result-cell submission.
+  - Relation listing.
+
+- `protocol` — Dependency/relation cells and projections, grouped human/LLM Markdown, content cells and concrete output types from `llm_tool_cli`.
+- `skills` — Document definitions and packaged Markdown.
+- `workspace` — Schema, validated/compiled relations and rules, starter configuration.
+- `cli`:
+
+  - Parsing.
+  - Runtime invocation.
+  - Protocol/delivery setup.
+  - Errors/streams/exits through `llm_tool_cli`.
+
+Command-facing runtime operations MUST assemble/submit complete cells and return a result provided by `llm_tool_cli` without a value when no other result is useful.
+CLI MUST NOT:
+
+- query rules.
+- aggregate internal results.
+- read warning storage.
+- assemble payloads.
+
+Internal discovery/workspace APIs MAY retain typed results.
+
+Depmesh MUST directly use the following from `llm_tool_cli`:
+
+- protocol values.
+- cell bases/subtypes.
+- dispatch.
+- content cells.
+- rendering contexts.
+- typed error cells.
+
+Local dependency cells MUST own projections into matching shared output types.
+Shared output MUST own batch rendering/writing; protocol MUST retain individual projection/formatting.
+Project content MUST use shared cells without CLI-supplied output classes.
+The following MUST NOT duplicate shared code:
+
+- local render wrappers.
+- formatter families.
+- warning storage.
+- warning projections.
+
+CLI MUST directly use command scope from `llm_tool_cli`, without lifecycle wrappers, to bind output and finalize results then warnings.
+Sources MUST submit shared warnings directly while retaining typed query results.
+Dependency cells MUST prohibit journal delivery in their types and construction, without record conversion; relation content MUST retain shared journal prohibition.
+`llm_tool_cli` MUST own the following without Depmesh services/wrappers:
+
+- journal submission.
+- default factories.
+- processors.
+
+Skill loading MUST directly use `llm_tool_cli.skills`, preserving errors without adapters.
+Skill fixtures MUST live in `depmesh/skills/fixtures/` under the library's resource-loading convention; Depmesh MUST own document definitions and contents.
+CLI MUST use application construction and shared skill/version command registration from `llm_tool_cli`, supplying `depmesh.skills`, its document definitions, and distribution identity `depmesh`.
+
+Depmesh MUST use independent frozen settings from `llm_tool_cli` for static application identity, invocation protocol, and selected project.
+Static settings MUST supply the default configuration filename before parsing; project settings MUST own the active path and derived root.
+
+Root version MUST use strict integer validation from `llm_tool_cli` with local version constraints and defaults.
+Depmesh MUST own supported versions/defaults; shared validation MUST apply its constraint.
+Session-directory configuration MUST NOT exist without session storage behavior.
+Compiled workspaces MUST contain relations/rules without copied paths/root.
+
+CLI MUST use project-loading scope from `llm_tool_cli` through framework resources.
+Initialization MUST use the command provided by `llm_tool_cli` with Depmesh schema and the workspace-owned starter template, retaining project scope through framework resources.
+`llm_tool_cli` MUST own:
+
+- discovery.
+- loading.
+- starter creation and validation.
+- project setting construction, binding, and restoration.
+
+Local preparation wrappers MUST NOT remain.
+
+Workspace MUST compile the yielded validated configuration.
+Shared init MUST emit the generic creation acknowledgement; domain payloads MUST remain runtime-owned.
+
+Query orchestration MUST receive compiled workspace explicitly and read the active project root.
+Lower discovery MAY receive explicit root/cwd.
+Compiled workspaces MAY stay local; no global binding is required without a global consumer.
 
 ## Submodules
 
-Modules can have submodules that are responsible for more specific parts of the functionality.
+Submodules are optional unless required elsewhere.
+Small closed interchangeable-component families SHOULD use one implementation submodule per meaningfully distinct component.
+Shared family code SHOULD contain only:
 
-When a module contains a small closed family of interchangeable components, and each component has meaningful component-specific behavior, the module SHOULD prefer one implementation submodule per component.
+- common types.
+- public unions.
+- selection.
+- iteration glue.
 
-Shared package-level code for such component families SHOULD be limited to common types, public unions, selection helpers, and iteration glue.
+Conventional names MUST stay consistent:
 
-Some submodules have specific names that reflect their responsibilities and MUST be similar across different modules.
+- `utils` — Non-domain utilities.
+- `errors` — Environment models/internal exceptions.
+- `domain` — Module-specific domain logic.
+- `entities` — Owned types/entities.
+- `fixtures` — Reusable configuration/docs/data.
+- `tests` — Module tests.
+- `tests.make` — Test-object construction.
+- `tests.helpers` — Setup, mutation, workflows.
 
-List of specific submodules:
+Errors/entities/tests MUST follow their architecture specs.
+Higher modules MUST use `llm_tool_cli.core.entities` for the common Pydantic base.
 
-- `utils` — submodule responsible for utility functions that are not related to the domain logic.
-- `errors` — submodule responsible for defining custom exception types.
-- `domain` — submodule responsible for domain-specific logic related to the module's responsibilities.
-- `entities` — submodule responsible for defining types and entities related to the module's responsibilities.
-- `tests` — submodule containing module tests.
+Paths MUST directly use `llm_tool_cli.paths` for:
 
-The `errors`, `entities`, and `tests` submodules MUST follow the corresponding architecture specifications when they are present.
+- lexical ids/normalization.
+- resolution.
+- containment.
+- symlink rejection.
+- glob preparation/matching/capture validation.
+- enumeration.
 
-The shared `entities` submodule in `./depmesh/core/` MUST define the common Pydantic entity base used by higher-level modules.
+Glob predicates MUST use shared matching after substitution and shared capture validation during schema loading, without local compilers/parsers.
+Depmesh MUST retain templates, capture-to-output binding, and contextual warnings.
+Enumeration errors MUST propagate shared diagnostics without duplication.
 
 ### Test submodules
 
-Each submodule MUST have a corresponding `tests` submodule that contains tests for the code in the parent submodule.
+Tests SHOULD live under the nearest owning package's `tests`, named with the parent's `test_` prefix; structure SHOULD mirror implementation.
+Coverage MUST follow the test architecture's owned-behavior requirements rather than file symmetry.
+**Example:** `domain/entities.py` maps to `domain/tests/test_entities.py`.
 
-The name of a test submodule MUST be built from the name of the parent submodule by adding the `test_` prefix. The structure of the test submodule SHOULD mirror the structure of the parent submodule.
+Reusable construction SHOULD live in `tests.make`; setup, assertions, and coordinated actions SHOULD live in `tests.helpers`.
+Production MUST NOT import test utilities.
 
-Examples:
+## Cross-module dependencies
 
-- `./depmesh/core/utils.py` -> `./depmesh/core/tests/test_utils.py`
-- `./depmesh/domain/entities.py` -> `./depmesh/domain/tests/test_entities.py`
+### Import boundaries
+
+Top-level modules MUST expose explicit stable boundaries through package roots or declared public submodules.
+Public submodules SHOULD be cohesive and MUST NOT expose incidental helpers, storage details, or compatibility shims unless intentionally stable.
+Initializers SHOULD export ergonomic common names and define `__all__`, but MUST NOT be required to re-export every submodule name.
+Owned `errors` MUST be public.
+Roots without useful APIs MAY be empty or have empty `__all__`.
+
+Cross-module imports MUST use declared boundaries, never undeclared internals; same-owner submodules MAY import directly.
+Configured dependency checks MUST enforce the specified ownership and dependency direction.
+Check configuration MUST NOT permit undeclared dependencies merely to silence a finding.
+`utils` is public only if explicitly declared.
+**Example:** CLI may import `depmesh.workspace` or its declared public submodules, not its private implementation.
+
+Modules MAY import protocol boundary values/helpers to expose owned concepts.
+Typed-cell construction MUST NOT count as a boundary violation or protocol-specific rendering.
+Only protocol/CLI modules MAY depend on protocol-specific formatter implementations; non-protocol modules SHOULD NOT own serialization details.
+Protocol rendering means concrete external serialization, such as:
+
+- text framing.
+- LLM boundaries.
+- JSON Lines.
+- bytes.
+- formatter ordering.

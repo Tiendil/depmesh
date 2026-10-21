@@ -2,191 +2,173 @@
 
 ## Goal of the document
 
-This document describes how project modules represent fatal errors and warnings, and how those values move from lower layers to the CLI.
+This document describes the architecture of failure handling.
 
 ## Scope
 
-The scope of this specification is limited to error and warning architecture inside the Python implementation.
+This specification covers Python error/warning architecture.
+The following are out of scope:
 
-The following topics are out of scope:
-
-- exact wording of user-facing messages.
-- complete lists of future error codes.
+- exact messages.
+- code inventories.
 - terminal formatting.
-- dependency discovery algorithms.
-- test coverage requirements.
+- discovery algorithms.
+- coverage requirements.
 
 ## Dictionary
 
-- `fatal error` - a problem that prevents the requested command from completing successfully.
-- `non-fatal problem` - a problem discovered while processing a command that does not prevent the command from producing useful output.
-- `error code` - a stable machine-readable identifier for a fatal error.
-- `module root error` - the `Error` exception class in a module's `errors` submodule; it is the root for fatal errors owned by that module.
-- `exception boundary` - a module boundary where low-level exceptions are converted into project-specific exceptions or warnings.
+- `fatal error` — prevents successful command completion.
+- `non-fatal problem` — permits useful requested output.
+- `error code` — a machine-readable fatal-error identifier.
+- `module error category` — an `errors` model classifying its module's expected failures.
+- `exception boundary` — converts known low-level failures to returned errors or warnings.
 
 ## General principles
 
-Fatal errors MUST be represented with project-specific exceptions before they cross module boundaries.
+Expected failures MUST cross boundaries as shared `Result[T]` environment-error values, except predicate matching as described below.
+Depmesh MUST use `llm_tool_cli` results/error foundations and preserve shared errors unless translation adds domain meaning or recovery.
+Package ownership alone MUST NOT trigger translation; raised shared exceptions MUST NOT become expected failures.
+Internal errors MUST be raised and MUST NOT become cells in normal CLI handling.
 
-Non-fatal problems MUST be represented as warning strings, not as exceptions, when processing can continue and produce useful output.
+Predicate matching is exempt from result conversion: it MUST return captures or `None`, MAY raise evaluation failures, and composites MUST propagate failures rather than treating them as non-matches.
+Result-returning callers MUST recover helper error values within their propagation scope; unrelated matching exceptions MAY propagate unchanged.
 
-Lower-level modules MUST NOT print errors, print warnings, write JSON Lines records, or terminate the process.
+Non-fatal problems MUST use warning cells submitted to scoped output, both provided by `llm_tool_cli`.
+Lower modules MUST NOT print diagnostics/JSON Lines or terminate.
+The CLI MUST own fatal-error protocol delivery and shared exit-based termination.
 
-The CLI layer MUST be responsible for converting project errors and warnings into:
-
-- exit codes.
-- stderr messages.
-- output protocol records.
-
-Project-specific exceptions MUST expose stable error codes.
-
-Error codes MUST use lowercase ASCII letters, ASCII digits, and `_`.
-
-User-facing messages SHOULD be clear enough to diagnose the problem without exposing implementation stack details.
+Errors MUST expose machine-readable codes identifying failure kinds independently of message text.
+Project codes MUST use lowercase ASCII letters, ASCII digits, and `_`; adopted shared codes MUST retain native spelling.
+Messages SHOULD diagnose problems without stack details.
 
 ## Error ownership
 
-Each module MAY define an `errors` submodule for errors owned by that module.
+Depmesh bases MUST belong to `depmesh.core.errors`.
+Shared errors MUST retain their:
 
-Shared base error types MUST be owned by a common lower-level module that does not depend on CLI behavior.
+- hierarchy.
+- codes.
+- messages.
+- records.
 
-Module-specific error types MUST be defined in the module that can add the most useful context.
+Top-level error owners SHOULD define `errors` hierarchies with an `InternalError` root inheriting Depmesh's core internal base and an `EnvironmentError` root inheriting Depmesh's core environment base.
+Category roots MUST explicitly use `EnvironmentError`/`InternalError`, not an ambiguous `Error` or boundary-only name.
+Specific errors MUST belong where useful context can be added.
+Unique cases SHOULD have subclasses.
+Owners MUST export `errors` from their package initializer.
+Production errors MUST NOT live in tests; test-only errors MAY verify handling.
 
-Production errors MUST NOT be defined in test modules.
+## Error models and internal exceptions
 
-Test-only error classes MAY be defined in test modules when they are required to verify error handling behavior.
+Depmesh's environment-error base MUST inherit shared `EnvironmentError`, identify Depmesh-owned failures for policy, and inherit the shared default exit status without overriding it.
+Errors MUST remain presentation-independent Pydantic models, define `code`/`message`, and MUST NOT inherit `Exception`.
+They MAY add guidance and typed context.
+Leaf classes SHOULD declare messages/guidance; call sites SHOULD supply only varying context.
+Messages and guidance MAY use `{error.<field>}` formatting.
+Diagnostic data MUST follow the shared contract in `specs/architecture/errors.md` in `llm-tool-cli`.
+Core error bases MUST NOT depend on cells, formatters, or CLI output.
 
-## Error hierarchy
+Project technical exceptions MUST inherit `depmesh.core.errors.InternalError`, itself inheriting `llm_tool_cli.core.errors.InternalError`.
+They MUST NOT become environment errors merely through common ancestry or dependency origin.
+Models and exceptions MUST remain separate.
+Internal errors MUST NOT provide environment codes or diagnostic serialization.
 
-The project MUST define a single project root exception type for all expected fatal project errors.
+## Results
 
-The project root exception MUST be named `Error`.
+Fallible functions SHOULD return `Result[T]`; failures MUST use shared `EnvironmentErrors`, which MAY mix shared/Depmesh values.
+Success MUST use `Ok(value)`; failure MUST use `Err(errors)`.
+Independent validation failures SHOULD be collected in one result.
+Compatible propagation SHOULD preserve the original result/list without rewrapping.
+Functions SHOULD NOT be duplicated solely by handling strategy.
+Changing a function to return errors MUST update callers to handle/propagate/render according to their layer.
 
-The project root exception MUST inherit from `Exception`.
+## Callback boundaries
 
-The project root exception MUST NOT inherit from Pydantic model classes.
+Fallible callbacks/interchangeable components MUST expose result-aware interfaces.
+Framework callbacks MAY adapt results when ordinary values/control-flow exceptions are required.
+Pydantic validators MAY raise required validation exceptions internally; external-input boundaries MUST convert resulting failures to returned errors.
 
-The project root exception MUST be owned by the core module.
+## `unwrap_to_error`
 
-Each module that defines fatal errors SHOULD define one module root error class.
-
-The module root error class MUST be named `Error`.
-
-All fatal errors owned by that module MUST inherit from the module root error class.
-
-A module root error class MUST inherit from the project root exception or from a parent module's root error class.
-
-A module SHOULD NOT define multiple root error classes.
-
-Modules outside the CLI module MUST NOT know about CLI exit codes.
-
-Module root error classes SHOULD be abstract classification classes and SHOULD NOT be raised directly when a more specific concrete error is available.
-
-Intermediate abstract error classes MAY exist under a module root when a module needs a narrower ownership boundary.
-
-The hierarchy SHOULD keep module-specific root errors under the single project root exception.
-
-Concrete error class names MAY differ, but project and module root error classes MUST be named `Error`.
-
-## Exception data
-
-Project-specific exceptions SHOULD carry:
-
-- an error code.
-- a human-readable message.
-- optional structured details.
-- an optional original cause.
-
-Structured details MUST contain values that can be rendered deterministically.
-
-Structured details SHOULD use strings, numbers, booleans, `None`, lists, and dictionaries when they need to be serialized by the CLI.
-
-Exceptions MUST NOT require callers to parse their message text to understand the error category.
+For simpler composition of result-returning functions, `unwrap_to_error` SHOULD be preferred over repeated manual failure checks, particularly for functions mainly composing other results.
+Decorated functions MAY unwrap intermediate values.
+The decorator MUST convert `UnwrapError` back to `Err` with its payload and MUST NOT hide internal/arbitrary exceptions.
+Propagation unwraps MUST execute inside a recovery scope, including those in deferred iterators and callbacks.
+Creating an iterator or callback inside that scope MUST NOT substitute for executing its fallible work there.
+An unguarded failed unwrap is an internal error.
 
 ## Warnings
 
-Warnings represent non-fatal problems discovered while processing a request.
+Warnings MUST represent only non-fatal problems allowing useful output.
+They MUST NOT represent:
 
-Warnings MUST be used only when processing can continue and the command can still produce useful requested output.
+- invalid arguments.
+- unloadable configuration.
+- dependency query failures preventing valid results.
 
-Warnings MUST NOT be used for invalid command line arguments, invalid configuration that prevents loading, or dependency query failures that prevent producing a valid query result.
+They MUST use warning cells and scoped delivery provided by `llm_tool_cli`, buffered until finalization after results or reported errors.
 
-Warnings are plain strings stored in the core warning storage.
-
-Warnings are not exceptions, Pydantic entities, or Python `warnings` module warnings.
-
-The core module MUST provide singleton warning storage.
-
-The core warning storage MUST be accessible to all project modules.
-
-The core warning storage MUST store warnings as strings.
-
-The core warning storage MUST preserve warning insertion order.
-
-The core warning storage MUST provide operations to:
-
-- add a warning string.
-- read currently stored warning strings.
-- clear stored warning strings.
-
-Code that adds warnings SHOULD include enough context in the string for the CLI output to be useful.
-
-The CLI MUST clear the core warning storage at the start of each command.
-
-The CLI MUST read the core warning storage when rendering command output.
-
-The CLI MUST render stored warnings according to the selected output protocol.
-
-Examples of warning-producing situations include:
-
-- a files source pattern that cannot be resolved inside the project.
-- a command source that writes stderr output but still produces usable dependencies.
-- a command source that exits with a non-zero status when other artifact sources can still produce useful output.
+Examples include unresolvable files patterns and command-source stderr or non-zero exits when usable dependencies remain available.
 
 ## Pydantic validation errors
 
-Pydantic validation errors MUST NOT be exposed directly across high-level module boundaries for user-provided data.
-
-Modules that create Pydantic entities from external input MUST convert `pydantic.ValidationError` into project-specific errors or warning strings at the nearest exception boundary with useful context.
-
-Pydantic validation errors MAY be used directly inside tests for low-level entity validation.
+Raw external-input Pydantic errors MUST NOT cross high-level boundaries.
+The nearest useful boundary MUST convert `pydantic.ValidationError` into returned errors or warning cells; shared loading MAY own conversion.
+Low-level entity tests MAY assert Pydantic errors directly.
 
 ## Exception boundaries
 
-Modules that call external systems MUST convert relevant low-level failures into project-specific errors or warning strings at the boundary where context is still available.
-
-External systems include:
+External-system callers MUST convert relevant known failures at useful boundaries, including:
 
 - filesystem operations.
 - TOML parsing.
-- Pydantic model validation for external input.
-- regular expression compilation.
-- shell command execution.
+- external-input model validation.
+- regex compilation.
+- shell execution.
 
-Unexpected programming errors MAY propagate during development, but code that handles expected user or environment failures MUST convert them into project-specific errors.
-
-When converting an exception, the original exception SHOULD be preserved as the cause when it helps debugging.
+Expected raw filesystem/parser/validation failures MUST NOT escape high-level boundaries.
+Unexpected bugs MUST remain exceptions; blanket conversion MUST NOT hide them.
+Translation SHOULD add application meaning or recovery and SHOULD retain useful private causes.
 
 ## CLI mapping
 
-The CLI MUST map fatal project errors to the exit code categories specified by the CLI behavior specification.
+`llm_tool_cli` MUST own skill failures and protocol-option validation/diagnostics.
+Before result-based execution, Typer parsing MAY use standard invalid-argument behavior, including `typer.BadParameter`, `click.UsageError`, or `typer.Exit`.
 
-The CLI module MUST own the mapping from exception classes to exit codes.
+After protocol installation, command handling provided by `llm_tool_cli` MUST own every environment error's:
 
-The CLI mapping SHOULD be defined in the CLI module.
+- order.
+- presentation.
+- stdout delivery.
+- exit.
 
-The CLI mapping MAY map specific module root error classes to specific exit codes.
+Depmesh MUST NOT maintain another error-rendering/exit path.
+Errors MUST remain typed shared cells until shared projection of content/guidance/metadata.
+Shared error handling MUST NOT submit journal records or require workspace setup.
+Non-CLI errors MAY declare shared-core exit overrides; termination MUST remain at the shared CLI boundary.
 
-The CLI mapping MAY map specific concrete error classes to specific exit codes when a module root is too broad.
+## Naming error classes
 
-The CLI mapping MUST define a default non-zero exit code for project exceptions that are not explicitly mapped.
+Names SHOULD be short/descriptive.
+When clear, leaf names SHOULD omit these redundant suffixes:
 
-The CLI SHOULD choose the most specific non-zero exit code that matches the failure.
+- `Error`.
+- `Exception`.
+- `Failure`.
+- `Internal`.
+- `Environment`.
 
-The CLI MUST NOT return a non-zero exit code only because warnings were produced.
+Roots MUST retain the explicit categories required above.
 
-When a fatal error is rendered for the automation protocol, the `error` record MUST use the project error code.
+## Asserts
 
-When a warning is rendered for the automation protocol, the `warning` record MUST include the warning string as the `message` field.
+Assertions MAY aid typing/lint when prior flow guarantees invariants.
+They MUST NOT validate external input or handle recoverable query failures, which MUST use environment errors.
+Impossible states needing explicit handling SHOULD use internal errors.
 
-Human and LLM protocols SHOULD render warnings in the output and fatal errors outside the requested output.
+## Other exception types
+
+Production SHOULD use `InternalError` unless Python/third-party protocols require alternatives.
+Such interfaces, Pydantic validators, and Typer/click parsing MAY use required exception types.
+Shared technical result exceptions MAY implement controlled propagation but MUST NOT be mistaken for environment-error values.
+Temporary `NotImplementedError` MAY appear during implementation and SHOULD be replaced before completion with implemented behavior or project internal errors.

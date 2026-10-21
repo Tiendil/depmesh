@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from llm_tool_cli.paths import ProjectRootPath
+
 from depmesh.discovery.artifacts import CaptureName
 from depmesh.discovery.predicates.one_of import OneOfPredicate, OneOfPredicateConfig
-from depmesh.domain.entities import ArtifactId, ProjectRootPath
+from depmesh.domain.entities import ArtifactId
 
 
 class TestOneOfPredicate:

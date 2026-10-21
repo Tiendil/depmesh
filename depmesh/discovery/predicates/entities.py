@@ -4,16 +4,13 @@ import re
 from typing import Annotated, Literal, NewType
 
 import pydantic
+from llm_tool_cli.paths import FileGlobPattern, glob_capture_names
 
 from depmesh.discovery.artifacts import CaptureName, TemplateText
 from depmesh.discovery.predicates.base import ArtifactPredicateConfigBase
 
-GlobPattern = NewType("GlobPattern", str)
 OneOfPredicateValue = NewType("OneOfPredicateValue", str)
 RegexPattern = NewType("RegexPattern", str)
-
-CAPTURE_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-CAPTURE_RE = re.compile(r"\{([^{}]+)\}")
 
 
 class OneOfPredicateConfig(ArtifactPredicateConfigBase):
@@ -32,11 +29,11 @@ class GlobPredicateConfig(ArtifactPredicateConfigBase):
         return set(self.pattern.variables)
 
     def captures(self) -> set[CaptureName]:
-        return {
-            CaptureName(parse_glob_capture(token)[1])
-            for token in CAPTURE_RE.findall(self.pattern.value)
-            if token.startswith("*")
-        }
+        names = glob_capture_names(FileGlobPattern(self.pattern.value))
+        if names.is_err():
+            # Pydantic translates schema validation failures into config errors.
+            raise ValueError("; ".join(error.format_message() for error in names.unwrap_err()))
+        return {CaptureName(name) for name in names.unwrap()}
 
 
 class RegexPredicateConfig(ArtifactPredicateConfigBase):
@@ -99,33 +96,15 @@ AllPredicateConfig.model_rebuild(_types_namespace={"ArtifactPredicateConfig": Ar
 NotPredicateConfig.model_rebuild(_types_namespace={"ArtifactPredicateConfig": ArtifactPredicateConfig})
 
 
-def parse_glob_capture(token: str) -> tuple[str, str]:
-    if token.startswith("**"):
-        wildcard = "**"
-        name = token[2:]
-    elif token.startswith("*"):
-        wildcard = "*"
-        name = token[1:]
-    else:
-        raise ValueError(f"invalid glob capture `{token}`")
-
-    if not CAPTURE_NAME_RE.fullmatch(name):
-        raise ValueError(f"invalid glob capture name `{name}`")
-
-    return wildcard, name
-
-
 __all__ = [
     "AllPredicateConfig",
     "AnyPredicateConfig",
     "ArtifactPredicateConfig",
     "ArtifactPredicateConfigBase",
-    "GlobPattern",
     "GlobPredicateConfig",
     "NotPredicateConfig",
     "OneOfPredicateConfig",
     "OneOfPredicateValue",
     "RegexPattern",
     "RegexPredicateConfig",
-    "parse_glob_capture",
 ]

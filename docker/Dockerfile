@@ -17,6 +17,8 @@ ENV UV_PYTHON_DOWNLOADS=never
 ENV UV_LINK_MODE=copy
 ENV PATH="/home/depmesh/.venv/bin:${PATH}"
 
+# Uncomment with the local uv source and Compose build context.
+# COPY --from=llm-tool-cli --chown=$USER:$USER . /llm-tool-cli
 COPY --chown=$USER:$USER . /repository
 
 RUN uv sync --locked

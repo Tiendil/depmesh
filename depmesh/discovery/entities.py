@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pydantic
+from llm_tool_cli.core.entities import BaseEntity
 
-from depmesh.core.entities import BaseEntity
 from depmesh.discovery.predicates.base import ArtifactPredicateBase
 from depmesh.discovery.predicates.compiler import compile_predicate
 from depmesh.discovery.predicates.entities import ArtifactPredicateConfig

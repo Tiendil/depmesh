@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from depmesh.discovery.paths import normalize_path
+from llm_tool_cli.paths import ProjectRootPath, normalize_path
+
 from depmesh.discovery.predicates.base import ArtifactPredicateBase
 from depmesh.discovery.predicates.entities import OneOfPredicateConfig, OneOfPredicateValue
-from depmesh.domain.entities import ArtifactId, ProjectRootPath
+from depmesh.domain.entities import ArtifactId
 
 
 class OneOfPredicate(ArtifactPredicateBase):
@@ -21,7 +22,7 @@ class OneOfPredicate(ArtifactPredicateBase):
         captures = captures or {}
 
         for expected in self.config.artifacts:
-            if artifact == ArtifactId(normalize_path(expected.substitute(captures), root)):
+            if artifact == ArtifactId(normalize_path(expected.substitute(captures), root).unwrap()):
                 return {}
 
         return None
